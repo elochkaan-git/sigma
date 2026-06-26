@@ -1,0 +1,62 @@
+name: 'Sigma'
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      max-parallel: 1
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+    permissions: write-all
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Installing dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run:
+          sudo apt-get update -y;
+          # sudo apt-get install -y libxrandr-dev libxcursor-dev libxi-dev libudev-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libfreetype6-dev libboost-all-dev
+          # Just for example
+
+      - name: Installing dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat
+        # .\vcpkg\vcpkg install --triplet x64-windows sfml spdlog boost-program-options boost-filesystem
+        # Just for example
+
+      # It's commented because we don't have CMakeLists.txt
+      # - name: Configure Cmake (Linux)
+      #   if: matrix.os == 'ubuntu-latest'
+      #   run: cmake -B build -S . -G "Unix Makefiles"
+
+      # - name: Configure Cmake (Windows)
+      #   if: matrix.os == 'windows-latest'
+      #   run: cmake -B build -S . -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+      # - name: Build project and package
+      #   run: cmake --build build --target package --config Release
+          
+      # - name: Upload Release Asset
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     ext: ${{
+      #       matrix.os == 'ubuntu-latest' && '.tar.gz' ||
+      #       matrix.os == 'windows-latest' && '.zip'}}
+      #   shell: bash
+      #   run: |
+      #     TAG=$(git describe --abbrev=0 --tags)
+      #     if gh release view "${TAG}" > /dev/null 2>&1; 
+      #     then gh release upload "${TAG}" bin/labyrinth${ext};
+      #     else gh release create "${TAG}" bin/labyrinth${ext};
+      #     fi
