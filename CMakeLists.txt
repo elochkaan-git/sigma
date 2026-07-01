@@ -1,7 +1,19 @@
 cmake_minimum_required(VERSION 3.28)
 project(sigma LANGUAGES CXX)
 
-# Add files and deps
+# set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+add_executable(cipher main.cpp)
+target_include_directories(cipher
+  PRIVATE third-party/libsodium/include
+)
+find_library(LIBSODIUM
+  NAMES sodium
+  HINTS "${CMAKE_SOURCE_DIR}/third-party/libsodium/lib"
+)
+target_link_libraries(cipher "${LIBSODIUM}")
 
 # Generating package with version
 # execute_process(
