@@ -1,19 +1,42 @@
 cmake_minimum_required(VERSION 3.28)
 project(sigma LANGUAGES CXX)
 
-# set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# set(CMAKE_CXX_STANDARD 17)
-# set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(SERVER_NAME server)
 
-add_executable(cipher main.cpp)
-target_include_directories(cipher
-  PRIVATE third-party/libsodium/include
+######## SERVER CONFIG ########
+#                             #
+file(GLOB SERVER_SOURCES CONFIGURE_DEPENDS
+  ${CMAKE_SOURCE_DIR}/server/src/*.cpp
+)
+file(GLOB SERVER_HEADERS CONFIGURE_DEPENDS
+  ${CMAKE_SOURCE_DIR}/server/inc/*.h
+)
+
+add_executable(${SERVER_NAME} ${SERVER_SOURCES} ${SERVER_HEADERS} main.cpp)
+target_include_directories(${SERVER_NAME}
+  PRIVATE third-party/libsodium/include ${CMAKE_SOURCE_DIR}/server/inc
 )
 find_library(LIBSODIUM
   NAMES sodium
   HINTS "${CMAKE_SOURCE_DIR}/third-party/libsodium/lib"
 )
-target_link_libraries(cipher "${LIBSODIUM}")
+
+find_package(Qt6 REQUIRED COMPONENTS Core Network)
+qt_standard_project_setup(REQUIRES 6.8)
+
+target_link_libraries(${SERVER_NAME}
+  PRIVATE Qt6::Core Qt6::Network "${LIBSODIUM}"
+)
+
+target_compile_options(${SERVER_NAME} PRIVATE
+  $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra>
+  $<$<CXX_COMPILER_ID:MSVC>:/W4>
+)
+#                             #
+###############################
 
 # Generating package with version
 # execute_process(
