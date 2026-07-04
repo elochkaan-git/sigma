@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(SERVER_NAME server)
+set(CMAKE_AUTOMOC ON)
 
 ######## SERVER CONFIG ########
 #                             #
@@ -24,11 +25,11 @@ find_library(LIBSODIUM
   HINTS "${CMAKE_SOURCE_DIR}/third-party/libsodium/lib"
 )
 
-find_package(Qt6 REQUIRED COMPONENTS Core Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Network WebSockets Sql)
 qt_standard_project_setup(REQUIRES 6.8)
 
 target_link_libraries(${SERVER_NAME}
-  PRIVATE Qt6::Core Qt6::Network "${LIBSODIUM}"
+  PRIVATE Qt6::Core Qt6::Network Qt6::WebSockets Qt6::Sql "${LIBSODIUM}"
 )
 
 target_compile_options(${SERVER_NAME} PRIVATE
