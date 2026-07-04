@@ -6,6 +6,7 @@
 #include <memory>
 #include <QThreadPool>
 #include <QObject>
+#include <vector>
 
 Dispatcher::Dispatcher(UserService* user_service)
   : mUserService(user_service)
@@ -18,9 +19,9 @@ Dispatcher::dispatch(const Command& cmd, QObject* context, std::function<void(Re
 {
   std::visit(overloaded{
     [this, context, onResponseReady](const RegisterUser& cmd) {
-      auto job = [this, cmd]() -> Response {
+      auto job = [this, cmd]() -> std::vector<Response> {
         OperationStatus status = this->mUserService->registerUser(cmd.login, cmd.pwd);
-        return RegisterUserResponse{cmd.client_id, status};
+        return std::vector<Response>{RegisterUserResponse{cmd.client_id, status}};
       };
       Task* task = new Task(std::move(job)); // Владение передается QThreadPool, утечки памяти не будет
       QObject::connect(task, &Task::responseReady, context, onResponseReady);

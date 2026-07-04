@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QRunnable>
 #include <functional>
+#include <vector>
 #include "command_types.h"
 
 class Task : public QObject, public QRunnable
@@ -12,9 +13,9 @@ signals:
   void responseReady(Response result);
 
 public:
-  Task(std::function<Response()> job);
+  Task(std::function<std::vector<Response>()> job);
   void run() override;
 
 private:
-  std::function<Response()> mJob;
+  std::function<std::vector<Response>()> mJob;
 };
