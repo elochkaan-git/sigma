@@ -13,7 +13,7 @@ Task::run()
 {
   // TODO: добавить отлов ошибок выполнения
   std::vector<Response> result = mJob();
-  for (const auto r : result) {
+  for (const auto& r : result) {
     emit responseReady(r);
   }
 }
