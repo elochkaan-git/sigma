@@ -13,5 +13,8 @@ struct overloaded : Ts...
 template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
-using Response = std::variant<RegisterUserResponse>;
-using Command = std::variant<RegisterUser>;
+using Response = std::variant<RegisterUserResponse,
+                              LoginUserResponse,
+                              NewMessageResponse,
+                              SendMessageResponse>;
+using Command = std::variant<NullCommand, RegisterUser, LoginUser, SendMessage>;
