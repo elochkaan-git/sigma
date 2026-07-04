@@ -11,9 +11,8 @@ create table if not exists msgs_query (
   id serial primary key,
   sender_id int not null,
   receiver_id int not null,
-  encrypted_content bytea not null,
-  sent timestamp not null,
-  delivered varchar(10) not null default 'sent',
+  content text not null,
+  sent_at timestamp not null,
   constraint fk_sender foreign key (sender_id) references users(id),
   constraint fk_receiver foreign key (receiver_id) references users(id),
   constraint chk_sender_receiver check (sender_id != receiver_id)
