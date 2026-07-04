@@ -6,7 +6,7 @@
 
 /**
  * @brief Класс-сервис для работы с репозиторием UserRepository в базе данных.
- * 
+ *
  * @see UserRepository
  */
 class UserService
@@ -14,14 +14,14 @@ class UserService
 public:
   /**
    * @brief Конструктор сервиса.
-   * 
+   *
    * @param repo указатель на UserRepository
    */
   UserService(UserRepository* repo);
   /**
-   * @brief Метод для регистрации пользователей. Принимает нехэшированный пароль и логин,
-   * возвращает статус выполнения операции
-   * 
+   * @brief Метод для регистрации пользователей. Принимает нехэшированный пароль
+   * и логин, возвращает статус выполнения операции
+   *
    * @param login логин пользователя
    * @param passwd нехэшированный пароль
    * @return OperationStatus статус операции
@@ -32,4 +32,13 @@ public:
 
 private:
   UserRepository* mRepo;
+};
+
+/**
+ * @brief Структура, хранящая в себе указатели не сервисы
+ *
+ */
+struct Services
+{
+  UserService* u_service;
 };
