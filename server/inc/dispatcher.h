@@ -1,17 +1,29 @@
 #pragma once
+#include "command_types.h"
+#include "services.h"
 #include <QThreadPool>
 #include <functional>
 #include <memory>
-#include "command_types.h"
-#include "services.h"
 
+/**
+ * @brief Класс-диспетчер, распределяющий задачи по потокам
+ *
+ */
 class Dispatcher
 {
 public:
-  Dispatcher(UserService* user_service);
-  void dispatch(const Command& cmd, QObject* context, std::function<void(Response)> onResponseReady);
+  /**
+   * @brief Конструктор класса Dispatcher
+   *
+   * @param services структура с указателями на сервисы
+   * @see Services
+   */
+  Dispatcher(Services services);
+  void dispatch(const Command& cmd,
+                QObject* context,
+                std::function<void(Response)> onResponseReady);
 
 private:
   std::unique_ptr<QThreadPool> mThreadPool;
-  UserService* mUserService;
+  Services mServices;
 };

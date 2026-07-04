@@ -1,13 +1,13 @@
 #pragma once
 #include "command_types.h"
 #include "dispatcher.h"
-#include <QObject>
-#include <QWebSocketServer>
-#include <QWebSocket>
-#include <QHash>
-#include <QUuid>
-#include <QByteArray>
 #include <QAbstractSocket>
+#include <QByteArray>
+#include <QHash>
+#include <QObject>
+#include <QUuid>
+#include <QWebSocket>
+#include <QWebSocketServer>
 
 class NetworkManager : public QObject
 {

@@ -11,10 +11,9 @@ Task::Task(std::function<std::vector<Response>()> job)
 void
 Task::run()
 {
-  //TODO: добавить отлов ошибок выполнения
+  // TODO: добавить отлов ошибок выполнения
   std::vector<Response> result = mJob();
   for (const auto r : result) {
     emit responseReady(r);
   }
 }
-

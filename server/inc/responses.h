@@ -1,6 +1,6 @@
 #pragma once
-#include <QUuid>
 #include "statuses.h"
+#include <QUuid>
 
 struct RegisterUserResponse
 {

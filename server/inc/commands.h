@@ -1,10 +1,10 @@
 #pragma once
-#include <QUuid>
 #include <QString>
+#include <QUuid>
 
 /**
  * @brief Команда регистрации пользователя
- * 
+ *
  */
 struct RegisterUser
 {

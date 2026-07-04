@@ -1,11 +1,13 @@
 #pragma once
+#include "command_types.h"
 #include <QObject>
 #include <QRunnable>
 #include <functional>
 #include <vector>
-#include "command_types.h"
 
-class Task : public QObject, public QRunnable
+class Task
+  : public QObject
+  , public QRunnable
 {
   Q_OBJECT
 
