@@ -1,7 +1,9 @@
 #pragma once
 #include "connection_manager.h"
-#include "statuses.h"
+#include "structures.h"
 #include <QString>
+#include <optional>
+#include <vector>
 
 /**
  * @brief Класс для непосредственной работы с таблицами в базе данных
@@ -28,6 +30,21 @@ public:
    * @see OperationStatus
    */
   OperationStatus registerUser(QString login, QString pwd_hash);
+  std::optional<UserCredentials> findUserByLogin(QString login);
+
+private:
+  ConnectionManager* mConnManager;
+};
+
+class MessageRepository
+{
+public:
+  MessageRepository(ConnectionManager* manager);
+  void saveToQueue(unsigned int sender_id,
+                   unsigned int receiver_id,
+                   QString content);
+  std::vector<Message> getQueuedMessages(unsigned int user_id);
+  void deleteFromQueue(unsigned int msg_id);
 
 private:
   ConnectionManager* mConnManager;
