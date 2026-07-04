@@ -1,5 +1,6 @@
 #pragma once
 #include "command_types.h"
+#include "registry.h"
 #include "services.h"
 #include <QThreadPool>
 #include <functional>
@@ -18,7 +19,7 @@ public:
    * @param services структура с указателями на сервисы
    * @see Services
    */
-  Dispatcher(Services services);
+  Dispatcher(Services services, OnlineUsersRegistry* registry);
   void dispatch(const Command& cmd,
                 QObject* context,
                 std::function<void(Response)> onResponseReady);
@@ -26,4 +27,5 @@ public:
 private:
   std::unique_ptr<QThreadPool> mThreadPool;
   Services mServices;
+  OnlineUsersRegistry* mRegistry;
 };

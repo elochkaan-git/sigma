@@ -1,15 +1,19 @@
 #include "dispatcher.h"
 #include "command_types.h"
+#include "commands.h"
+#include "responses.h"
 #include "services.h"
-#include "statuses.h"
+#include "structures.h"
 #include "task.h"
 #include <QObject>
 #include <QThreadPool>
 #include <memory>
+#include <optional>
 #include <vector>
 
-Dispatcher::Dispatcher(Services services)
+Dispatcher::Dispatcher(Services services, OnlineUsersRegistry* registry)
   : mServices(services)
+  , mRegistry(registry)
 {
   mThreadPool = std::make_unique<QThreadPool>();
 }
@@ -20,17 +24,64 @@ Dispatcher::dispatch(const Command& cmd,
                      std::function<void(Response)> onResponseReady)
 {
   std::visit(
-    overloaded{ [this, context, onResponseReady](const RegisterUser& cmd) {
-      auto job = [this, cmd]() -> std::vector<Response> {
-        OperationStatus status =
-          this->mServices.u_service->registerUser(cmd.login, cmd.pwd);
-        return std::vector<Response>{ RegisterUserResponse{ cmd.client_id,
-                                                            status } };
-      };
-      Task* task = new Task(std::move(
-        job)); // Владение передается QThreadPool, утечки памяти не будет
-      QObject::connect(task, &Task::responseReady, context, onResponseReady);
-      this->mThreadPool->start(task);
-    } },
+    overloaded{
+      [this, context, onResponseReady](const RegisterUser& cmd) {
+        auto job = [this, cmd]() -> std::vector<Response> {
+          OperationStatus status =
+            this->mServices.u_service->registerUser(cmd.login, cmd.pwd);
+          return std::vector<Response>{ RegisterUserResponse{ cmd.client_id,
+                                                              status } };
+        };
+        Task* task = new Task(std::move(
+          job)); // Владение передается QThreadPool, утечки памяти не будет
+        QObject::connect(task, &Task::responseReady, context, onResponseReady);
+        this->mThreadPool->start(task);
+      },
+      [this, context, onResponseReady](const LoginUser& cmd) {
+        auto job = [this, cmd]() -> std::vector<Response> {
+          std::optional<unsigned int> user_id =
+            mServices.u_service->loginUser(cmd.login, cmd.pwd);
+          if (user_id.has_value()) {
+            std::vector<Response> responses{ LoginUserResponse{
+              cmd.client_id, user_id.value(), OperationStatus::OK } };
+            responses.reserve(100);
+            for (const auto& m : this->mServices.msg_service->getQueuedMessages(
+                   user_id.value())) {
+              responses.push_back(
+                NewMessageResponse{ cmd.client_id, m.sender_id, m.content });
+              this->mServices.msg_service->deleteFromQueue(m.msg_id);
+            }
+            return responses;
+          } else {
+            return std::vector<Response>{ LoginUserResponse{
+              cmd.client_id, 0, OperationStatus::InvalidCredentials } };
+          }
+        };
+        Task* task = new Task(std::move(job));
+        QObject::connect(task, &Task::responseReady, context, onResponseReady);
+        this->mThreadPool->start(task);
+      },
+      [this, context, onResponseReady](const SendMessage& cmd) {
+        auto job = [this, cmd]() -> std::vector<Response> {
+          std::optional<QUuid> receiver_id =
+            this->mRegistry->getClientId(cmd.receiver_id);
+          if (receiver_id.has_value()) {
+            return std::vector<Response>{
+              SendMessageResponse{ cmd.client_id, OperationStatus::OK },
+              NewMessageResponse{
+                receiver_id.value(), cmd.sender_id, cmd.content }
+            };
+          } else {
+            mServices.msg_service->saveToQueue(
+              cmd.sender_id, cmd.receiver_id, cmd.content);
+            return std::vector<Response>{ SendMessageResponse{
+              cmd.client_id, OperationStatus::OK } };
+          }
+        };
+        Task* task = new Task(std::move(job));
+        QObject::connect(task, &Task::responseReady, context, onResponseReady);
+        this->mThreadPool->start(task);
+      },
+      [](const auto&) {} },
     cmd);
 }
