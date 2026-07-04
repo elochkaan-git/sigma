@@ -1,6 +1,7 @@
 #pragma once
 #include "command_types.h"
 #include "dispatcher.h"
+#include "registry.h"
 #include <QAbstractSocket>
 #include <QByteArray>
 #include <QHash>
@@ -14,7 +15,7 @@ class NetworkManager : public QObject
   Q_OBJECT
 
 public:
-  NetworkManager(Dispatcher* dispatcher);
+  NetworkManager(Dispatcher* dispatcher, OnlineUsersRegistry* registry);
   QByteArray serialize(const Response& response);
   Command deserialize(QUuid client_id, const QByteArray& message);
   void sendResponse(const Response& response);
@@ -27,7 +28,9 @@ public slots:
 
 private:
   Dispatcher* mDispatcher;
+  OnlineUsersRegistry* mRegistry;
   QWebSocketServer* mServer;
   QHash<QUuid, QWebSocket*> mConnections;
   QUuid getClientId(const Response& response);
+  void handleSideEffect(const Response& response);
 };
