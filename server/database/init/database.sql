@@ -7,7 +7,7 @@ create table if not exists users (
   last_seen timestamp default null
 );
 
-create table if not exists msgs_query (
+create table if not exists msgs_queue (
   id serial primary key,
   sender_id int not null,
   receiver_id int not null,
