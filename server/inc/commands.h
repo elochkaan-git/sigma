@@ -2,6 +2,11 @@
 #include <QString>
 #include <QUuid>
 
+/**
+ * @brief Нулевой объект для ошибок или остаточных путей в std::visit
+ *
+ * @see Dispatcher, NetworkManager
+ */
 struct NullCommand
 {};
 
@@ -16,6 +21,10 @@ struct RegisterUser
   QString pwd;
 };
 
+/**
+ * @brief Команда входа пользователя
+ *
+ */
 struct LoginUser
 {
   QUuid client_id;
@@ -23,6 +32,10 @@ struct LoginUser
   QString pwd;
 };
 
+/**
+ * @brief Команда отправки сообщения
+ *
+ */
 struct SendMessage
 {
   QUuid client_id;

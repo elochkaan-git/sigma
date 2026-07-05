@@ -65,7 +65,7 @@ UserRepository::findUserByLogin(QString login)
       query.lastError()
         .text()
         .toStdString()); // TODO: Replace throwing error on returning warning
-  } //FIXME: Возможна ошибка из-за отсутствия пользователя в системе
+  } // FIXME: Возможна ошибка из-за отсутствия пользователя в системе
 }
 
 MessageRepository::MessageRepository(ConnectionManager* manager)
@@ -81,7 +81,8 @@ MessageRepository::saveToQueue(unsigned int sender_id,
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
   bool status = query.prepare("insert into msgs_queue (sender_id, receiver_id, "
-                              "content, sent_at) values (:sender, :receiver, :content, current_timestamp)");
+                              "content, sent_at) values (:sender, :receiver, "
+                              ":content, current_timestamp)");
   if (!status) {
     throw std::runtime_error(
       query.lastError()
