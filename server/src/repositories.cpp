@@ -80,7 +80,7 @@ MessageRepository::saveToQueue(unsigned int sender_id,
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
-  bool status = query.prepare("insert into msgs_query (sender_id, receiver_id, "
+  bool status = query.prepare("insert into msgs_queue (sender_id, receiver_id, "
                               "content, sent_at) values (:sender, :receiver, :content, current_timestamp)");
   if (!status) {
     throw std::runtime_error(
@@ -106,7 +106,7 @@ MessageRepository::getQueuedMessages(unsigned int user_id)
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
   bool status =
-    query.prepare("select * from msgs_query where receiver_id = :user");
+    query.prepare("select * from msgs_queue where receiver_id = :user");
   if (!status) {
     throw std::runtime_error(
       query.lastError()
@@ -137,7 +137,7 @@ MessageRepository::deleteFromQueue(unsigned int msg_id)
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
-  bool status = query.prepare("delete from msgs_query where id = :id");
+  bool status = query.prepare("delete from msgs_queue where id = :id");
   if (!status) {
     throw std::runtime_error(
       query.lastError()
