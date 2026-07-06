@@ -14,6 +14,10 @@ enum class OperationStatus
   InvalidCredentials = 2
 };
 
+/**
+ * @brief Структура письма из очереди
+ * @see MessageRepository::getQueuedMessages
+ */
 struct Message
 {
   unsigned int msg_id;
@@ -21,6 +25,10 @@ struct Message
   QString content;
 };
 
+/**
+ * @brief Данные пользователя
+ * @see UserRepository::findUserByLogin
+ */
 struct UserCredentials
 {
   unsigned int user_id;

@@ -102,7 +102,7 @@ MessageRepository::saveToQueue(unsigned int sender_id,
 }
 
 std::vector<Message>
-MessageRepository::getQueuedMessages(unsigned int user_id)
+MessageRepository::getQueuedMessages(unsigned int receiver_id)
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
@@ -114,7 +114,7 @@ MessageRepository::getQueuedMessages(unsigned int user_id)
         .text()
         .toStdString()); // TODO: Replace throwing error on returning warning
   }
-  query.bindValue(":user", user_id);
+  query.bindValue(":user", receiver_id);
   status = query.exec();
   if (!status) {
     throw std::runtime_error(
