@@ -1,0 +1,8 @@
+#pragma once
+#include <QLoggingCategory>
+
+Q_DECLARE_LOGGING_CATEGORY(app)
+Q_DECLARE_LOGGING_CATEGORY(appNetwork)
+Q_DECLARE_LOGGING_CATEGORY(appDispatcher)
+Q_DECLARE_LOGGING_CATEGORY(appDatabase)
+Q_DECLARE_LOGGING_CATEGORY(appParser)
