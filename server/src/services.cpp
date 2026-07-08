@@ -29,21 +29,21 @@ UserService::registerUser(QString login, QString passwd)
   return mUserRepo->registerUser(login, pwd_hash);
 }
 
-std::optional<unsigned int>
+std::pair<OperationStatus, std::optional<unsigned int>>
 UserService::loginUser(QString login, QString passwd)
 {
-  std::optional<UserCredentials> user_info = mUserRepo->findUserByLogin(login);
-  if (!user_info.has_value()) {
-    return std::nullopt;
+  auto [status, user_info] = mUserRepo->findUserByLogin(login);
+  if (status == OperationStatus::UserNotExist) {
+    return {OperationStatus::UserNotExist, std::nullopt};
   } else {
     std::string pwd = passwd.toStdString();
     if (crypto_pwhash_str_verify(
           user_info.value().pwd_hash.toStdString().c_str(),
           pwd.c_str(),
           pwd.length()) != 0) {
-      return std::nullopt;
+      return {OperationStatus::InvalidCredentials, std::nullopt};
     }
-    return user_info.value().user_id;
+    return {OperationStatus::OK, user_info.value().user_id};
   }
 }
 
@@ -52,22 +52,22 @@ MessageService::MessageService(MessageRepository* repo)
 {
 }
 
-void
+OperationStatus
 MessageService::saveToQueue(unsigned int sender_id,
                             unsigned int receiver_id,
                             QString content)
 {
-  mMsgRepo->saveToQueue(sender_id, receiver_id, content);
+  return mMsgRepo->saveToQueue(sender_id, receiver_id, content);
 }
 
-std::vector<Message>
+std::pair<OperationStatus, std::optional<std::vector<Message>>>
 MessageService::getQueuedMessages(unsigned int user_id)
 {
   return mMsgRepo->getQueuedMessages(user_id);
 }
 
-void
+OperationStatus
 MessageService::deleteFromQueue(unsigned int msg_id)
 {
-  mMsgRepo->deleteFromQueue(msg_id);
+  return mMsgRepo->deleteFromQueue(msg_id);
 }

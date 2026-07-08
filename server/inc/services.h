@@ -30,7 +30,18 @@ public:
    * @see OperationStatus
    */
   OperationStatus registerUser(QString login, QString passwd);
-  std::optional<unsigned int> loginUser(QString login, QString passwd);
+  /**
+   * @brief Возвращает user_id пользователя при успешном входе в аккаунт, иначе
+   * 0 с соответствующим статусом выполнения
+   *
+   * @param login логин пользователя
+   * @param passwd пароль
+   * @return std::pair<OperationStatus, std::optional<unsigned int>> Статус
+   * операции и user_id пользователя
+   */
+  std::pair<OperationStatus, std::optional<unsigned int>> loginUser(
+    QString login,
+    QString passwd);
 
 private:
   UserRepository* mUserRepo;
@@ -50,28 +61,36 @@ public:
    */
   MessageService(MessageRepository* repo);
   /**
-   * @brief Сохраняет письмо в очередь
+   * @brief Сохраняет письмо в очереь
    *
    * @param sender_id ID пользователя-отправителя
    * @param receiver_id ID пользователя-получателя
-   * @param content контент письма
+   * @param content содержимое письма
+   * @return OperationStatus статус выполнения операции
+   * @see OperationStatus
    */
-  void saveToQueue(unsigned int sender_id,
+  OperationStatus saveToQueue(unsigned int sender_id,
                    unsigned int receiver_id,
                    QString content);
   /**
    * @brief Возвращает вектор писем, адресованных указанному пользователю
    *
    * @param receiver_id ID пользователя-получателя
-   * @return std::vector<Message> Вектор сообщений. Может быть пустым
+   * @return std::pair<OperationStatus, std::optional<std::vector<Message>>>
+   * Возвращает статус операции и вектор сообщений. Если сообщений в очереди
+   * нет, то возвращается std::nullopt
+   * @see OperationStatus, Message
    */
-  std::vector<Message> getQueuedMessages(unsigned int user_id);
+  std::pair<OperationStatus, std::optional<std::vector<Message>>>
+  getQueuedMessages(unsigned int receiver_id);
   /**
    * @brief Удаляет из очереди письмо с указанным ID
    *
    * @param msg_id ID письма
+   * @return OperationStatus статус выполнения операции
+   * @see OperationStatus
    */
-  void deleteFromQueue(unsigned int msg_id);
+  OperationStatus deleteFromQueue(unsigned int msg_id);
 
 private:
   MessageRepository* mMsgRepo;

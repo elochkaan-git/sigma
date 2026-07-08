@@ -3,6 +3,7 @@
 #include "structures.h"
 #include <QString>
 #include <optional>
+#include <utility>
 #include <vector>
 
 /**
@@ -30,7 +31,16 @@ public:
    * @see OperationStatus
    */
   OperationStatus registerUser(QString login, QString pwd_hash);
-  std::optional<UserCredentials> findUserByLogin(QString login);
+  /**
+   * @brief Возвращает данные пользователя, если он зарегестрирован в базе
+   * данных
+   *
+   * @param login логин пользователя
+   * @return std::pair<OperationStatus, std::optional<UserCredentials>> статус
+   * операции и данные пользователя, если есть, иначе std::nullopt
+   */
+  std::pair<OperationStatus, std::optional<UserCredentials>> findUserByLogin(
+    QString login);
 
 private:
   ConnectionManager* mConnManager;
@@ -56,23 +66,31 @@ public:
    * @param sender_id ID пользователя-отправителя
    * @param receiver_id ID пользователя-получателя
    * @param content содержимое письма
+   * @return OperationStatus статус выполнения операции
+   * @see OperationStatus
    */
-  void saveToQueue(unsigned int sender_id,
-                   unsigned int receiver_id,
-                   QString content);
+  OperationStatus saveToQueue(unsigned int sender_id,
+                              unsigned int receiver_id,
+                              QString content);
   /**
    * @brief Возвращает вектор писем, адресованных указанному пользователю
    *
    * @param receiver_id ID пользователя-получателя
-   * @return std::vector<Message> Вектор сообщений. Может быть пустым
+   * @return std::pair<OperationStatus, std::optional<std::vector<Message>>>
+   * Возвращает статус операции и вектор сообщений. Если сообщений в очереди
+   * нет, то возвращается std::nullopt
+   * @see OperationStatus, Message
    */
-  std::vector<Message> getQueuedMessages(unsigned int receiver_id);
+  std::pair<OperationStatus, std::optional<std::vector<Message>>>
+  getQueuedMessages(unsigned int receiver_id);
   /**
    * @brief Удаляет из очереди письмо с указанным ID
    *
    * @param msg_id ID письма
+   * @return OperationStatus статус выполнения операции
+   * @see OperationStatus
    */
-  void deleteFromQueue(unsigned int msg_id);
+  OperationStatus deleteFromQueue(unsigned int msg_id);
 
 private:
   ConnectionManager* mConnManager;

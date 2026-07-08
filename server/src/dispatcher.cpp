@@ -39,14 +39,14 @@ Dispatcher::dispatch(const Command& cmd,
       },
       [this, context, onResponseReady](const LoginUser& cmd) {
         auto job = [this, cmd]() -> std::vector<Response> {
-          std::optional<unsigned int> user_id =
+          auto [status, user_id] =
             mServices.u_service->loginUser(cmd.login, cmd.pwd);
           if (user_id.has_value()) {
             std::vector<Response> responses{ LoginUserResponse{
               cmd.client_id, user_id.value(), OperationStatus::OK } };
             responses.reserve(100);
-            for (const auto& m : this->mServices.msg_service->getQueuedMessages(
-                   user_id.value())) {
+            auto [status, msgs] = this->mServices.msg_service->getQueuedMessages(user_id.value());
+            for (const auto& m : msgs.value()) {
               responses.push_back(
                 NewMessageResponse{ cmd.client_id, m.sender_id, m.content });
               this->mServices.msg_service->deleteFromQueue(m.msg_id);
