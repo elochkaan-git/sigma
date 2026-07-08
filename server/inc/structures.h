@@ -11,7 +11,9 @@ enum class OperationStatus
   OK = 0,        /**< Все в порядке, операция завершилась без ошибок */
   UserExist = 1, /**< Если при регистрации попытаться указать уже
                    зарегистрированный логин */
-  InvalidCredentials = 2
+  UserNotExist = 2,
+  InvalidCredentials = 3,
+  InternalError = 255
 };
 
 /**
