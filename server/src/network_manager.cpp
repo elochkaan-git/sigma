@@ -13,8 +13,8 @@
 #include <QUuid>
 #include <QWebSocket>
 #include <QWebSocketServer>
+#include <QtTypes>
 #include <qlogging.h>
-#include <qtypes.h>
 #include <variant>
 
 NetworkManager::NetworkManager(Dispatcher* dispatcher,
