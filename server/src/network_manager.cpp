@@ -1,6 +1,7 @@
 #include "network_manager.h"
 #include "command_types.h"
 #include "commands.h"
+#include "logging.h"
 #include "registry.h"
 #include "responses.h"
 #include <QAbstractSocket>
@@ -29,6 +30,7 @@ NetworkManager::NetworkManager(Dispatcher* dispatcher,
                    this,
                    &NetworkManager::onNewConnection);
   mServer->listen(QHostAddress::Any, 5555);
+  qInfo(appNetwork) << "Server start listening";
 }
 
 QByteArray
@@ -129,6 +131,7 @@ NetworkManager::onNewConnection()
   QUuid newConnectionId = QUuid::createUuid();
   newConnection->setProperty("client_id", newConnectionId);
   mConnections[newConnectionId] = newConnection;
+  qInfo(appNetwork) << "New connection! ID: " << newConnectionId;
 }
 
 void
@@ -137,6 +140,7 @@ NetworkManager::onMessageReceived(const QString& message)
   const QByteArray data(message.toStdString());
   QUuid client_id =
     qobject_cast<QWebSocket*>(this->sender())->property("client_id").toUuid();
+  qInfo(appNetwork) << "New message from" << client_id;
   Command cmd = this->deserialize(client_id, data);
   mDispatcher->dispatch(cmd, this, [this](const Response& r) {
     this->handleSideEffect(r);
@@ -151,14 +155,14 @@ NetworkManager::onDisconnected()
   QWebSocket* sender = qobject_cast<QWebSocket*>(this->sender());
   mConnections.remove(sender->property("client_id").toUuid());
   mRegistry->removeUser(sender->property("user_id").toUInt());
+  qInfo(appNetwork) << sender->property("client_id").toUuid() << "disconnected";
   sender->deleteLater();
 }
 
 void
 NetworkManager::onErrorOccured(QAbstractSocket::SocketError error)
 {
-  // TODO: logging
-  return;
+  qWarning(appNetwork) << error;
 }
 
 QUuid

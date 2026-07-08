@@ -33,6 +33,7 @@ main(int argc, char* argv[])
 
     return app.exec();
   } catch (const std::runtime_error& error) {
+    qCritical(app) << error.what();
     exit(255);
   } catch (...) {
   };
