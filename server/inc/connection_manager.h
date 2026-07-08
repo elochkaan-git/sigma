@@ -48,4 +48,12 @@ private:
   /// из разных воркер-потоков параллельно.
   std::atomic<unsigned int> mThreadCounter{ 0 };
   DatabaseInfo mDatabase;
+  /**
+   * @brief Проверяет структуру DatabaseInfo на валидность
+   *
+   * @param db_info структура DatabaseInfo
+   * @return true если все в норме
+   * @return false иначе
+   */
+  bool checkDatabaseInfo(const DatabaseInfo& db_info);
 };
