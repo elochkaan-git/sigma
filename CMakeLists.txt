@@ -1,34 +1,42 @@
 cmake_minimum_required(VERSION 3.28)
-project(sigma LANGUAGES CXX)
+project(SigmaMessenger LANGUAGES CXX)
 
-# Add files and deps
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Generating package with version
-# execute_process(
-#   COMMAND git describe --abbrev=0 --tags
-#   OUTPUT_VARIABLE tag
-# )
+find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick)
 
-# string(LENGTH ${tag} tag_len)
-# math(EXPR new_tag_len "${tag_len} - 1")
-# string(SUBSTRING "${tag}" 0 ${new_tag_len} clear_tag)
-# string(REPLACE "." ";" list_tag "${clear_tag}")
-# list(GET list_tag 0 MAJOR_VERSION)
-# list(GET list_tag 1 MINOR_VERSION)
-# list(GET list_tag 2 PATCH_VERSION)
+qt_standard_project_setup(REQUIRES 6.8)
 
-# set(CPACK_PACKAGE_VERSION_MAJOR "${MAJOR_VERSION}")
-# set(CPACK_PACKAGE_VERSION_MINOR "${MINOR_VERSION}")
-# set(CPACK_PACKAGE_VERSION_PATCH "${PATCH_VERSION}")
-# set(CPACK_PACKAGE_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
-# set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
-# set(CPACK_PACKAGE_CONTACT elochkaan@gmail.com)
-# set(CPACK_PACKAGE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+set(ASSETS_FILES
+    "assets/logo.png"
+    "assets/mic.png"
+    "assets/video-camera.png"
+    "assets/arrow down.png"
+)
 
-# if (MSVC)
-#     set(CPACK_GENERATOR ZIP)
-# else ()
-#     set(CPACK_GENERATOR DEB)
-# endif()
+qt_add_executable(SigmaMessenger
+    main.cpp
+)
 
-# include(CPack)
+qt_add_qml_module(SigmaMessenger
+    URI Main
+    VERSION 1.0
+    RESOURCE_PREFIX "/"
+    QML_FILES 
+        qml/Server_choice.qml
+        qml/Login_server.qml
+        qml/Register_server.qml
+        qml/Style.qml
+        qml/ServerButton.qml
+        qml/Main.qml
+    RESOURCES ${ASSETS_FILES}
+
+)
+
+target_link_libraries(SigmaMessenger PRIVATE Qt6::Gui Qt6::Qml Qt6::Quick)
+
+install(TARGETS SigmaMessenger
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
