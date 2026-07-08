@@ -1,0 +1,32 @@
+services:
+  base:
+    build:
+      context: .
+      dockerfile: base.Dockerfile
+    image: base:latest
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: server:latest
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5555:5555"
+  db:
+    image: postgres:18-alpine
+    container_name: pg-minimal
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./server/database/init:/docker-entrypoint-initdb.d
