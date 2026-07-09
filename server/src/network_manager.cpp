@@ -64,6 +64,30 @@ NetworkManager::serialize(const Response& response)
                   o["content"] = r.content;
                   return o;
                 },
+                [](const SendFriendRequestResponse& r) {
+                  QJsonObject o;
+                  o["client_id"] = r.client_id.toString(QUuid::WithoutBraces);
+                  o["status"] = QJsonValue(static_cast<int>(r.status));
+                  return o;
+                },
+                [](const AcceptFriendRequestResponse& r) {
+                  QJsonObject o;
+                  o["client_id"] = r.client_id.toString(QUuid::WithoutBraces);
+                  o["status"] = QJsonValue(static_cast<int>(r.status));
+                  return o;
+                },
+                [](const RejectFriendRequestResponse& r) {
+                  QJsonObject o;
+                  o["client_id"] = r.client_id.toString(QUuid::WithoutBraces);
+                  o["status"] = QJsonValue(static_cast<int>(r.status));
+                  return o;
+                },
+                [](const DeleteFriendResponse& r) {
+                  QJsonObject o;
+                  o["client_id"] = r.client_id.toString(QUuid::WithoutBraces);
+                  o["status"] = QJsonValue(static_cast<int>(r.status));
+                  return o;
+                },
                 [](const auto&) { return QJsonObject{}; } },
     response);
 
@@ -90,6 +114,30 @@ NetworkManager::deserialize(QUuid client_id, const QByteArray& message)
     return LoginUser{ client_id,
                       obj["login"].toString(),
                       obj["pwd"].toString() };
+  } else if (obj["type"] == "friend_request") {
+    return SendFriendRequest{
+      client_id,
+      this->mConnections[client_id]->property("user_id").toUInt(),
+      static_cast<unsigned int>(obj["friend_id"].toInteger())
+    };
+  } else if (obj["type"] == "accept_friend_request") {
+    return AcceptFriendRequest{
+      client_id,
+      this->mConnections[client_id]->property("user_id").toUInt(),
+      static_cast<unsigned int>(obj["friend_id"].toInteger())
+    };
+  } else if (obj["type"] == "reject_friend_request") {
+    return RejectFriendRequest{
+      client_id,
+      this->mConnections[client_id]->property("user_id").toUInt(),
+      static_cast<unsigned int>(obj["friend_id"].toInteger())
+    };
+  } else if (obj["type"] == "delete_friend") {
+    return RemoveFriend{
+      client_id,
+      this->mConnections[client_id]->property("user_id").toUInt(),
+      static_cast<unsigned int>(obj["friend_id"].toInteger())
+    };
   } else if (obj["type"] == "message") {
     return SendMessage{
       client_id,

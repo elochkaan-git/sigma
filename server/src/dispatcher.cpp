@@ -7,7 +7,7 @@
 #include "task.h"
 #include <QObject>
 #include <QThreadPool>
-#include <algorithm>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -24,34 +24,32 @@ Dispatcher::dispatch(const Command& cmd,
                      QObject* context,
                      std::function<void(Response)> onResponseReady)
 {
-  std::visit(
+  std::function<std::vector<Response>()> job = std::visit(
     overloaded{
-      [this, context, onResponseReady](const RegisterUser& cmd) {
-        auto job = [this, cmd]() -> std::vector<Response> {
+      [this](
+        const RegisterUser& cmd) -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
           OperationStatus status =
             this->mServices.u_service->registerUser(cmd.login, cmd.pwd);
           return std::vector<Response>{ RegisterUserResponse{ cmd.client_id,
                                                               status } };
         };
-        Task* task = new Task(std::move(
-          job)); // Владение передается QThreadPool, утечки памяти не будет
-        QObject::connect(task, &Task::responseReady, context, onResponseReady);
-        this->mThreadPool->start(task);
       },
-      [this, context, onResponseReady](const LoginUser& cmd) {
-        auto job = [this, cmd]() -> std::vector<Response> {
+      [this](const LoginUser& cmd) -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
           auto [status, user_id] =
             mServices.u_service->loginUser(cmd.login, cmd.pwd);
           if (user_id.has_value()) {
             std::vector<Response> responses{ LoginUserResponse{
               cmd.client_id, user_id.value(), OperationStatus::OK } };
-            responses.reserve(100);
             auto [status, msgs] =
               this->mServices.msg_service->getQueuedMessages(user_id.value());
-            for (const auto& m : msgs.value()) {
-              responses.push_back(
-                NewMessageResponse{ cmd.client_id, m.sender_id, m.content });
-              this->mServices.msg_service->deleteFromQueue(m.msg_id);
+            if (msgs.has_value() && status == OperationStatus::OK) {
+              for (const auto& m : msgs.value()) {
+                responses.push_back(
+                  NewMessageResponse{ cmd.client_id, m.sender_id, m.content });
+                this->mServices.msg_service->deleteFromQueue(m.msg_id);
+              }
             }
             return responses;
           } else {
@@ -59,25 +57,14 @@ Dispatcher::dispatch(const Command& cmd,
               cmd.client_id, 0, OperationStatus::InvalidCredentials } };
           }
         };
-        Task* task = new Task(std::move(job));
-        QObject::connect(task, &Task::responseReady, context, onResponseReady);
-        this->mThreadPool->start(task);
       },
-      [this, context, onResponseReady](const SendMessage& cmd) {
-        auto job = [this, cmd]() -> std::vector<Response> {
-          const auto [status, ids] =
-            mServices.rel_service->getFriends(cmd.receiver_id);
-          if (status != OperationStatus::OK && !ids.has_value()) {
+      [this](const SendMessage& cmd) -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          OperationStatus status = this->mServices.rel_service->areFriends(
+            cmd.sender_id, cmd.receiver_id);
+          if (status != OperationStatus::OK) {
             return std::vector<Response>{ SendMessageResponse{ cmd.client_id,
                                                                status } };
-          }
-          if (std::find_if(ids.value().begin(),
-                           ids.value().end(),
-                           [cmd](const User& user) {
-                             return user.user_id == cmd.sender_id;
-                           }) == ids.value().end()) {
-            return std::vector<Response>{ SendMessageResponse{
-              cmd.client_id, OperationStatus::UserNotInFriends } };
           }
           std::optional<QUuid> receiver_id =
             this->mRegistry->getClientId(cmd.receiver_id);
@@ -88,16 +75,60 @@ Dispatcher::dispatch(const Command& cmd,
                 receiver_id.value(), cmd.sender_id, cmd.content }
             };
           } else {
-            mServices.msg_service->saveToQueue(
+            OperationStatus status = mServices.msg_service->saveToQueue(
               cmd.sender_id, cmd.receiver_id, cmd.content);
-            return std::vector<Response>{ SendMessageResponse{
-              cmd.client_id, OperationStatus::OK } };
+            return std::vector<Response>{ SendMessageResponse{ cmd.client_id,
+                                                               status } };
           }
         };
-        Task* task = new Task(std::move(job));
-        QObject::connect(task, &Task::responseReady, context, onResponseReady);
-        this->mThreadPool->start(task);
-      }, //TODO: сделать обработку команд, связанных с заявками в друзья
-      [](const auto&) {} },
+      },
+      [this](const SendFriendRequest& cmd)
+        -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          OperationStatus status =
+            this->mServices.rel_service->sendFriendRequest(cmd.user_id,
+                                                           cmd.friend_id);
+          return std::vector<Response>{ SendFriendRequestResponse{
+            cmd.client_id, status } };
+        };
+      },
+      [this](const AcceptFriendRequest& cmd)
+        -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          OperationStatus status =
+            this->mServices.rel_service->acceptFriendRequest(cmd.user_id,
+                                                             cmd.friend_id);
+          return std::vector<Response>{ AcceptFriendRequestResponse{
+            cmd.client_id, status } };
+        };
+      },
+      [this](const RejectFriendRequest& cmd)
+        -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          OperationStatus status =
+            this->mServices.rel_service->rejectFriendRequest(cmd.user_id,
+                                                             cmd.friend_id);
+          return std::vector<Response>{ RejectFriendRequestResponse{
+            cmd.client_id, status } };
+        };
+      },
+      [this](
+        const RemoveFriend& cmd) -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          OperationStatus status = this->mServices.rel_service->removeFriend(
+            cmd.user_id, cmd.friend_id);
+          return std::vector<Response>{ SendFriendRequestResponse{
+            cmd.client_id, status } };
+        };
+      },
+      [](const auto&) -> std::function<std::vector<Response>()> {
+        auto job = []() -> std::vector<Response> {
+          return std::vector<Response>{};
+        };
+        return job;
+      } },
     cmd);
+  Task* task = new Task(std::move(job));
+  QObject::connect(task, &Task::responseReady, context, onResponseReady);
+  this->mThreadPool->start(task);
 }
