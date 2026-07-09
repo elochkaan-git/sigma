@@ -91,11 +91,12 @@ NetworkManager::deserialize(QUuid client_id, const QByteArray& message)
                       obj["login"].toString(),
                       obj["pwd"].toString() };
   } else if (obj["type"] == "message") {
-    return SendMessage{ client_id,
-                        static_cast<unsigned int>(obj["sender_id"].toInteger()),
-                        static_cast<unsigned int>(
-                          obj["receiver_id"].toInteger()),
-                        obj["content"].toString() };
+    return SendMessage{
+      client_id,
+      this->mConnections[client_id]->property("user_id").toUInt(),
+      static_cast<unsigned int>(obj["receiver_id"].toInteger()),
+      obj["content"].toString()
+    };
   } else {
     return NullCommand{};
   }
