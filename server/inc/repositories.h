@@ -36,11 +36,12 @@ public:
    * данных
    *
    * @param login логин пользователя
-   * @return std::pair<OperationStatus, std::optional<UserCredentials>> статус
+   * @return std::pair<OperationStatus, std::optional<User>> статус
    * операции и данные пользователя, если есть, иначе std::nullopt
    */
-  std::pair<OperationStatus, std::optional<UserCredentials>> findUserByLogin(
-    QString login);
+  std::pair<OperationStatus, std::optional<User>> getUserByLogin(QString login);
+  std::pair<OperationStatus, std::optional<User>> getUserByID(
+    unsigned int user_id);
 
 private:
   ConnectionManager* mConnManager;
@@ -94,4 +95,27 @@ public:
 
 private:
   ConnectionManager* mConnManager;
+};
+
+class RelationRepository
+{
+public:
+  RelationRepository(ConnectionManager* manager);
+  OperationStatus sendFriendRequest(unsigned int user_id,
+                                    unsigned int friend_id);
+  OperationStatus acceptFriendRequest(unsigned int user_id,
+                                      unsigned int friend_id);
+  OperationStatus rejectFriendRequest(unsigned int user_id,
+                                      unsigned int friend_id);
+  OperationStatus removeFriend(unsigned int user_id, unsigned int friend_id);
+  std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
+  getFriends(unsigned int user_id);
+  std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
+  getFriendRequests(unsigned int user_id);
+  std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
+  getSentFriendRequests(unsigned int user_id);
+
+private:
+  ConnectionManager* mConnManager;
+  OperationStatus handleQueryErrors(QSqlQuery& query);
 };

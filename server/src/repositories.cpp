@@ -40,8 +40,8 @@ UserRepository::registerUser(QString login, QString pwd_hash)
   }
 }
 
-std::pair<OperationStatus, std::optional<UserCredentials>>
-UserRepository::findUserByLogin(QString login)
+std::pair<OperationStatus, std::optional<User>>
+UserRepository::getUserByLogin(QString login)
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
@@ -58,10 +58,37 @@ UserRepository::findUserByLogin(QString login)
     unsigned int user_id = query.value(0).toUInt();
     QString user_login = query.value(1).toString();
     QString user_pwd_hash = query.value(2).toString();
-    return { OperationStatus::OK,
-             UserCredentials{ user_id, user_login, user_pwd_hash } };
+    return { OperationStatus::OK, User{ user_id, user_login, user_pwd_hash } };
   } else if (status && !isValue) {
-    qWarning(appDatabase) << "No user with such login found";
+    qWarning(appDatabase) << "No user with login '" << login << "' found";
+    return { OperationStatus::UserNotExist, std::nullopt };
+  } else {
+    qCritical(appDatabase) << query.lastError().text();
+    return { OperationStatus::InternalError, std::nullopt };
+  }
+}
+
+std::pair<OperationStatus, std::optional<User>>
+UserRepository::getUserByID(unsigned int user_id)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  QSqlQuery query(connection);
+  bool status =
+    query.prepare("select id, login, passwd from users where id = :id");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    return { OperationStatus::InternalError, std::nullopt };
+  }
+  query.bindValue(":id", user_id);
+  status = query.exec();
+  bool isValue = query.next();
+  if (status && isValue) {
+    unsigned int user_id = query.value(0).toUInt();
+    QString user_login = query.value(1).toString();
+    QString user_pwd_hash = query.value(2).toString();
+    return { OperationStatus::OK, User{ user_id, user_login, user_pwd_hash } };
+  } else if (status && !isValue) {
+    qWarning(appDatabase) << "No user with id '" << user_id << "' found";
     return { OperationStatus::UserNotExist, std::nullopt };
   } else {
     qCritical(appDatabase) << query.lastError().text();
@@ -86,7 +113,7 @@ MessageRepository::saveToQueue(unsigned int sender_id,
                               ":content, current_timestamp)");
   if (!status) {
     qWarning(appDatabase) << query.lastError().text().toStdString();
-    // TODO: Replace throwing error on returning warning
+    return OperationStatus::InternalError;
   }
   query.bindValue(":sender", sender_id);
   query.bindValue(":receiver", receiver_id);
@@ -94,8 +121,9 @@ MessageRepository::saveToQueue(unsigned int sender_id,
   status = query.exec();
   if (!status) {
     qWarning(appDatabase) << query.lastError().text().toStdString();
-    // TODO: Replace throwing error on returning warning
+    return OperationStatus::InternalError;
   }
+  return OperationStatus::OK;
 }
 
 std::pair<OperationStatus, std::optional<std::vector<Message>>>
@@ -107,13 +135,13 @@ MessageRepository::getQueuedMessages(unsigned int receiver_id)
     query.prepare("select * from msgs_queue where receiver_id = :user");
   if (!status) {
     qWarning(appDatabase) << query.lastError().text().toStdString();
-    // TODO: Replace throwing error on returning warning
+    return { OperationStatus::InternalError, std::nullopt };
   }
   query.bindValue(":user", receiver_id);
   status = query.exec();
   if (!status) {
     qWarning(appDatabase) << query.lastError().text().toStdString();
-    // TODO: Replace throwing error on returning warning
+    return { OperationStatus::InternalError, std::nullopt };
   }
   std::vector<Message> msgs;
   msgs.reserve(100);
@@ -138,12 +166,315 @@ MessageRepository::deleteFromQueue(unsigned int msg_id)
   bool status = query.prepare("delete from msgs_queue where id = :id");
   if (!status) {
     qWarning(appDatabase) << query.lastError().text().toStdString();
-    // TODO: Replace throwing error on returning warning
+    return OperationStatus::InternalError;
   }
   query.bindValue(":id", msg_id);
   status = query.exec();
   if (!status) {
     qWarning(appDatabase) << query.lastError().text().toStdString();
-    // TODO: Replace throwing error on returning warning
+    return OperationStatus::InternalError;
+  }
+  return OperationStatus::OK;
+}
+
+RelationRepository::RelationRepository(ConnectionManager* manager)
+  : mConnManager(manager)
+{
+}
+
+OperationStatus
+RelationRepository::sendFriendRequest(unsigned int user_id,
+                                      unsigned int friend_id)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  bool status = connection.transaction();
+  if (!status) {
+    qWarning(appDatabase) << "Can't begin transaction. What:"
+                          << connection.lastError().text();
+    return OperationStatus::InternalError;
+  }
+  QSqlQuery query(connection);
+  status = query.prepare("insert into relations (user_id, friend_id, status) "
+                         "values (:user_id, :friend_id, 'sent')");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text().toStdString();
+    connection.rollback();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":user_id", user_id);
+  query.bindValue(":friend_id", friend_id);
+  OperationStatus error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    connection.rollback();
+    return error;
+  }
+
+  status = query.prepare("insert into relations (user_id, friend_id, status) "
+                         "values (:friend_id, :user_id, 'received')");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    connection.rollback();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":user_id", user_id);
+  query.bindValue(":friend_id", friend_id);
+  error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    connection.rollback();
+    return error;
+  }
+
+  connection.commit();
+  return OperationStatus::OK;
+}
+
+OperationStatus
+RelationRepository::acceptFriendRequest(unsigned int user_id,
+                                        unsigned int friend_id)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  bool status = connection.transaction();
+  if (!status) {
+    qWarning(appDatabase) << "Can't begin transaction. What:"
+                          << connection.lastError().text();
+    return OperationStatus::InternalError;
+  }
+  QSqlQuery query(connection);
+  status = query.prepare("update relations set status = 'friend' where user_id "
+                         "= :user_id and friend_id = :friend_id");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text().toStdString();
+    connection.rollback();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":user_id", user_id);
+  query.bindValue(":friend_id", friend_id);
+  OperationStatus error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    connection.rollback();
+    return error;
+  }
+
+  status = query.prepare("update relations set status = 'friend' where user_id "
+                         "= :friend_id and friend_id = :user_id");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    connection.rollback();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":user_id", user_id);
+  query.bindValue(":friend_id", friend_id);
+  error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    connection.rollback();
+    return error;
+  }
+
+  connection.commit();
+  return OperationStatus::OK;
+}
+
+OperationStatus
+RelationRepository::rejectFriendRequest(unsigned int user_id,
+                                        unsigned int friend_id)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  bool status = connection.transaction();
+  if (!status) {
+    qWarning(appDatabase) << "Can't begin transaction. What:"
+                          << connection.lastError().text();
+    return OperationStatus::InternalError;
+  }
+  QSqlQuery query(connection);
+  status = query.prepare("delete from relations where user_id = :user_id and "
+                         "friend_id = :friend_id and status = 'received'");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text().toStdString();
+    connection.rollback();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":user_id", user_id);
+  query.bindValue(":friend_id", friend_id);
+  OperationStatus error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    connection.rollback();
+    return error;
+  }
+
+  status = query.prepare("delete from relations where user_id = :friend_id and "
+                         "friend_id = :user_id and status = 'sent'");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    connection.rollback();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":user_id", user_id);
+  query.bindValue(":friend_id", friend_id);
+  error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    connection.rollback();
+    return error;
+  }
+
+  connection.commit();
+  return OperationStatus::OK;
+}
+
+OperationStatus
+RelationRepository::removeFriend(unsigned int user_id, unsigned int friend_id)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  bool status = connection.transaction();
+  if (!status) {
+    qWarning(appDatabase) << "Can't begin transaction. What:"
+                          << connection.lastError().text();
+    return OperationStatus::InternalError;
+  }
+  QSqlQuery query(connection);
+  status = query.prepare("delete from relations where user_id = :user_id and "
+                         "friend_id = :friend_id and status = 'friend'");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text().toStdString();
+    connection.rollback();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":user_id", user_id);
+  query.bindValue(":friend_id", friend_id);
+  OperationStatus error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    connection.rollback();
+    return error;
+  }
+
+  status = query.prepare("delete from relations where user_id = :friend_id and "
+                         "friend_id = :user_id and status = 'friend'");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    connection.rollback();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":user_id", user_id);
+  query.bindValue(":friend_id", friend_id);
+  error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    connection.rollback();
+    return error;
+  }
+
+  connection.commit();
+  return OperationStatus::OK;
+}
+
+std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
+RelationRepository::getFriends(unsigned int user_id)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  QSqlQuery query(connection);
+  bool status = query.prepare("select friend_id from relations where user_id = "
+                              ":user_id and status = 'friend'");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text().toStdString();
+    return { OperationStatus::InternalError, std::nullopt };
+  }
+  query.bindValue(":user_id", user_id);
+  OperationStatus error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    return { error, std::nullopt };
+  }
+
+  std::vector<unsigned int> friends;
+  friends.reserve(100);
+  while (query.next()) {
+    unsigned int friend_id = query.value(0).toUInt();
+    friends.push_back(friend_id);
+  }
+  if (!friends.size()) {
+    return { OperationStatus::OK, std::nullopt };
+  } else {
+    return { OperationStatus::OK, friends };
+  }
+}
+
+std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
+RelationRepository::getFriendRequests(unsigned int user_id)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  QSqlQuery query(connection);
+  bool status = query.prepare("select friend_id from relations where user_id = "
+                              ":user_id and status = 'received'");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text().toStdString();
+    return { OperationStatus::InternalError, std::nullopt };
+  }
+  query.bindValue(":user_id", user_id);
+  OperationStatus error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    return { error, std::nullopt };
+  }
+
+  std::vector<unsigned int> requests;
+  requests.reserve(100);
+  while (query.next()) {
+    unsigned int friend_id = query.value(0).toUInt();
+    requests.push_back(friend_id);
+  }
+  if (!requests.size()) {
+    return { OperationStatus::OK, std::nullopt };
+  } else {
+    return { OperationStatus::OK, requests };
+  }
+}
+
+std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
+RelationRepository::getSentFriendRequests(unsigned int user_id)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  QSqlQuery query(connection);
+  bool status = query.prepare("select friend_id from relations where user_id = "
+                              ":user_id and status = 'sent'");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text().toStdString();
+    return { OperationStatus::InternalError, std::nullopt };
+  }
+  query.bindValue(":user_id", user_id);
+  OperationStatus error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    return { error, std::nullopt };
+  }
+
+  std::vector<unsigned int> requests;
+  requests.reserve(100);
+  while (query.next()) {
+    unsigned int friend_id = query.value(0).toUInt();
+    requests.push_back(friend_id);
+  }
+  if (!requests.size()) {
+    return { OperationStatus::OK, std::nullopt };
+  } else {
+    return { OperationStatus::OK, requests };
+  }
+}
+
+OperationStatus
+RelationRepository::handleQueryErrors(QSqlQuery& query)
+{
+  bool status = query.exec();
+  if (status) {
+    return OperationStatus::OK;
+  } else if (query.lastError().nativeErrorCode() == "23503") {
+    qWarning(appDatabase) << "No such user";
+    return OperationStatus::UserNotExist;
+  } else if (query.lastError().nativeErrorCode() == "23505") {
+    qWarning(appDatabase) << "Relation already exists";
+    return OperationStatus::RelationAlreadyExist;
+  } else if (query.lastError().nativeErrorCode() == "23514") {
+    qWarning(appDatabase) << "You can't add yourself in friends, dummy";
+    return OperationStatus::RelationWithYourself;
+  } else if (!query.numRowsAffected()) {
+    qWarning(appDatabase) << "No rows to update/delete";
+    return OperationStatus::NoSuchRelation;
+  } else {
+    qCritical(appDatabase) << "Internal error:" << query.lastError().text();
+    return OperationStatus::InternalError;
   }
 }
