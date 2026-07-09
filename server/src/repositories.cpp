@@ -9,6 +9,7 @@
 #include <QtSql/QSqlQuery>
 #include <optional>
 #include <qlogging.h>
+#include <qsqldatabase.h>
 #include <vector>
 
 UserRepository::UserRepository(ConnectionManager* manager)
@@ -452,6 +453,30 @@ RelationRepository::getSentFriendRequests(unsigned int user_id)
     return { OperationStatus::OK, std::nullopt };
   } else {
     return { OperationStatus::OK, requests };
+  }
+}
+
+OperationStatus
+RelationRepository::areFriends(unsigned int user_id, unsigned int friend_id)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  QSqlQuery query(connection);
+  bool status = query.prepare("select 1 from relations where user_id = "
+                              ":user_id and friend_id = :friend_id");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text().toStdString();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":user_id", user_id);
+  query.bindValue(":friend_id", friend_id);
+  OperationStatus error = handleQueryErrors(query);
+  if (error != OperationStatus::OK) {
+    return error;
+  }
+  if (query.next()) {
+    return OperationStatus::OK;
+  } else {
+    return OperationStatus::UserNotInFriends;
   }
 }
 

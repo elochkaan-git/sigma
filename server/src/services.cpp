@@ -8,6 +8,7 @@
 #include <sodium.h>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 UserService::UserService(UserRepository* u_repo)
@@ -47,6 +48,12 @@ UserService::loginUser(QString login, QString passwd)
     }
     return { OperationStatus::OK, user_info.value().user_id };
   }
+}
+
+std::pair<OperationStatus, std::optional<User>>
+UserService::getUserByID(unsigned int user_id)
+{
+  return this->mUserRepo->getUserByID(user_id);
 }
 
 MessageService::MessageService(MessageRepository* repo)
@@ -168,4 +175,10 @@ RelationService::getSentFriendRequests(unsigned int user_id)
     sentRequests.push_back({ user.value().user_id, user.value().login, "" });
   }
   return { OperationStatus::OK, sentRequests };
+}
+
+OperationStatus
+RelationService::areFriends(unsigned int user_id, unsigned int friend_id)
+{
+  return this->mRelRepo->areFriends(user_id, friend_id);
 }

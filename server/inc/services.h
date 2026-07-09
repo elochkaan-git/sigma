@@ -42,6 +42,8 @@ public:
   std::pair<OperationStatus, std::optional<unsigned int>> loginUser(
     QString login,
     QString passwd);
+  std::pair<OperationStatus, std::optional<User>> getUserByID(
+    unsigned int user_id);
 
 private:
   UserRepository* mUserRepo;
@@ -113,6 +115,7 @@ public:
   getFriendRequests(unsigned int user_id);
   std::pair<OperationStatus, std::optional<std::vector<User>>>
   getSentFriendRequests(unsigned int user_id);
+  OperationStatus areFriends(unsigned int user_id, unsigned int friend_id);
 
 private:
   RelationRepository* mRelRepo;

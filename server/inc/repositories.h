@@ -114,6 +114,7 @@ public:
   getFriendRequests(unsigned int user_id);
   std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
   getSentFriendRequests(unsigned int user_id);
+  OperationStatus areFriends(unsigned int user_id, unsigned int friend_id);
 
 private:
   ConnectionManager* mConnManager;
