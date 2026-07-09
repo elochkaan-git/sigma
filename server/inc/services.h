@@ -70,8 +70,8 @@ public:
    * @see OperationStatus
    */
   OperationStatus saveToQueue(unsigned int sender_id,
-                   unsigned int receiver_id,
-                   QString content);
+                              unsigned int receiver_id,
+                              QString content);
   /**
    * @brief Возвращает вектор писем, адресованных указанному пользователю
    *
@@ -96,6 +96,29 @@ private:
   MessageRepository* mMsgRepo;
 };
 
+class RelationService
+{
+public:
+  RelationService(RelationRepository* rel_repo, UserRepository* u_repo);
+  OperationStatus sendFriendRequest(unsigned int user_id,
+                                    unsigned int friend_id);
+  OperationStatus acceptFriendRequest(unsigned int user_id,
+                                      unsigned int friend_id);
+  OperationStatus rejectFriendRequest(unsigned int user_id,
+                                      unsigned int friend_id);
+  OperationStatus removeFriend(unsigned int user_id, unsigned int friend_id);
+  std::pair<OperationStatus, std::optional<std::vector<User>>> getFriends(
+    unsigned int user_id);
+  std::pair<OperationStatus, std::optional<std::vector<User>>>
+  getFriendRequests(unsigned int user_id);
+  std::pair<OperationStatus, std::optional<std::vector<User>>>
+  getSentFriendRequests(unsigned int user_id);
+
+private:
+  RelationRepository* mRelRepo;
+  UserRepository* mUserRepo;
+};
+
 /**
  * @brief Структура, хранящая в себе указатели не сервисы
  *
@@ -104,4 +127,5 @@ struct Services
 {
   UserService* u_service;
   MessageService* msg_service;
+  RelationService* rel_service;
 };
