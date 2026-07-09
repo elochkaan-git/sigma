@@ -1,4 +1,5 @@
 #pragma once
+#include <QDateTime>
 #include <QString>
 
 /**
@@ -13,6 +14,10 @@ enum class OperationStatus
                    зарегистрированный логин */
   UserNotExist = 2,
   InvalidCredentials = 3,
+  RelationAlreadyExist = 4,
+  RelationWithYourself = 5,
+  NoSuchRelation = 6,
+  UserNotInFriends = 7,
   InternalError = 255
 };
 
@@ -29,9 +34,9 @@ struct Message
 
 /**
  * @brief Данные пользователя
- * @see UserRepository::findUserByLogin
+ * @see UserRepository::getUserByLogin
  */
-struct UserCredentials
+struct User
 {
   unsigned int user_id;
   QString login;
