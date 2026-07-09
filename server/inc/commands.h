@@ -43,3 +43,33 @@ struct SendMessage
   unsigned int receiver_id;
   QString content;
 };
+
+struct SendFriendRequest
+{
+  QUuid client_id;
+  unsigned int user_id;
+  unsigned int friend_id;
+};
+
+struct AcceptFriendRequest
+{
+  QUuid client_id;
+  unsigned int user_id;
+  unsigned int friend_id;
+};
+
+struct RejectFriendRequest
+{
+  QUuid client_id;
+  unsigned int user_id;
+  unsigned int friend_id;
+};
+
+struct RemoveFriend
+{
+  QUuid client_id;
+  unsigned int user_id;
+  unsigned int friend_id;
+};
+
+// TODO: сделать команды, связанные с заявками в друзья

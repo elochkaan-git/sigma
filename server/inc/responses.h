@@ -49,3 +49,27 @@ struct NewMessageResponse
   unsigned int sender_id;
   QString content;
 };
+
+struct SendFriendRequestResponse
+{
+  QUuid client_id;
+  OperationStatus status;
+};
+
+struct AcceptFriendRequestResponse
+{
+  QUuid client_id;
+  OperationStatus status;
+};
+
+struct RejectFriendRequestResponse
+{
+  QUuid client_id;
+  OperationStatus status;
+};
+
+struct DeleteFriendResponse
+{
+  QUuid client_id;
+  OperationStatus status;
+};

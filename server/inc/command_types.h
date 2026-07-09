@@ -16,5 +16,16 @@ overloaded(Ts...) -> overloaded<Ts...>;
 using Response = std::variant<RegisterUserResponse,
                               LoginUserResponse,
                               NewMessageResponse,
-                              SendMessageResponse>;
-using Command = std::variant<NullCommand, RegisterUser, LoginUser, SendMessage>;
+                              SendMessageResponse,
+                              SendFriendRequestResponse,
+                              AcceptFriendRequestResponse,
+                              RejectFriendRequestResponse,
+                              DeleteFriendResponse>;
+using Command = std::variant<NullCommand,
+                             RegisterUser,
+                             LoginUser,
+                             SendMessage,
+                             SendFriendRequest,
+                             AcceptFriendRequest,
+                             RejectFriendRequest,
+                             RemoveFriend>;
