@@ -7,6 +7,7 @@
 #include "task.h"
 #include <QObject>
 #include <QThreadPool>
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -45,7 +46,8 @@ Dispatcher::dispatch(const Command& cmd,
             std::vector<Response> responses{ LoginUserResponse{
               cmd.client_id, user_id.value(), OperationStatus::OK } };
             responses.reserve(100);
-            auto [status, msgs] = this->mServices.msg_service->getQueuedMessages(user_id.value());
+            auto [status, msgs] =
+              this->mServices.msg_service->getQueuedMessages(user_id.value());
             for (const auto& m : msgs.value()) {
               responses.push_back(
                 NewMessageResponse{ cmd.client_id, m.sender_id, m.content });
@@ -63,6 +65,20 @@ Dispatcher::dispatch(const Command& cmd,
       },
       [this, context, onResponseReady](const SendMessage& cmd) {
         auto job = [this, cmd]() -> std::vector<Response> {
+          const auto [status, ids] =
+            mServices.rel_service->getFriends(cmd.receiver_id);
+          if (status != OperationStatus::OK && !ids.has_value()) {
+            return std::vector<Response>{ SendMessageResponse{ cmd.client_id,
+                                                               status } };
+          }
+          if (std::find_if(ids.value().begin(),
+                           ids.value().end(),
+                           [cmd](const User& user) {
+                             return user.user_id == cmd.sender_id;
+                           }) == ids.value().end()) {
+            return std::vector<Response>{ SendMessageResponse{
+              cmd.client_id, OperationStatus::UserNotInFriends } };
+          }
           std::optional<QUuid> receiver_id =
             this->mRegistry->getClientId(cmd.receiver_id);
           if (receiver_id.has_value()) {
@@ -81,7 +97,7 @@ Dispatcher::dispatch(const Command& cmd,
         Task* task = new Task(std::move(job));
         QObject::connect(task, &Task::responseReady, context, onResponseReady);
         this->mThreadPool->start(task);
-      },
+      }, //TODO: сделать обработку команд, связанных с заявками в друзья
       [](const auto&) {} },
     cmd);
 }
