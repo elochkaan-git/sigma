@@ -1,6 +1,7 @@
 #pragma once
 #include "commands.h"
 #include "responses.h"
+#include "structures.h"
 #include <variant>
 
 // helper type for the visitor #4
@@ -20,8 +21,9 @@ using Response = std::variant<RegisterUserResponse,
                               SendFriendRequestResponse,
                               AcceptFriendRequestResponse,
                               RejectFriendRequestResponse,
-                              DeleteFriendResponse>;
-using Command = std::variant<NullCommand,
+                              RemoveFriendResponse,
+                              Error>;
+using Command = std::variant<Error,
                              RegisterUser,
                              LoginUser,
                              SendMessage,

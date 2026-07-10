@@ -3,14 +3,6 @@
 #include <QUuid>
 
 /**
- * @brief Нулевой объект для ошибок или остаточных путей в std::visit
- *
- * @see Dispatcher, NetworkManager
- */
-struct NullCommand
-{};
-
-/**
  * @brief Команда регистрации пользователя
  *
  */

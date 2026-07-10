@@ -1,6 +1,7 @@
 #pragma once
 #include <QDateTime>
 #include <QString>
+#include <quuid.h>
 
 /**
  * @brief Enum-класс статусов выполнения операций в репозиториях
@@ -41,4 +42,10 @@ struct User
   unsigned int user_id;
   QString login;
   QString pwd_hash;
+};
+
+struct Error
+{
+  QUuid client_id;
+  QString reason;
 };

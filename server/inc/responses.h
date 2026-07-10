@@ -68,7 +68,7 @@ struct RejectFriendRequestResponse
   OperationStatus status;
 };
 
-struct DeleteFriendResponse
+struct RemoveFriendResponse
 {
   QUuid client_id;
   OperationStatus status;
