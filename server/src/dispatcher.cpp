@@ -121,9 +121,9 @@ Dispatcher::dispatch(const Command& cmd,
             cmd.client_id, status } };
         };
       },
-      [](const auto&) -> std::function<std::vector<Response>()> {
-        auto job = []() -> std::vector<Response> {
-          return std::vector<Response>{};
+      [](const Error& cmd) -> std::function<std::vector<Response>()> {
+        auto job = [cmd]() -> std::vector<Response> {
+          return std::vector<Response>{ cmd };
         };
         return job;
       } },
