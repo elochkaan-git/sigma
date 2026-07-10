@@ -5,6 +5,7 @@
 #include "registry.h"
 #include "repositories.h"
 #include "services.h"
+#include "sodium/core.h"
 #include <QCoreApplication>
 #include <qlogging.h>
 #include <stdexcept>
@@ -17,8 +18,12 @@ main(int argc, char* argv[])
       "[%{time yyyy-MM-dd h:mm:ss.zzz}] [%{type}] [%{category}] "
       "%{message} (%{function})");
     qInfo(app) << "Startup server!";
-    QCoreApplication app(argc, argv);
-
+    QCoreApplication application(argc, argv);
+    
+    int status = sodium_init();
+    if (status) {
+      throw std::runtime_error("Can't init sodium library");
+    }
     ConnectionManager conn_manager({ getenv("DB_HOST"),
                                      getenv("DB_NAME"),
                                      getenv("DB_USER"),
@@ -26,12 +31,14 @@ main(int argc, char* argv[])
     OnlineUsersRegistry registry;
     UserRepository userRepo(&conn_manager);
     MessageRepository msgRepo(&conn_manager);
+    RelationRepository relRepo(&conn_manager);
     UserService userServive(&userRepo);
     MessageService msgService(&msgRepo);
-    Dispatcher dispatcher({ &userServive, &msgService }, &registry);
+    RelationService relService(&relRepo, &userRepo);
+    Dispatcher dispatcher({ &userServive, &msgService, &relService }, &registry);
     NetworkManager net_manager(&dispatcher, &registry);
 
-    return app.exec();
+    return application.exec();
   } catch (const std::runtime_error& error) {
     qCritical(app) << error.what();
     exit(255);
