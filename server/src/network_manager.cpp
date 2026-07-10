@@ -115,6 +115,7 @@ NetworkManager::serialize(const Response& response)
       } },
     response);
 
+  qInfo(appNetwork) << "Preparing" << obj["type"] << "command";
   return QJsonDocument(obj).toJson(QJsonDocument::Compact);
 }
 
@@ -138,6 +139,7 @@ NetworkManager::deserialize(QUuid client_id, const QByteArray& message)
 
   QString type = obj["type"].toString();
   QJsonObject payload = obj["payload"].toObject();
+  qInfo(appNetwork) << "New message from" << client_id << ", type:" << type;
 
   auto it = kCommandSpecs.find(type);
   if (it == kCommandSpecs.end()) {
@@ -169,6 +171,7 @@ NetworkManager::sendResponse(const Response& response)
   if (!mConnections.contains(id))
     return;
   QByteArray message = serialize(response);
+  qInfo(appNetwork) << "Sending response to" << id.toString();
   mConnections[id]->sendBinaryMessage(message);
 }
 
@@ -201,7 +204,6 @@ NetworkManager::onMessageReceived(const QString& message)
   const QByteArray data(message.toStdString());
   QUuid client_id =
     qobject_cast<QWebSocket*>(this->sender())->property("client_id").toUuid();
-  qInfo(appNetwork) << "New message from" << client_id;
   Command cmd = this->deserialize(client_id, data);
   mDispatcher->dispatch(cmd, this, [this](const Response& r) {
     this->handleSideEffect(r);
