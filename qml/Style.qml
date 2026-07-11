@@ -104,7 +104,7 @@ QtObject {
         TextField {
             id: control
             implicitWidth: 200
-            implicitHeight: 40
+            implicitHeight: 30
             color: root.colors.fg_default
             font: root.textStyles.messageText
             selectedTextColor: root.colors.fg_on_accent

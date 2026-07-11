@@ -3,8 +3,6 @@ import QtQuick.Controls
 
 Item {
     id: root
-    width: 640
-    height: 480
     
     property var style: Style{} // Подключаем стиль из Style.qml
     property var colors: style.colors // Подключаем палитру из Style.qml
@@ -83,6 +81,7 @@ Item {
 
         clearServerDialogFields()
     }
+    
     Rectangle {
         anchors.fill: parent
         color: colors.bg_canvas_default
