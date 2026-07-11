@@ -14,15 +14,15 @@ struct overloaded : Ts...
 template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
-using Response = std::variant<RegisterUserResponse,
+using Response = std::variant<Error,
+                              RegisterUserResponse,
                               LoginUserResponse,
                               NewMessageResponse,
                               SendMessageResponse,
                               SendFriendRequestResponse,
                               AcceptFriendRequestResponse,
                               RejectFriendRequestResponse,
-                              RemoveFriendResponse,
-                              Error>;
+                              RemoveFriendResponse>;
 using Command = std::variant<Error,
                              RegisterUser,
                              LoginUser,
