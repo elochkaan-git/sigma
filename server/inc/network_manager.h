@@ -10,8 +10,12 @@
 #include <QWebSocket>
 #include <QWebSocketServer>
 #include <functional>
+#include <qcontainerfwd.h>
+#include <qdatetime.h>
+#include <qhostaddress.h>
 #include <qjsonobject.h>
 #include <qjsonvalue.h>
+#include <qlist.h>
 
 struct FieldSpec
 {
@@ -26,6 +30,39 @@ struct CommandSpec
   std::function<
     Command(QUuid client_id, unsigned int user_id, const QJsonObject& payload)>
     build;
+};
+
+enum class ConnectionStatus
+{
+  COMMON = 0,
+  FLOOD = 1,
+  BAN = 2
+};
+
+enum class CommandType
+{
+  ERROR,
+  REGISTER,
+  LOGIN,
+  SEND_MESSAGE,
+  SEND_FRIEND_REQUEST,
+  ACCEPT_FRIEND_REQUEST,
+  REJECT_FRIEND_REQUEST,
+  REMOVE_FRIEND,
+  OVERSIZED
+};
+
+struct Record
+{
+  CommandType type;
+  QDateTime timestamp;
+};
+
+struct ConnectionState
+{
+  ConnectionStatus status;
+  QList<Record> last_cmds;
+  QDateTime timestamp;
 };
 
 /**
@@ -100,6 +137,8 @@ private:
   OnlineUsersRegistry* mRegistry;
   QWebSocketServer* mServer;
   QHash<QUuid, QWebSocket*> mConnections;
+  QHash<unsigned int, ConnectionState> mIDConstraints;
+  QHash<QHostAddress, ConnectionState> mIPConstraints;
   /**
    * @brief Возвращает QUuid пользователя из ответа
    *
@@ -108,6 +147,7 @@ private:
    * @see responses.h
    */
   QUuid getClientId(const Response& response);
+  CommandType getTypeOfCommand(const Command& cmd);
   /**
    * @brief Обрабатывает побочные эффекты ответов.
    *
