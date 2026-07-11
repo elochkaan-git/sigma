@@ -30,6 +30,7 @@ qt_add_qml_module(SigmaMessenger
         qml/Style.qml
         qml/ServerButton.qml
         qml/Main.qml
+        qml/General_window.qml
     RESOURCES ${ASSETS_FILES}
 
 )
