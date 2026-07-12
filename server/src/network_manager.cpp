@@ -70,7 +70,6 @@ NetworkManager::NetworkManager(Dispatcher* dispatcher,
 QByteArray
 NetworkManager::serialize(const Response& response)
 {
-  // TODO: обработка всех вариантов ответа (пока что временная заглушка)
   QJsonObject obj = std::visit(
     overloaded{
       [](const RegisterUserResponse& r) {
