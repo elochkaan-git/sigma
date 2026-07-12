@@ -1,3 +1,4 @@
+//TODO: привести в порядок include
 #pragma once
 #include "command_types.h"
 #include "dispatcher.h"
@@ -133,6 +134,7 @@ public slots:
   void onErrorOccured(QAbstractSocket::SocketError error);
 
 private:
+  //TODO: отделять приватные поля от методов отдельными приватными блоками
   Dispatcher* mDispatcher;
   OnlineUsersRegistry* mRegistry;
   QWebSocketServer* mServer;
