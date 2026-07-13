@@ -1,5 +1,7 @@
 #include "task.h"
+
 #include "command_types.h"
+
 #include <functional>
 #include <vector>
 

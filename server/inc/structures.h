@@ -1,7 +1,7 @@
 #pragma once
 #include <QDateTime>
 #include <QString>
-#include <quuid.h>
+#include <QUuid>
 
 /**
  * @brief Enum-класс статусов выполнения операций в репозиториях

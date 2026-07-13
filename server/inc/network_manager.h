@@ -1,22 +1,25 @@
-//TODO: привести в порядок include
+// TODO: привести в порядок include
 #pragma once
 #include "command_types.h"
 #include "dispatcher.h"
 #include "registry.h"
+
 #include <QAbstractSocket>
 #include <QByteArray>
+#include <QDateTime>
 #include <QHash>
+#include <QHostAddress>
+#include <QJsonObject>
+#include <QJsonValue>
+#include <QList>
 #include <QObject>
+#include <QString>
 #include <QUuid>
 #include <QWebSocket>
 #include <QWebSocketServer>
+
 #include <functional>
-#include <qcontainerfwd.h>
-#include <qdatetime.h>
-#include <qhostaddress.h>
-#include <qjsonobject.h>
-#include <qjsonvalue.h>
-#include <qlist.h>
+
 
 struct FieldSpec
 {
@@ -134,13 +137,14 @@ public slots:
   void onErrorOccured(QAbstractSocket::SocketError error);
 
 private:
-  //TODO: отделять приватные поля от методов отдельными приватными блоками
   Dispatcher* mDispatcher;
   OnlineUsersRegistry* mRegistry;
   QWebSocketServer* mServer;
   QHash<QUuid, QWebSocket*> mConnections;
   QHash<unsigned int, ConnectionState> mIDConstraints;
   QHash<QHostAddress, ConnectionState> mIPConstraints;
+
+private:
   /**
    * @brief Возвращает QUuid пользователя из ответа
    *

@@ -1,11 +1,14 @@
 #include "connection_manager.h"
+
 #include "logging.h"
+
+#include <QObject>
 #include <QThread>
+#include <QtLogging>
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlError>
+
 #include <cstdlib>
-#include <qlogging.h>
-#include <qobject.h>
 #include <stdexcept>
 #include <string>
 

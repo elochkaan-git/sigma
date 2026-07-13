@@ -5,9 +5,11 @@
 #include "registry.h"
 #include "repositories.h"
 #include "services.h"
-#include "sodium/core.h"
+
 #include <QCoreApplication>
-#include <qlogging.h>
+#include <QtLogging>
+#include <sodium.h>
+
 #include <stdexcept>
 
 int
@@ -19,7 +21,7 @@ main(int argc, char* argv[])
       "%{message} (%{function})");
     qInfo(app) << "Startup server!";
     QCoreApplication application(argc, argv);
-    
+
     int status = sodium_init();
     if (status) {
       throw std::runtime_error("Can't init sodium library");
@@ -35,7 +37,8 @@ main(int argc, char* argv[])
     UserService userServive(&userRepo);
     MessageService msgService(&msgRepo);
     RelationService relService(&relRepo, &userRepo);
-    Dispatcher dispatcher({ &userServive, &msgService, &relService }, &registry);
+    Dispatcher dispatcher({ &userServive, &msgService, &relService },
+                          &registry);
     NetworkManager net_manager(&dispatcher, &registry);
 
     return application.exec();

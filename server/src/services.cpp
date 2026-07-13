@@ -1,11 +1,13 @@
 #include "services.h"
+
 #include "logging.h"
 #include "repositories.h"
-#include "sodium/crypto_pwhash.h"
 #include "structures.h"
+
 #include <QString>
-#include <optional>
 #include <sodium.h>
+
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>

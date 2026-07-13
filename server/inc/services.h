@@ -1,8 +1,10 @@
 #pragma once
 #include "repositories.h"
 #include "structures.h"
+
 #include <QObject>
 #include <QString>
+
 #include <optional>
 
 /**

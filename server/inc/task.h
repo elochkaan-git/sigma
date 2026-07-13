@@ -1,7 +1,9 @@
 #pragma once
 #include "command_types.h"
+
 #include <QObject>
 #include <QRunnable>
+
 #include <functional>
 #include <vector>
 

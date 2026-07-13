@@ -1,12 +1,15 @@
 #include "dispatcher.h"
+
 #include "command_types.h"
 #include "commands.h"
 #include "responses.h"
 #include "services.h"
 #include "structures.h"
 #include "task.h"
+
 #include <QObject>
 #include <QThreadPool>
+
 #include <functional>
 #include <memory>
 #include <optional>

@@ -2,7 +2,9 @@
 #include "command_types.h"
 #include "registry.h"
 #include "services.h"
+
 #include <QThreadPool>
+
 #include <functional>
 #include <memory>
 

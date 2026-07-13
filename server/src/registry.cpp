@@ -1,7 +1,9 @@
 #include "registry.h"
+
 #include <QReadLocker>
 #include <QUuid>
 #include <QWriteLocker>
+
 #include <optional>
 
 void

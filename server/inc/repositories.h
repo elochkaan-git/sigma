@@ -1,7 +1,9 @@
 #pragma once
 #include "connection_manager.h"
 #include "structures.h"
+
 #include <QString>
+
 #include <optional>
 #include <utility>
 #include <vector>

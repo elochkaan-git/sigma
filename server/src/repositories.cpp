@@ -1,15 +1,16 @@
 // TODO: пересмотреть ошибки
 #include "repositories.h"
+
 #include "connection_manager.h"
 #include "logging.h"
 #include "structures.h"
+
 #include <QtLogging>
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlError>
 #include <QtSql/QSqlQuery>
+
 #include <optional>
-#include <qlogging.h>
-#include <qsqldatabase.h>
 #include <vector>
 
 UserRepository::UserRepository(ConnectionManager* manager)

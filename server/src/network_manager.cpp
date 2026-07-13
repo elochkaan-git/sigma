@@ -1,32 +1,32 @@
 #include "network_manager.h"
+
 #include "command_types.h"
 #include "commands.h"
 #include "logging.h"
 #include "registry.h"
 #include "responses.h"
 #include "structures.h"
+
 #include <QAbstractSocket>
 #include <QByteArray>
+#include <QDateTime>
 #include <QHostAddress>
+#include <QIterable>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QObject>
 #include <QUuid>
+#include <QVariant>
 #include <QWebSocket>
 #include <QWebSocketServer>
+#include <QtLogging>
 #include <QtTypes>
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <optional>
-#include <qdatetime.h>
-#include <qhostaddress.h>
-#include <qiterable.h>
-#include <qjsonvalue.h>
-#include <qlogging.h>
-#include <qtypes.h>
-#include <qvariant.h>
 #include <variant>
 
 QJsonObject
@@ -304,8 +304,8 @@ NetworkManager::onMessageReceived(const QString& message)
                              [](const Record& r) {
                                return r.type == CommandType::OVERSIZED;
                              }) > 4) {
-      cmd = Error{ client_id,
-                   QString("Too many big messages. Now you in ban") };
+      cmd =
+        Error{ client_id, QString("Too many big messages. Now you in ban") };
       state.last_cmds.clear();
       state.status = ConnectionStatus::BAN;
       state.timestamp = now;

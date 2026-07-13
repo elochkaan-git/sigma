@@ -1,4 +1,5 @@
 #include "logging.h"
+
 #include <QLoggingCategory>
 
 Q_LOGGING_CATEGORY(app, "app")
