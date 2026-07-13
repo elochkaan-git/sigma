@@ -64,4 +64,12 @@ struct RemoveFriend
   unsigned int friend_id;
 };
 
-//TODO: сделать команды для получения списка друзей и списка заявок
+struct GetFriends
+{
+  QUuid client_id;
+};
+
+struct GetFriendRequests
+{
+  QUuid client_id;
+};
