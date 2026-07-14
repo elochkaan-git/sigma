@@ -1,6 +1,5 @@
 #include "services.h"
 
-#include "logging.h"
 #include "repositories.h"
 #include "structures.h"
 
@@ -117,22 +116,16 @@ RelationService::removeFriend(unsigned int user_id, unsigned int friend_id)
 }
 
 std::pair<OperationStatus, std::optional<std::vector<User>>>
-RelationService::getFriends(unsigned int user_id)
+RelationService::getFriendsID(unsigned int user_id)
 {
-  const auto [status, ids] = this->mRelRepo->getFriends(user_id);
-  if (status != OperationStatus::OK || !ids.has_value()) {
-    return { status, std::nullopt };
+  const auto [status_rel, ids] = this->mRelRepo->getFriendsID(user_id);
+  if (status_rel != OperationStatus::OK || !ids.has_value()) {
+    return { status_rel, std::nullopt };
   }
-  std::vector<User> friends;
-  friends.reserve(ids.value().size());
-  for (const auto& id : ids.value()) {
-    // TODO: добавить метод получения списка пользователей, а не по одному
-    const auto [user_status, user] = mUserRepo->getUserByID(id);
-    if (user_status != OperationStatus::OK || !user.has_value()) {
-      qWarning(appService) << "Friend id" << id << "not found, skipping";
-      continue;
-    }
-    friends.push_back({ user.value().user_id, user.value().login, "" });
+  const auto [status_users, friends] =
+    this->mUserRepo->getUsersById(ids.value());
+  if (status_users != OperationStatus::OK || !friends.has_value()) {
+    return { status_users, std::nullopt };
   }
   return { OperationStatus::OK, friends };
 }
@@ -140,20 +133,14 @@ RelationService::getFriends(unsigned int user_id)
 std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getFriendRequests(unsigned int user_id)
 {
-  const auto [status, ids] = this->mRelRepo->getFriendRequests(user_id);
-  if (status != OperationStatus::OK || !ids.has_value()) {
-    return { status, std::nullopt };
+  const auto [status_rel, ids] = this->mRelRepo->getFriendsID(user_id);
+  if (status_rel != OperationStatus::OK || !ids.has_value()) {
+    return { status_rel, std::nullopt };
   }
-  std::vector<User> requests;
-  requests.reserve(ids.value().size());
-  for (const auto& id : ids.value()) {
-    // TODO: добавить метод получения списка пользователей, а не по одному
-    const auto [user_status, user] = mUserRepo->getUserByID(id);
-    if (user_status != OperationStatus::OK || !user.has_value()) {
-      qWarning(appService) << "Friend id" << id << "not found, skipping";
-      continue;
-    }
-    requests.push_back({ user.value().user_id, user.value().login, "" });
+  const auto [status_users, requests] =
+    this->mUserRepo->getUsersById(ids.value());
+  if (status_users != OperationStatus::OK || !requests.has_value()) {
+    return { status_users, std::nullopt };
   }
   return { OperationStatus::OK, requests };
 }
@@ -161,20 +148,14 @@ RelationService::getFriendRequests(unsigned int user_id)
 std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getSentFriendRequests(unsigned int user_id)
 {
-  const auto [status, ids] = this->mRelRepo->getSentFriendRequests(user_id);
-  if (status != OperationStatus::OK || !ids.has_value()) {
-    return { status, std::nullopt };
+  const auto [status_rel, ids] = this->mRelRepo->getFriendsID(user_id);
+  if (status_rel != OperationStatus::OK || !ids.has_value()) {
+    return { status_rel, std::nullopt };
   }
-  std::vector<User> sentRequests;
-  sentRequests.reserve(ids.value().size());
-  for (const auto& id : ids.value()) {
-    // TODO: добавить метод получения списка пользователей, а не по одному
-    const auto [user_status, user] = mUserRepo->getUserByID(id);
-    if (user_status != OperationStatus::OK || !user.has_value()) {
-      qWarning(appService) << "Friend id" << id << "not found, skipping";
-      continue;
-    }
-    sentRequests.push_back({ user.value().user_id, user.value().login, "" });
+  const auto [status_users, sentRequests] =
+    this->mUserRepo->getUsersById(ids.value());
+  if (status_users != OperationStatus::OK || !sentRequests.has_value()) {
+    return { status_users, std::nullopt };
   }
   return { OperationStatus::OK, sentRequests };
 }
