@@ -32,7 +32,7 @@ public:
    * @return OperationStatus статус выполнения операции
    * @see OperationStatus
    */
-  OperationStatus registerUser(QString login, QString pwd_hash);
+  OperationStatus registerUser(const QString& login, const QString& pwd_hash);
   /**
    * @brief Возвращает данные пользователя, если он зарегестрирован в базе
    * данных
@@ -41,9 +41,12 @@ public:
    * @return std::pair<OperationStatus, std::optional<User>> статус
    * операции и данные пользователя, если есть, иначе std::nullopt
    */
-  std::pair<OperationStatus, std::optional<User>> getUserByLogin(QString login);
+  std::pair<OperationStatus, std::optional<User>> getUserByLogin(
+    const QString& login);
   std::pair<OperationStatus, std::optional<User>> getUserByID(
     unsigned int user_id);
+  std::pair<OperationStatus, std::optional<std::vector<User>>> getUsersById(
+    const std::vector<unsigned int>& ids);
 
 private:
   ConnectionManager* mConnManager;
@@ -74,7 +77,7 @@ public:
    */
   OperationStatus saveToQueue(unsigned int sender_id,
                               unsigned int receiver_id,
-                              QString content);
+                              const QString& content);
   /**
    * @brief Возвращает вектор писем, адресованных указанному пользователю
    *
@@ -111,7 +114,7 @@ public:
                                       unsigned int friend_id);
   OperationStatus removeFriend(unsigned int user_id, unsigned int friend_id);
   std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
-  getFriends(unsigned int user_id);
+  getFriendsID(unsigned int user_id);
   std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
   getFriendRequests(unsigned int user_id);
   std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
@@ -120,5 +123,7 @@ public:
 
 private:
   ConnectionManager* mConnManager;
+
+private:
   OperationStatus handleQueryErrors(QSqlQuery& query);
 };

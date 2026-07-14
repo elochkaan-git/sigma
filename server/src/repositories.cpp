@@ -1,4 +1,3 @@
-// TODO: пересмотреть ошибки
 #include "repositories.h"
 
 #include "connection_manager.h"
@@ -10,7 +9,10 @@
 #include <QtSql/QSqlError>
 #include <QtSql/QSqlQuery>
 
+#include <cstddef>
 #include <optional>
+#include <qhashfunctions.h>
+#include <qlogging.h>
 #include <vector>
 
 UserRepository::UserRepository(ConnectionManager* manager)
@@ -19,7 +21,7 @@ UserRepository::UserRepository(ConnectionManager* manager)
 }
 
 OperationStatus
-UserRepository::registerUser(QString login, QString pwd_hash)
+UserRepository::registerUser(const QString& login, const QString& pwd_hash)
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
@@ -31,6 +33,7 @@ UserRepository::registerUser(QString login, QString pwd_hash)
   }
   query.bindValue(":login", login);
   query.bindValue(":pwd", pwd_hash);
+
   status = query.exec();
   if (status) {
     return OperationStatus::OK;
@@ -43,7 +46,7 @@ UserRepository::registerUser(QString login, QString pwd_hash)
 }
 
 std::pair<OperationStatus, std::optional<User>>
-UserRepository::getUserByLogin(QString login)
+UserRepository::getUserByLogin(const QString& login)
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
@@ -98,6 +101,50 @@ UserRepository::getUserByID(unsigned int user_id)
   }
 }
 
+std::pair<OperationStatus, std::optional<std::vector<User>>>
+UserRepository::getUsersById(const std::vector<unsigned int>& ids)
+{
+  if (ids.empty()) {
+    qWarning(appDatabase) << "Empty vector of ids";
+    return { OperationStatus::UserNotExist, std::nullopt };
+  }
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  QSqlQuery query(connection);
+  QString placeholders = "(";
+  for (size_t i = 0; i < ids.size() - 1; ++i) {
+    placeholders += QString(":id%1,").arg(i);
+  }
+  placeholders += QString(":id%1)").arg(ids.size() - 1);
+
+  bool status = query.prepare(
+    "select id, login, passwd from users where id in " + placeholders);
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    return { OperationStatus::InternalError, std::nullopt };
+  }
+  for (size_t i = 0; i < ids.size(); ++i) {
+    query.bindValue(QString(":id%1").arg(i), ids.at(i));
+  }
+  status = query.exec();
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    return { OperationStatus::InternalError, std::nullopt };
+  }
+  std::vector<User> users;
+  users.reserve(ids.size());
+  while (query.next()) {
+    unsigned int user_id = query.value(0).toUInt();
+    QString user_login = query.value(1).toString();
+    QString user_pwd_hash = query.value(2).toString();
+    users.push_back(User{ user_id, user_login, user_pwd_hash });
+  }
+  if (users.empty()) {
+    qWarning(appDatabase) << "No such users, sorry";
+    return { OperationStatus::OK, std::nullopt };
+  }
+  return { OperationStatus::OK, users };
+}
+
 MessageRepository::MessageRepository(ConnectionManager* manager)
   : mConnManager(manager)
 {
@@ -106,7 +153,7 @@ MessageRepository::MessageRepository(ConnectionManager* manager)
 OperationStatus
 MessageRepository::saveToQueue(unsigned int sender_id,
                                unsigned int receiver_id,
-                               QString content)
+                               const QString& content)
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
@@ -368,7 +415,7 @@ RelationRepository::removeFriend(unsigned int user_id, unsigned int friend_id)
 }
 
 std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
-RelationRepository::getFriends(unsigned int user_id)
+RelationRepository::getFriendsID(unsigned int user_id)
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
@@ -488,10 +535,10 @@ RelationRepository::handleQueryErrors(QSqlQuery& query)
   if (status) {
     return OperationStatus::OK;
   } else if (query.lastError().nativeErrorCode() == "23503") {
-    qWarning(appDatabase) << "No such user";
+    qWarning(appDatabase) << "Foreign key violation";
     return OperationStatus::UserNotExist;
   } else if (query.lastError().nativeErrorCode() == "23505") {
-    qWarning(appDatabase) << "Relation already exists";
+    qWarning(appDatabase) << "Unique violation";
     return OperationStatus::RelationAlreadyExist;
   } else if (query.lastError().nativeErrorCode() == "23514") {
     qWarning(appDatabase) << "You can't add yourself in friends, dummy";
