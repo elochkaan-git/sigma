@@ -1,5 +1,6 @@
 #pragma once
 #include "command_types.h"
+#include "commands.h"
 #include "dispatcher.h"
 #include "registry.h"
 
@@ -12,13 +13,15 @@
 #include <QJsonValue>
 #include <QList>
 #include <QObject>
+#include <QSettings>
 #include <QString>
 #include <QUuid>
+#include <QVariant>
 #include <QWebSocket>
 #include <QWebSocketServer>
+#include <QtTypes>
 
 #include <functional>
-
 
 struct FieldSpec
 {
@@ -86,7 +89,9 @@ public:
    * @param dispatcher указатель на объект класса Dispatcher
    * @param registry указатель на объект класса OnlineUsersRegistry
    */
-  NetworkManager(Dispatcher* dispatcher, OnlineUsersRegistry* registry);
+  NetworkManager(Dispatcher* dispatcher,
+                 OnlineUsersRegistry* registry,
+                 const QString& iniPath);
   /**
    * @brief Сериализует Response в Json
    *
@@ -105,7 +110,7 @@ public:
    * @see Dispatcher
    * @see commands.h
    */
-  Command deserialize(QUuid client_id, const QByteArray& message);
+  Command deserialize(const QUuid& client_id, const QByteArray& message);
   /**
    * @brief Отправляет сообщение сокету с ID, указанному в Response. Если
    * пользователь не в сети, то ничего не отправляется
@@ -142,6 +147,16 @@ private:
   QHash<QUuid, QWebSocket*> mConnections;
   QHash<unsigned int, ConnectionState> mIDConstraints;
   QHash<QHostAddress, ConnectionState> mIPConstraints;
+  QSettings mSettings;
+  struct NetworkConfig
+  {
+    QHostAddress host;
+    quint64 max_msg_size;
+    quint32 port;
+    quint32 flood_limit;
+    quint32 ban_limit;
+    bool trust_proxy_header;
+  } mConfig;
 
 private:
   /**
@@ -163,6 +178,7 @@ private:
    * @see responses.h
    */
   void handleSideEffect(const Response& response);
+  QVariant checkAndGetValue(const QString& key, const QVariant& defaultValue);
 };
 
 static const auto isString = [](const QJsonValue& v) { return v.isString(); };

@@ -16,6 +16,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QObject>
+#include <QSettings>
 #include <QUuid>
 #include <QVariant>
 #include <QWebSocket>
@@ -23,7 +24,6 @@
 #include <QtLogging>
 #include <QtTypes>
 
-#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <optional>
@@ -52,18 +52,60 @@ validate(const QJsonObject& obj, const std::vector<FieldSpec>& fields)
   return std::nullopt;
 }
 
+QString
+formatBytes(qint64 bytes)
+{
+  const QStringList units = { "bytes", "KB", "MB", "GB", "TB" };
+  double value = bytes;
+  int unitIndex = 0;
+
+  while (value >= 5 * 1024 && unitIndex < units.size() - 1) {
+    value /= 1024.0;
+    ++unitIndex;
+  }
+
+  return QString("%1 %2")
+    .arg(QString::number(value, 'f', unitIndex == 0 ? 0 : 2))
+    .arg(units[unitIndex]);
+}
+
 NetworkManager::NetworkManager(Dispatcher* dispatcher,
-                               OnlineUsersRegistry* registry)
+                               OnlineUsersRegistry* registry,
+                               const QString& iniPath)
   : mDispatcher(dispatcher)
   , mRegistry(registry)
+  , mSettings(iniPath.isEmpty() ? "config.ini" : iniPath, QSettings::IniFormat)
 {
+  if (!mSettings.childGroups().contains("network")) {
+    qWarning(appNetwork)
+      << "There's no network section in config, using default values";
+    mSettings.beginGroup("network");
+    mSettings.setValue("host", 2130706433); // Localhost as decimal
+    mSettings.setValue("port", 5555);       // Default port
+    mSettings.endGroup();
+  }
+
+  mSettings.beginGroup("network");
+  // TODO: может, добавить проверку типа перед использованием?
+  mConfig.host.setAddress(checkAndGetValue("host", 2130706433).toUInt());
+  mConfig.port = checkAndGetValue("port", 5555).toUInt();
+  mConfig.flood_limit = checkAndGetValue("flood_limit", 15).toUInt();
+  mConfig.ban_limit = checkAndGetValue("ban_limit", 60).toUInt();
+  mConfig.trust_proxy_header =
+    checkAndGetValue("trust_proxy_server", false).toBool();
+  mConfig.max_msg_size =
+    checkAndGetValue("max_msg_size", 536870912).toULongLong();
+  qInfo(appNetwork) << "Running server on" << mConfig.host.toString() << ":"
+                    << mConfig.port;
+  mSettings.endGroup();
+
   mServer = new QWebSocketServer(
     "p2p messenger", QWebSocketServer::NonSecureMode, this);
   QObject::connect(mServer,
                    &QWebSocketServer::newConnection,
                    this,
                    &NetworkManager::onNewConnection);
-  mServer->listen(QHostAddress::Any, 5555);
+  mServer->listen(mConfig.host, mConfig.port);
   qInfo(appNetwork) << "Server start listening";
 }
 
@@ -126,7 +168,7 @@ NetworkManager::serialize(const Response& response)
 }
 
 Command
-NetworkManager::deserialize(QUuid client_id, const QByteArray& message)
+NetworkManager::deserialize(const QUuid& client_id, const QByteArray& message)
 {
   QJsonParseError parseError;
   QJsonDocument doc = QJsonDocument::fromJson(message, &parseError);
@@ -209,8 +251,9 @@ void
 NetworkManager::onMessageReceived(const QString& message)
 {
   qDebug(appNetwork) << "Size of message:" << message.size();
-  qsizetype maxMsgSize = 536'870'912;
+  qsizetype maxMsgSize = mConfig.max_msg_size;
   QWebSocket* client = qobject_cast<QWebSocket*>(this->sender());
+  // FIXME: не забыть поменять название заголовка на нормальное
   QHostAddress addr(client->request().headers().value("IPv4").toByteArray());
   QUuid client_id = client->property("client_id").toUuid();
 
@@ -233,8 +276,9 @@ NetworkManager::onMessageReceived(const QString& message)
     user = mIPConstraints.find(addr);
     auto IPuser = std::get<decltype(mIPConstraints)::iterator>(user);
     if (IPuser == mIPConstraints.end()) {
-      // TODO: с появлением кофигурации сделать обращение к peerAddress, если
-      // передача через заголовок отключена
+      if (!mConfig.trust_proxy_header) {
+        addr = client->peerAddress();
+      }
       mIPConstraints[addr] =
         ConnectionState{ ConnectionStatus::COMMON, {}, now };
     }
@@ -246,9 +290,8 @@ NetworkManager::onMessageReceived(const QString& message)
   CommandType type;
 
   if (message.size() > maxMsgSize) {
-    // TODO: сделать небольшую функцию, которая бы в зависимости от размера
-    // писала mb, kb и т.д.
-    QString reason("Message size bigger than %1 MB");
+    const QString reason("Message size bigger than " +
+                         formatBytes(message.size()));
     cmd = Error{ client_id, reason.arg(maxMsgSize / 1024 / 1024) };
     type = CommandType::OVERSIZED;
   } else {
@@ -289,21 +332,21 @@ NetworkManager::onMessageReceived(const QString& message)
     state.last_cmds.removeIf([&](const Record& r) {
       return duration_cast<minutes>(now - r.timestamp).count() > 15;
     });
-    // TODO: подсчет всех типов, вместо if для каждого типа
-    if (std::count_if(
-          state.last_cmds.begin(), state.last_cmds.end(), [](const Record& r) {
-            return r.type == CommandType::LOGIN;
-          }) > 4) {
+    QHash<CommandType, qsizetype> cmdTypesCount;
+    for (const auto& cmd : state.last_cmds) {
+      if (cmdTypesCount.contains(cmd.type)) {
+        cmdTypesCount[cmd.type] += 1;
+      } else {
+        cmdTypesCount[cmd.type] = 0;
+      }
+    }
+    if (cmdTypesCount.value(CommandType::LOGIN, 0) > 4) {
       cmd =
         Error{ client_id, QString("Too many login attempts. Now you in ban") };
       state.last_cmds.clear();
       state.status = ConnectionStatus::BAN;
       state.timestamp = now;
-    } else if (std::count_if(state.last_cmds.begin(),
-                             state.last_cmds.end(),
-                             [](const Record& r) {
-                               return r.type == CommandType::OVERSIZED;
-                             }) > 4) {
+    } else if (cmdTypesCount.value(CommandType::OVERSIZED, 0) > 4) {
       cmd =
         Error{ client_id, QString("Too many big messages. Now you in ban") };
       state.last_cmds.clear();
@@ -331,7 +374,6 @@ NetworkManager::onMessageReceived(const QString& message)
 void
 NetworkManager::onDisconnected()
 {
-  // TODO: logging
   QWebSocket* sender = qobject_cast<QWebSocket*>(this->sender());
   mConnections.remove(sender->property("client_id").toUuid());
   mRegistry->removeUser(sender->property("user_id").toUInt());
@@ -384,4 +426,16 @@ NetworkManager::handleSideEffect(const Response& response)
                         },
                          [](const auto&) {} },
              response);
+}
+
+QVariant
+NetworkManager::checkAndGetValue(const QString& key,
+                                 const QVariant& defaultValue)
+{
+  if (!mSettings.contains(key)) {
+    qWarning(appNetwork)
+      << QString("'%1' key not provided in config, using default value")
+           .arg(key);
+  }
+  return mSettings.value(key, defaultValue);
 }
