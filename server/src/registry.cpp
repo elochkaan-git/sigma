@@ -7,7 +7,7 @@
 #include <optional>
 
 void
-OnlineUsersRegistry::registerUser(unsigned int user_id, QUuid client_id)
+OnlineUsersRegistry::registerUser(unsigned int user_id, const QUuid& client_id)
 {
   QWriteLocker locker(&mLock);
   mOnlineUsers[user_id] = client_id;

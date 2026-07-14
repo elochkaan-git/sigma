@@ -22,7 +22,7 @@ public:
    * @param user_id ID пользователя
    * @param client_id ID клиента
    */
-  void registerUser(unsigned int user_id, QUuid client_id);
+  void registerUser(unsigned int user_id, const QUuid& client_id);
   /**
    * @brief Удаляет пользователя из реестра
    *
