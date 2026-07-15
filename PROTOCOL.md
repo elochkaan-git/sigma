@@ -191,6 +191,19 @@
 
 ---
 
+### 2.11 `get_server_stats` — получение статистики сервера
+
+```json
+{
+  "type": "get_server_stats",
+  "payload": {}
+}
+```
+
+**Ответ:** [`get_server_stats_response`](#312-get_server_stats_response)
+
+---
+
 ## 3. Ответы (сервер → клиент)
 
 ### 3.1 `register_user_response`
@@ -355,7 +368,22 @@
 }
 ```
 
-### 3.12 `error`
+### 3.12 `get_server_stats_response`
+
+Возможные статусы: `OK` (0), `InternalError` (255). `online` - количество пользователей онлайн, `total` - общее число пользователей
+
+```json
+{
+  "type": "get_server_stats_response",
+  "payload": {
+    "status": 0,
+    "online": 1,
+    "total": 2
+  }
+}
+```
+
+### 3.13 `error`
 
 Возвращают ошибку, непредусмотренную в OperationStatus, в виде текста.
 
