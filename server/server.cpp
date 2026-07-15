@@ -39,7 +39,7 @@ main(int argc, char* argv[])
     RelationService relService(&relRepo, &userRepo);
     Dispatcher dispatcher({ &userServive, &msgService, &relService },
                           &registry);
-    NetworkManager net_manager(&dispatcher, &registry);
+    NetworkManager net_manager(&dispatcher, &registry, "config.ini");
 
     return application.exec();
   } catch (const std::runtime_error& error) {
