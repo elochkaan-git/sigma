@@ -20,32 +20,32 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Installing dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run:
-          sudo apt-get update -y;
-          # sudo apt-get install -y libxrandr-dev libxcursor-dev libxi-dev libudev-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libfreetype6-dev libboost-all-dev
-          # Just for example
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+          modules: 'qtwebsockets'
+          cache: true
 
-      - name: Installing dependencies (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          git clone https://github.com/microsoft/vcpkg.git
-          .\vcpkg\bootstrap-vcpkg.bat
-        # .\vcpkg\vcpkg install --triplet x64-windows sfml spdlog boost-program-options boost-filesystem
-        # Just for example
+      # Just for example
+      # - name: Installing dependencies (Linux)
+      #   if: matrix.os == 'ubuntu-latest'
+      #   run:
+      #     sudo apt-get update -y;
+      #     sudo apt-get install -y libxrandr-dev libxcursor-dev libxi-dev libudev-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libfreetype6-dev libboost-all-dev
 
       # It's commented because we don't have CMakeLists.txt
-      # - name: Configure Cmake (Linux)
-      #   if: matrix.os == 'ubuntu-latest'
-      #   run: cmake -B build -S . -G "Unix Makefiles"
+      - name: Configure Cmake (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: cmake -B build -S . -G "Unix Makefiles"
 
-      # - name: Configure Cmake (Windows)
-      #   if: matrix.os == 'windows-latest'
-      #   run: cmake -B build -S . -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
+      - name: Configure Cmake (Windows)
+        if: matrix.os == 'windows-latest'
+        run: cmake -B build -S . -G "Visual Studio 17 2022" -A x64
 
-      # - name: Build project and package
-      #   run: cmake --build build --target package --config Release
+      # Only building, no packaging
+      - name: Build project and package
+        run: cmake --build build --config Release
           
       # - name: Upload Release Asset
       #   env:
