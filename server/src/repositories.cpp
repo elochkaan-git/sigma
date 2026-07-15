@@ -427,6 +427,7 @@ RelationRepository::getFriendsID(unsigned int user_id)
   }
   query.bindValue(":user_id", user_id);
   OperationStatus error = handleQueryErrors(query);
+  // NOTE: при отсутствии заявок отправляется статус NoSuchRelation
   if (error != OperationStatus::OK) {
     return { error, std::nullopt };
   }
@@ -456,6 +457,7 @@ RelationRepository::getFriendRequests(unsigned int user_id)
     return { OperationStatus::InternalError, std::nullopt };
   }
   query.bindValue(":user_id", user_id);
+  // NOTE: при отсутствии заявок отправляется статус NoSuchRelation
   OperationStatus error = handleQueryErrors(query);
   if (error != OperationStatus::OK) {
     return { error, std::nullopt };
@@ -487,6 +489,7 @@ RelationRepository::getSentFriendRequests(unsigned int user_id)
   }
   query.bindValue(":user_id", user_id);
   OperationStatus error = handleQueryErrors(query);
+  // NOTE: при отсутствии заявок отправляется статус NoSuchRelation
   if (error != OperationStatus::OK) {
     return { error, std::nullopt };
   }
@@ -532,9 +535,8 @@ OperationStatus
 RelationRepository::handleQueryErrors(QSqlQuery& query)
 {
   bool status = query.exec();
-  if (status) {
-    return OperationStatus::OK;
-  } else if (query.lastError().nativeErrorCode() == "23503") {
+  int numRowsAffected = query.numRowsAffected();
+  if (query.lastError().nativeErrorCode() == "23503") {
     qWarning(appDatabase) << "Foreign key violation";
     return OperationStatus::UserNotExist;
   } else if (query.lastError().nativeErrorCode() == "23505") {
@@ -543,9 +545,11 @@ RelationRepository::handleQueryErrors(QSqlQuery& query)
   } else if (query.lastError().nativeErrorCode() == "23514") {
     qWarning(appDatabase) << "You can't add yourself in friends, dummy";
     return OperationStatus::RelationWithYourself;
-  } else if (!query.numRowsAffected()) {
+  } else if (!numRowsAffected) {
     qWarning(appDatabase) << "No rows to update/delete";
     return OperationStatus::NoSuchRelation;
+  } else if (status) {
+    return OperationStatus::OK;
   } else {
     qCritical(appDatabase) << "Internal error:" << query.lastError().text();
     return OperationStatus::InternalError;
