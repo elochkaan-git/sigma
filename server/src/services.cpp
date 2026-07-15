@@ -116,48 +116,57 @@ RelationService::removeFriend(unsigned int user_id, unsigned int friend_id)
 }
 
 std::pair<OperationStatus, std::optional<std::vector<User>>>
-RelationService::getFriendsID(unsigned int user_id)
+RelationService::getFriends(unsigned int user_id)
 {
-  const auto [status_rel, ids] = this->mRelRepo->getFriendsID(user_id);
-  if (status_rel != OperationStatus::OK || !ids.has_value()) {
-    return { status_rel, std::nullopt };
-  }
   const auto [status_users, friends] =
-    this->mUserRepo->getUsersById(ids.value());
+    this->mRelRepo->getFriendsID(user_id);
   if (status_users != OperationStatus::OK || !friends.has_value()) {
     return { status_users, std::nullopt };
   }
-  return { OperationStatus::OK, friends };
+  auto [status_rel, users] = this->mUserRepo->getUsersById(friends.value());
+  if (status_rel != OperationStatus::OK || !users.has_value()) {
+    return { status_rel, std::nullopt };
+  }
+  for (auto& u : users.value()) {
+    u.pwd_hash.clear();
+  }
+  return { OperationStatus::OK, users };
 }
 
 std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getFriendRequests(unsigned int user_id)
 {
-  const auto [status_rel, ids] = this->mRelRepo->getFriendsID(user_id);
-  if (status_rel != OperationStatus::OK || !ids.has_value()) {
-    return { status_rel, std::nullopt };
-  }
   const auto [status_users, requests] =
-    this->mUserRepo->getUsersById(ids.value());
+    this->mRelRepo->getFriendRequests(user_id);
   if (status_users != OperationStatus::OK || !requests.has_value()) {
     return { status_users, std::nullopt };
   }
-  return { OperationStatus::OK, requests };
+  auto [status_rel, users] = this->mUserRepo->getUsersById(requests.value());
+  if (status_rel != OperationStatus::OK || !users.has_value()) {
+    return { status_rel, std::nullopt };
+  }
+  for (auto& u : users.value()) {
+    u.pwd_hash.clear();
+  }
+  return { OperationStatus::OK, users };
 }
 
 std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getSentFriendRequests(unsigned int user_id)
 {
-  const auto [status_rel, ids] = this->mRelRepo->getFriendsID(user_id);
-  if (status_rel != OperationStatus::OK || !ids.has_value()) {
-    return { status_rel, std::nullopt };
-  }
   const auto [status_users, sentRequests] =
-    this->mUserRepo->getUsersById(ids.value());
+    this->mRelRepo->getSentFriendRequests(user_id);
   if (status_users != OperationStatus::OK || !sentRequests.has_value()) {
     return { status_users, std::nullopt };
   }
-  return { OperationStatus::OK, sentRequests };
+  auto [status_rel, users] = this->mUserRepo->getUsersById(sentRequests.value());
+  if (status_rel != OperationStatus::OK || !users.has_value()) {
+    return { status_rel, std::nullopt };
+  }
+  for (auto& u : users.value()) {
+    u.pwd_hash.clear();
+  }
+  return { OperationStatus::OK, users };
 }
 
 OperationStatus

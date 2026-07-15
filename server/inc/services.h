@@ -111,7 +111,7 @@ public:
   OperationStatus rejectFriendRequest(unsigned int user_id,
                                       unsigned int friend_id);
   OperationStatus removeFriend(unsigned int user_id, unsigned int friend_id);
-  std::pair<OperationStatus, std::optional<std::vector<User>>> getFriendsID(
+  std::pair<OperationStatus, std::optional<std::vector<User>>> getFriends(
     unsigned int user_id);
   std::pair<OperationStatus, std::optional<std::vector<User>>>
   getFriendRequests(unsigned int user_id);
