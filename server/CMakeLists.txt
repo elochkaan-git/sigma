@@ -13,9 +13,14 @@ add_executable(${SERVER_NAME} ${SERVER_SOURCES} ${SERVER_HEADERS} server.cpp)
 target_include_directories(${SERVER_NAME}
   PRIVATE ${CMAKE_SOURCE_DIR}/third-party/libsodium/include ${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
+if (WIN32)
+  set(LIBSODIUM_LIB_DIR "${CMAKE_SOURCE_DIR}/third-party/libsodium/lib/windows")
+else()
+  set(LIBSODIUM_LIB_DIR "${CMAKE_SOURCE_DIR}/third-party/libsodium/lib/linux")
+endif()
 find_library(LIBSODIUM
-  NAMES sodium
-  HINTS "${CMAKE_SOURCE_DIR}/third-party/libsodium/lib"
+  NAMES sodium libsodium
+  HINTS "${LIBSODIUM_LIB_DIR}"
 )
 
 find_package(Qt6 REQUIRED COMPONENTS Core Network WebSockets Sql)
