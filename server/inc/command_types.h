@@ -15,6 +15,22 @@ struct overloaded : Ts...
 template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
+enum class CommandType
+{
+  ERROR,
+  REGISTER,
+  LOGIN,
+  SEND_MESSAGE,
+  SEND_FRIEND_REQUEST,
+  ACCEPT_FRIEND_REQUEST,
+  REJECT_FRIEND_REQUEST,
+  REMOVE_FRIEND,
+  GET_FRIENDS,
+  GET_FRIEND_REQUESTS,
+  GET_SENT_FRIEND_REQUESTS,
+  OVERSIZED
+};
+
 using Response = std::variant<Error,
                               RegisterUserResponse,
                               LoginUserResponse,
@@ -38,3 +54,8 @@ using Command = std::variant<Error,
                              GetFriends,
                              GetFriendRequests,
                              GetSentFriendRequests>;
+
+CommandType
+getTypeOfCommand(const Command& cmd);
+QString
+commandTypeToString(const CommandType& cmd_type);
