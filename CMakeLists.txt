@@ -10,31 +10,33 @@ add_subdirectory(server)
 
 
 # Generating package with version
-# execute_process(
-#   COMMAND git describe --abbrev=0 --tags
-#   OUTPUT_VARIABLE tag
-# )
+execute_process(
+  COMMAND git describe --abbrev=0 --tags
+  OUTPUT_VARIABLE tag
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
-# string(LENGTH ${tag} tag_len)
-# math(EXPR new_tag_len "${tag_len} - 1")
-# string(SUBSTRING "${tag}" 0 ${new_tag_len} clear_tag)
-# string(REPLACE "." ";" list_tag "${clear_tag}")
-# list(GET list_tag 0 MAJOR_VERSION)
-# list(GET list_tag 1 MINOR_VERSION)
-# list(GET list_tag 2 PATCH_VERSION)
+# Tags like "v1.2.3" or "1.2.3" are both supported
+string(REGEX REPLACE "^v" "" clear_tag "${tag}")
+string(REPLACE "." ";" list_tag "${clear_tag}")
+list(GET list_tag 0 MAJOR_VERSION)
+list(GET list_tag 1 MINOR_VERSION)
+list(GET list_tag 2 PATCH_VERSION)
 
-# set(CPACK_PACKAGE_VERSION_MAJOR "${MAJOR_VERSION}")
-# set(CPACK_PACKAGE_VERSION_MINOR "${MINOR_VERSION}")
-# set(CPACK_PACKAGE_VERSION_PATCH "${PATCH_VERSION}")
-# set(CPACK_PACKAGE_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
-# set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
-# set(CPACK_PACKAGE_CONTACT elochkaan@gmail.com)
-# set(CPACK_PACKAGE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+set(CPACK_PACKAGE_VERSION_MAJOR "${MAJOR_VERSION}")
+set(CPACK_PACKAGE_VERSION_MINOR "${MINOR_VERSION}")
+set(CPACK_PACKAGE_VERSION_PATCH "${PATCH_VERSION}")
+set(CPACK_PACKAGE_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_PACKAGE_CONTACT elochkaan@gmail.com)
+set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/package")
 
-# if (MSVC)
-#     set(CPACK_GENERATOR ZIP)
-# else ()
-#     set(CPACK_GENERATOR DEB)
-# endif()
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME}")
 
-# include(CPack)
+if (WIN32)
+  set(CPACK_GENERATOR ZIP)
+else ()
+  set(CPACK_GENERATOR TGZ)
+endif()
+
+include(CPack)
