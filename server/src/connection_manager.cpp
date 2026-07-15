@@ -39,7 +39,7 @@ ConnectionManager::currentConnection()
   } else {
     bool status = connection.open();
     if (!status) {
-      qCritical() << connection.lastError().text();
+      qCritical(appDatabase) << connection.lastError().text();
       throw std::runtime_error("Can't connect to database");
     }
     return connection;

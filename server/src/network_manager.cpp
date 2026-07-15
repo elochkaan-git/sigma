@@ -375,7 +375,7 @@ NetworkManager::onMessageReceived(const QString& message)
       if (cmdTypesCount.contains(cmd.type)) {
         cmdTypesCount[cmd.type] += 1;
       } else {
-        cmdTypesCount[cmd.type] = 0;
+        cmdTypesCount[cmd.type] = 1;
       }
     }
     if (cmdTypesCount.value(CommandType::LOGIN, 0) >
