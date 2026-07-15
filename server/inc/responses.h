@@ -74,3 +74,24 @@ struct RemoveFriendResponse
   QUuid client_id;
   OperationStatus status;
 };
+
+struct GetFriendsResponse
+{
+  QUuid client_id;
+  OperationStatus status;
+  std::optional<std::vector<User>> friends;
+};
+
+struct GetFriendRequestsResponse
+{
+  QUuid client_id;
+  OperationStatus status;
+  std::optional<std::vector<User>> requests;
+};
+
+struct GetSentFriendRequestsResponse
+{
+  QUuid client_id;
+  OperationStatus status;
+  std::optional<std::vector<User>> sentRequests;
+};

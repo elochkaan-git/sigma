@@ -23,7 +23,10 @@ using Response = std::variant<Error,
                               SendFriendRequestResponse,
                               AcceptFriendRequestResponse,
                               RejectFriendRequestResponse,
-                              RemoveFriendResponse>;
+                              RemoveFriendResponse,
+                              GetFriendsResponse,
+                              GetFriendRequestsResponse,
+                              GetSentFriendRequestsResponse>;
 using Command = std::variant<Error,
                              RegisterUser,
                              LoginUser,
@@ -31,4 +34,7 @@ using Command = std::variant<Error,
                              SendFriendRequest,
                              AcceptFriendRequest,
                              RejectFriendRequest,
-                             RemoveFriend>;
+                             RemoveFriend,
+                             GetFriends,
+                             GetFriendRequests,
+                             GetSentFriendRequests>;

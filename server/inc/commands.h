@@ -67,9 +67,17 @@ struct RemoveFriend
 struct GetFriends
 {
   QUuid client_id;
+  unsigned int user_id;
 };
 
 struct GetFriendRequests
 {
   QUuid client_id;
+  unsigned int user_id;
+};
+
+struct GetSentFriendRequests
+{
+  QUuid client_id;
+  unsigned int user_id;
 };
