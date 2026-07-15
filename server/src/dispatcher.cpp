@@ -69,6 +69,23 @@ Dispatcher::dispatch(const Command& cmd,
           return this->handleRemoveFriend(cmd);
         };
       },
+      [this](const GetFriends& cmd) -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          return this->handleGetFriends(cmd);
+        };
+      },
+      [this](const GetFriendRequests& cmd)
+        -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          return this->handleGetFriendRequests(cmd);
+        };
+      },
+      [this](const GetSentFriendRequests& cmd)
+        -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          return this->handleGetSentFriendRequests(cmd);
+        };
+      },
       [](const Error& cmd) -> std::function<std::vector<Response>()> {
         auto job = [cmd]() -> std::vector<Response> {
           return std::vector<Response>{ cmd };
@@ -170,4 +187,30 @@ Dispatcher::handleRemoveFriend(const RemoveFriend& cmd)
     this->mServices.rel_service->removeFriend(cmd.user_id, cmd.friend_id);
   return std::vector<Response>{ SendFriendRequestResponse{ cmd.client_id,
                                                            status } };
+}
+
+std::vector<Response>
+Dispatcher::handleGetFriends(const GetFriends& cmd)
+{
+  auto [status, friends] = this->mServices.rel_service->getFriends(cmd.user_id);
+  return std::vector<Response>{ GetFriendsResponse{
+    cmd.client_id, status, friends } };
+}
+
+std::vector<Response>
+Dispatcher::handleGetFriendRequests(const GetFriendRequests& cmd)
+{
+  auto [status, requests] =
+    this->mServices.rel_service->getFriendRequests(cmd.user_id);
+  return std::vector<Response>{ GetFriendRequestsResponse{
+    cmd.client_id, status, requests } };
+}
+
+std::vector<Response>
+Dispatcher::handleGetSentFriendRequests(const GetSentFriendRequests& cmd)
+{
+  auto [status, sentRequests] =
+    this->mServices.rel_service->getSentFriendRequests(cmd.user_id);
+  return std::vector<Response>{ GetSentFriendRequestsResponse{
+    cmd.client_id, status, sentRequests } };
 }

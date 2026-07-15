@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 /**
  * @brief Класс-диспетчер, распределяющий задачи по потокам
@@ -51,7 +52,13 @@ private:
   std::vector<Response> handleLoginUser(const LoginUser& cmd);
   std::vector<Response> handleMessage(const SendMessage& cmd);
   std::vector<Response> handleSendFriendRequest(const SendFriendRequest& cmd);
-  std::vector<Response> handleAcceptFriendRequest(const AcceptFriendRequest& cmd);
-  std::vector<Response> handleRejectFriendRequest(const RejectFriendRequest& cmd);
+  std::vector<Response> handleAcceptFriendRequest(
+    const AcceptFriendRequest& cmd);
+  std::vector<Response> handleRejectFriendRequest(
+    const RejectFriendRequest& cmd);
   std::vector<Response> handleRemoveFriend(const RemoveFriend& cmd);
+  std::vector<Response> handleGetFriends(const GetFriends& cmd);
+  std::vector<Response> handleGetFriendRequests(const GetFriendRequests& cmd);
+  std::vector<Response> handleGetSentFriendRequests(
+    const GetSentFriendRequests& cmd);
 };
