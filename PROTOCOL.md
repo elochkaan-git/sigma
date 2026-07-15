@@ -19,9 +19,10 @@
 | C++ тип         | JSON тип                          |
 |-----------------|------------------------------------|
 | `QString`       | `string`                           |
-| `QUuid`         | `string` (формат UUID, напр. `"550e8400-e29b-41d4-a716-446655440000"`) |
 | `unsigned int`  | `number` (целое, ≥ 0)              |
 | `OperationStatus` | `number` (целое, код статуса — см. таблицу ниже) |
+| `User`          | `object` (`{ "user_id": number, "login": string }`) |
+| `std::vector<User>` (опционально) | `array` объектов `User`; если данных нет — пустой массив `[]` |
 
 ### Коды `status` (`OperationStatus`)
 
@@ -86,7 +87,7 @@
 ```
 
 **Ответ:** [`send_message_response`](#33-send_message_response) — подтверждение доставки.
-Если получатель онлайн, ему дополнительно приходит push
+Если получатель онлайн, ему дополнительно приходит
 [`new_message`](#37-new_message).
 
 ---
@@ -147,7 +148,46 @@
 }
 ```
 
-**Ответ:** `delete_friend_response` (⚠️ см. «Открытые вопросы» — несовпадение названий с командой)
+**Ответ:** [`remove_friend_response`](#38-remove_friend_response)
+
+---
+
+### 2.8 `get_friends` — получение списка друзей
+
+```json
+{
+  "type": "get_friends",
+  "payload": {}
+}
+```
+
+**Ответ:** [`get_friends_response`](#39-get_friends_response)
+
+---
+
+### 2.9 `get_friend_requests` — получение входящих заявок в друзья
+
+```json
+{
+  "type": "get_friend_requests",
+  "payload": {}
+}
+```
+
+**Ответ:** [`get_friend_requests_response`](#310-get_friend_requests_response)
+
+---
+
+### 2.10 `get_sent_friend_requests` — получение исходящих заявок в друзья
+
+```json
+{
+  "type": "get_sent_friend_requests",
+  "payload": {}
+}
+```
+
+**Ответ:** [`get_sent_friend_requests_response`](#311-get_sent_friend_requests_response)
 
 ---
 
@@ -236,7 +276,7 @@
 }
 ```
 
-### 3.7 `new_message` — входящее сообщение (push, не является ответом на конкретную команду)
+### 3.7 `new_message` — входящее сообщение (не является ответом на конкретную команду)
 
 Отправляется получателю сообщения сервером в момент, когда он онлайн.
 
@@ -263,7 +303,59 @@
 }
 ```
 
-### 3.9 `error`
+### 3.9 `get_friends_response`
+
+Возможные статусы: `OK` (0), `InternalError` (255). Поле `friends` — массив
+объектов `User`; при статусе, отличном от `OK`, будет пустым массивом.
+
+```json
+{
+  "type": "get_friends_response",
+  "payload": {
+    "status": 0,
+    "friends": [
+      { "user_id": 2, "login": "alice" },
+      { "user_id": 3, "login": "bob" }
+    ]
+  }
+}
+```
+
+### 3.10 `get_friend_requests_response`
+
+Возможные статусы: `OK` (0), `InternalError` (255). Поле `requests` —
+массив пользователей, приславших входящую заявку в друзья.
+
+```json
+{
+  "type": "get_friend_requests_response",
+  "payload": {
+    "status": 0,
+    "requests": [
+      { "user_id": 4, "login": "carol" }
+    ]
+  }
+}
+```
+
+### 3.11 `get_sent_friend_requests_response`
+
+Возможные статусы: `OK` (0), `InternalError` (255). Поле `sent_requests` —
+массив пользователей, которым текущий пользователь отправил заявку в друзья.
+
+```json
+{
+  "type": "get_sent_friend_requests_response",
+  "payload": {
+    "status": 0,
+    "sent_requests": [
+      { "user_id": 5, "login": "dave" }
+    ]
+  }
+}
+```
+
+### 3.12 `error`
 
 Возвращают ошибку, непредусмотренную в OperationStatus, в виде текста.
 
@@ -271,7 +363,7 @@
 {
   "type": "error",
   "payload": {
-    "reason": "string
+    "reason": "string"
   }
 }
 ```
