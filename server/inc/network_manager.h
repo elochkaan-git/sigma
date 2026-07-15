@@ -24,39 +24,61 @@
 
 #include <functional>
 
+/**
+ * @brief Спецификация поля в запросе
+ */
 struct FieldSpec
 {
-  QString name;
-  std::function<bool(const QJsonValue&)> check;
+  QString name; /**< название поля */
+  std::function<bool(const QJsonValue&)>
+    check; /**<  функция, которая должна проверить значение поля (тип и/или
+              значение) */
 };
 
+/**
+ * @brief Спецификация команды
+ *
+ */
 struct CommandSpec
 {
-  std::vector<FieldSpec> fields;
-  bool requiresAuth;
+  std::vector<FieldSpec>
+    fields;          /**< спецификации полей, которые нужно проверить */
+  bool requiresAuth; /**< требует ли команда авторизации */
   std::function<
     Command(QUuid client_id, unsigned int user_id, const QJsonObject& payload)>
-    build;
+    build; /**< функция, собирающая и возвращающая команду */
 };
 
+/**
+ * @brief Статус соединения пользователя
+ *
+ */
 enum class ConnectionStatus
 {
-  COMMON = 0,
-  FLOOD = 1,
-  BAN = 2
+  COMMON = 0, /**< Обычное состояние */
+  FLOOD = 1,  /**< Наказан за флуд */
+  BAN = 2 /**< Наказан за серьезные проступки (брутфорс, перегрузка сервера) */
 };
 
+/**
+ * @brief Запись о присланном запросе
+ *
+ */
 struct Record
 {
-  CommandType type;
-  QDateTime timestamp;
+  CommandType type;    /**< тип команды */
+  QDateTime timestamp; /**< время прихода */
 };
 
+/**
+ * @brief Состояние подключения пользователя
+ *
+ */
 struct ConnectionState
 {
-  ConnectionStatus status;
-  QList<Record> last_cmds;
-  QDateTime timestamp;
+  ConnectionStatus status; /**< статус подключения */
+  QList<Record> last_cmds; /**< список последних команд */
+  QDateTime timestamp;     /**< временная метка, когда был изменен статус */
 };
 
 /**
@@ -136,6 +158,10 @@ private:
   QHash<unsigned int, ConnectionState> mIDConstraints;
   QHash<QHostAddress, ConnectionState> mIPConstraints;
   QSettings mSettings;
+  /**
+   * @brief Структура, хранящая конфигурацию класс
+   * на момент запуска. Заполняется в конструкторе
+   */
   struct NetworkConfig
   {
     QHostAddress host;
@@ -168,12 +194,30 @@ private:
    * @see responses.h
    */
   void handleSideEffect(const Response& response);
+  /**
+   * @brief Проверяет, существует ли переданный ключ в настройках,
+   * загруженных из ini-файла. Если ключ отсутствует, то возвращается
+   * значение по умолчанию
+   *
+   * @param key ключ
+   * @param defaultValue значение по умолчанию
+   * @return QVariant значение, если ключ существует
+   */
   QVariant checkAndGetValue(const QString& key, const QVariant& defaultValue);
 };
 
+/**
+ * @brief Проверяет, что значение является строкой
+ */
 static const auto isString = [](const QJsonValue& v) { return v.isString(); };
+/**
+ * @brief Проверяет, что значение является числом
+ */
 static const auto isNumber = [](const QJsonValue& v) { return v.isDouble(); };
 
+/**
+ * @brief Словарь спецификаций комманд
+ */
 inline const QHash<QString, CommandSpec> kCommandSpecs = {
   { "register_user",
     { { { "login", isString }, { "pwd", isString } },

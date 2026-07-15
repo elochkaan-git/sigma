@@ -44,6 +44,13 @@ public:
   std::pair<OperationStatus, std::optional<unsigned int>> loginUser(
     QString login,
     QString passwd);
+  /**
+   * @brief Возвращает пользователя по id
+   *
+   * @param user_id id пользователя
+   * @return std::pair<OperationStatus, std::optional<User>> Статус
+   * операции и пользователь
+   */
   std::pair<OperationStatus, std::optional<User>> getUserByID(
     unsigned int user_id);
 
@@ -100,23 +107,94 @@ private:
   MessageRepository* mMsgRepo;
 };
 
+/**
+ * @brief Класс-сервис для работы с отношениями
+ *
+ */
 class RelationService
 {
 public:
+  /**
+   * @brief Конструктор RelationService
+   *
+   * @param rel_repo указатель на объект класса RelationRepository
+   * @param u_repo указатель на объект класса UserRepository
+   */
   RelationService(RelationRepository* rel_repo, UserRepository* u_repo);
+  /**
+   * @brief Отправляет заявку в друзья от пользователя user_id пользователю
+   * friend_id
+   *
+   * @param user_id id отправителя заявки
+   * @param friend_id id получателя заявки
+   * @return OperationStatus статус операции
+   */
   OperationStatus sendFriendRequest(unsigned int user_id,
                                     unsigned int friend_id);
+  /**
+   * @brief Принимает заявку в друзья от пользователя user_id пользователю
+   * friend_id
+   *
+   * @param user_id id отправителя заявки
+   * @param friend_id id получателя заявки
+   * @return OperationStatus статус операции
+   */
   OperationStatus acceptFriendRequest(unsigned int user_id,
                                       unsigned int friend_id);
+  /**
+   * @brief Отклоняет заявку в друзья от пользователя user_id пользователю
+   * friend_id
+   *
+   * @param user_id id отправителя заявки
+   * @param friend_id id получателя заявки
+   * @return OperationStatus статус операции
+   */
   OperationStatus rejectFriendRequest(unsigned int user_id,
                                       unsigned int friend_id);
+  /**
+   * @brief Удаляет дружбу между user_id и friend_id
+   *
+   * @param user_id id инициатора
+   * @param friend_id id цели
+   * @return OperationStatus статус операции
+   */
   OperationStatus removeFriend(unsigned int user_id, unsigned int friend_id);
+  /**
+   * @brief Возвращает список пользователей, состоящих в друзьях
+   *
+   * @param user_id id пользователя
+   * @return std::pair<OperationStatus, std::optional<std::vector<User>>> список
+   * пользователей, может быть std::nullopt
+   */
   std::pair<OperationStatus, std::optional<std::vector<User>>> getFriends(
     unsigned int user_id);
+  /**
+   * @brief Возвращает список пользователей, отправивших заявку в друзья
+   *
+   * @param user_id id пользователя
+   * @return std::pair<OperationStatus, std::optional<std::vector<User>>> список
+   * пользователей, может быть std::nullopt
+   */
   std::pair<OperationStatus, std::optional<std::vector<User>>>
   getFriendRequests(unsigned int user_id);
+  /**
+   * @brief Возвращает список пользователей, которым была отправлена заявка в
+   * друзьяы
+   *
+   * @param user_id id пользователя
+   * @return std::pair<OperationStatus, std::optional<std::vector<User>>> список
+   * пользователей, может быть std::nullopt
+   */
   std::pair<OperationStatus, std::optional<std::vector<User>>>
   getSentFriendRequests(unsigned int user_id);
+  /**
+   * @brief Проверяет, являются ли user_id и friend_id друзьями
+   *
+   * @param user_id id инициатора
+   * @param friend_id id цели
+   * @return OperationStatus статус операции. OK, если пользователи являются
+   * друзьями
+   */
   OperationStatus areFriends(unsigned int user_id, unsigned int friend_id);
 
 private:

@@ -4,6 +4,7 @@
 #include "logging.h"
 #include "structures.h"
 
+#include <QString>
 #include <QtLogging>
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlError>
@@ -11,8 +12,6 @@
 
 #include <cstddef>
 #include <optional>
-#include <qhashfunctions.h>
-#include <qlogging.h>
 #include <vector>
 
 UserRepository::UserRepository(ConnectionManager* manager)
@@ -23,7 +22,8 @@ UserRepository::UserRepository(ConnectionManager* manager)
 OperationStatus
 UserRepository::registerUser(const QString& login, const QString& pwd_hash)
 {
-  // FIXME: добавить откат транзакции, чтобы при UserExists не было перехода на следующий id
+  // FIXME: добавить откат транзакции, чтобы при UserExists не было перехода на
+  // следующий id
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
   bool status =

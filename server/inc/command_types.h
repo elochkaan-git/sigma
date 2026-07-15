@@ -15,6 +15,9 @@ struct overloaded : Ts...
 template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
+/**
+ * @brief Типы команд
+ */
 enum class CommandType
 {
   ERROR,
@@ -31,6 +34,9 @@ enum class CommandType
   OVERSIZED
 };
 
+/**
+ * @brief сокращение для варианта ответов
+ */
 using Response = std::variant<Error,
                               RegisterUserResponse,
                               LoginUserResponse,
@@ -43,6 +49,9 @@ using Response = std::variant<Error,
                               GetFriendsResponse,
                               GetFriendRequestsResponse,
                               GetSentFriendRequestsResponse>;
+/**
+ * @brief сокращение для варианта команд
+ */
 using Command = std::variant<Error,
                              RegisterUser,
                              LoginUser,
@@ -55,7 +64,20 @@ using Command = std::variant<Error,
                              GetFriendRequests,
                              GetSentFriendRequests>;
 
+/**
+ * @brief Возвращает тип команды
+ *
+ * @param cmd команда
+ * @return CommandType
+ */
 CommandType
 getTypeOfCommand(const Command& cmd);
+
+/**
+ * @brief Превращает enum в QString
+ *
+ * @param cmd_type тип команды
+ * @return QString команда в виде строки
+ */
 QString
 commandTypeToString(const CommandType& cmd_type);

@@ -44,8 +44,13 @@ struct User
   QString pwd_hash;
 };
 
+/**
+ * @brief Универсальная структура ошибки для случаев, не заложенных в
+ * OperationStatus. Используется и как команда, и как ответ.
+ *
+ */
 struct Error
 {
-  QUuid client_id;
-  QString reason;
+  QUuid client_id; /**< id клиента */
+  QString reason;  /**< причина ошибки */
 };

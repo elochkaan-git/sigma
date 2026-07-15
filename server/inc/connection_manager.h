@@ -56,5 +56,14 @@ private:
    * @return true если все в норме
    * @return false иначе
    */
+
+private:
+  /**
+   * @brief Валидация переданных свойств базы данных
+   *
+   * @param db_info данные базы данных
+   * @return true если все поля валидны
+   * @return false если какое-то из полей невалидно
+   */
   bool checkDatabaseInfo(const DatabaseInfo& db_info);
 };
