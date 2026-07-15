@@ -69,6 +69,21 @@ formatBytes(qint64 bytes)
     .arg(units[unitIndex]);
 }
 
+QJsonArray
+serializeUsers(const std::optional<std::vector<User>>& users)
+{
+  QJsonArray arr;
+  if (!users.has_value())
+    return arr;
+  for (const auto& u : users.value()) {
+    QJsonObject o;
+    o["user_id"] = static_cast<qint64>(u.user_id);
+    o["login"] = u.login;
+    arr.append(o);
+  }
+  return arr;
+}
+
 NetworkManager::NetworkManager(Dispatcher* dispatcher,
                                OnlineUsersRegistry* registry,
                                const QString& iniPath)
@@ -80,14 +95,14 @@ NetworkManager::NetworkManager(Dispatcher* dispatcher,
     qWarning(appNetwork)
       << "There's no network section in config, using default values";
     mSettings.beginGroup("network");
-    mSettings.setValue("host", 2130706433); // Localhost as decimal
+    mSettings.setValue("host", 0); // Localhost as decimal
     mSettings.setValue("port", 5555);       // Default port
     mSettings.endGroup();
   }
 
   mSettings.beginGroup("network");
   // TODO: может, добавить проверку типа перед использованием?
-  mConfig.host.setAddress(checkAndGetValue("host", 2130706433).toUInt());
+  mConfig.host.setAddress(checkAndGetValue("host", 0).toUInt());
   mConfig.port = checkAndGetValue("port", 5555).toUInt();
   mConfig.flood_limit = checkAndGetValue("flood_limit", 15).toUInt();
   mConfig.ban_limit = checkAndGetValue("ban_limit", 60).toUInt();
@@ -155,6 +170,24 @@ NetworkManager::serialize(const Response& response)
         QJsonObject payload;
         payload["status"] = QJsonValue(static_cast<int>(r.status));
         return wrap("remove_friend_response", std::move(payload));
+      },
+      [](const GetFriendsResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["friends"] = serializeUsers(r.friends);
+        return wrap("get_friends_response", std::move(payload));
+      },
+      [](const GetFriendRequestsResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["requests"] = serializeUsers(r.requests);
+        return wrap("get_friend_requests_response", std::move(payload));
+      },
+      [](const GetSentFriendRequestsResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["sent_requests"] = serializeUsers(r.sentRequests);
+        return wrap("get_sent_friend_requests_response", std::move(payload));
       },
       [](const Error& r) {
         QJsonObject payload;
@@ -410,7 +443,12 @@ NetworkManager::getTypeOfCommand(const Command& cmd)
       [](const RejectFriendRequest&) {
         return CommandType::REJECT_FRIEND_REQUEST;
       },
-      [](const RemoveFriend&) { return CommandType::REMOVE_FRIEND; } },
+      [](const RemoveFriend&) { return CommandType::REMOVE_FRIEND; },
+      [](const GetFriends&) { return CommandType::GET_FRIENDS; },
+      [](const GetFriendRequests&) { return CommandType::GET_FRIEND_REQUESTS; },
+      [](const GetSentFriendRequests&) {
+        return CommandType::GET_SENT_FRIEND_REQUESTS;
+      } },
     cmd);
 }
 

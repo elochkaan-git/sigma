@@ -9,6 +9,7 @@
 #include <QDateTime>
 #include <QHash>
 #include <QHostAddress>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QList>
@@ -55,6 +56,9 @@ enum class CommandType
   ACCEPT_FRIEND_REQUEST,
   REJECT_FRIEND_REQUEST,
   REMOVE_FRIEND,
+  GET_FRIENDS,
+  GET_FRIEND_REQUESTS,
+  GET_SENT_FRIEND_REQUESTS,
   OVERSIZED
 };
 
@@ -254,4 +258,22 @@ inline const QHash<QString, CommandSpec> kCommandSpecs = {
           p["content"].toString()
         };
       } } },
+  { "get_friends",
+    { {},
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject&) -> Command {
+        return GetFriends{ client_id, user_id };
+      } } },
+  { "get_friend_requests",
+    { {},
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject&) -> Command {
+        return GetFriendRequests{ client_id, user_id };
+      } } },
+  { "get_sent_friend_requests",
+    { {},
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject&) -> Command {
+        return GetSentFriendRequests{ client_id, user_id };
+      } } }
 };
