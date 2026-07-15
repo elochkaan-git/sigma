@@ -8,7 +8,7 @@ SigmaMessenger — это приложение на базе C++ и Qt 6 (QML/Qu
 
 1. **CMake** версии **3.28** или выше.
 2. **Компилятор** с поддержкой стандарта **C++17** (GCC / Clang на Linux, MSVC 2019+ на Windows).
-3. **Qt 6** [версии **6.8** или выше](cite: 1) с компонентами `Gui`, `Qml` и `Quick`[cite: 1].
+3. **Qt 6** [версии **6.8** или выше] с компонентами Gui, Qml, Quick (для сборки клиента) и Core, Network, WebSockets, Sql (для сборки сервера).
 
 ---
 
@@ -16,6 +16,10 @@ SigmaMessenger — это приложение на базе C++ и Qt 6 (QML/Qu
 
 ### 1. Установка зависимостей (на примере Ubuntu/Debian)
 
+> [!warning] Обратите внимание
+> Названия пакетов Qt6 могут отличаться в зависимости от вашего дистрибутива Linux
+
+#### Клиент
 Установите необходимые инструменты сборки и пакеты Qt 6:
 
 ``` bash
@@ -24,26 +28,33 @@ sudo apt install build-essential cmake qt6-base-dev qt6-declarative-dev qt6-qml-
 # Альтернативный вариант: сборка из исходников (https://doc.qt.io/qt-6/linux-building.html)
 ```
 
-(Примечание: Названия пакетов Qt6 могут отличаться в зависимости от вашего дистрибутива Linux, например, Fedora/Arch).
+#### Сервер
 
+```sh
+apt-get update
+apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config ca-certificates qt6-base-dev qt6-websockets-dev libqt6sql6-psql
+```
 
 ### 2. Компиляция проекта
 
 Выполните следующие команды в корневой директории проекта:
 
 ``` bash
-# 1. Создание и переход в директорию сборки
+# 1. Копирование проекта и переход в него
+git clone https://github.com/elochkaan-git/sigma.git && cd sigma
+
+# 2. Создание и переход в директорию сборки
 mkdir build && cd build
 
-# 2. Конфигурация проекта
+# 3. Конфигурация проекта
 # Если Qt установлен в нестандартную директорию, укажите -DCMAKE_PREFIX_PATH=/путь/к/qt6
 cmake .. -DCMAKE_BUILD_TYPE=Release
 
-# 3. Сборка приложения
+# 4. Сборка приложения
 cmake --build . --config Release
 ```
 
-Исполняемый файл `SigmaMessenger` будет находиться в папке `build`.
+Исполняемый файл клиента `SigmaMessenger` будет находиться непосредственно в папке `build`, исполняемый файл сервера будет находиться в `build/server`.
 
 ## Сборка на Windows
 
@@ -75,3 +86,30 @@ cmake --build . --config Release
 - `main.cpp` — Точка входа в приложение.
 - `qml/` — Исходный код интерфейса на QML (Main, Login, Register и др.).
 - `assets/` — Графические ресурсы приложения (логотипы, иконки).
+
+---
+
+## Запуск сервера
+
+Запустить сервер можно двумя способами: в контейнере и непосредственно на хосте
+
+### Запуск в контейнере
+
+Запуск всего приложения производится командой в корневой директории проекта
+
+```sh
+sudo make up
+```
+
+Данная команда сначала соберет базовый образ системы для сборки проекта, а уже потом непосредственно проект
+
+> [!warning] Предупреждение
+> Если вы собираетесь запускать сервер через непосредственно docker-compose, то сначала нужно собрать сервис base, а уже потом server
+
+### Запуск на хосте
+
+Запуск производится через исполняемый файл `/path/to/project/sigma/build/server/server`. Но для корректного запуска должны быть определены переменные окружения (см. [.env.example](https://github.com/elochkaan-git/sigma/blob/main/.env.example)). Дальше приведен пример запуска сервера с заданными переменными окружения
+
+```sh
+DB_HOST=localhost DB_USER=user DB_PASSWORD=password DB_NAME=db bash -c "./server/server"
+```
