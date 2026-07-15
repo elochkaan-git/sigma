@@ -26,6 +26,7 @@ jobs:
         with:
           version: '6.8.*'
           modules: 'qtwebsockets'
+          arch: ${{ matrix.os == 'windows-latest' && 'win64_msvc2022_64' || '' }}
           cache: true
 
       # Just for example
