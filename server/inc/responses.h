@@ -119,3 +119,15 @@ struct GetSentFriendRequestsResponse
   std::optional<std::vector<User>>
     sentRequests; /**< Список пользователей, может быть std::nullopt */
 };
+
+/**
+ * @brief Ответ на получение статистики с сервера - число
+ * онлайн-пользователей и общее число пользователей
+ */
+struct GetServerStatsResponse
+{
+  QUuid client_id;
+  OperationStatus status;
+  unsigned int online;
+  unsigned int total;
+};

@@ -65,6 +65,12 @@ UserService::getUserByID(unsigned int user_id)
   return this->mUserRepo->getUserByID(user_id);
 }
 
+std::pair<OperationStatus, unsigned int>
+UserService::countUsers()
+{
+  return this->mUserRepo->countUsers();
+}
+
 MessageService::MessageService(MessageRepository* repo)
   : mMsgRepo(repo)
 {

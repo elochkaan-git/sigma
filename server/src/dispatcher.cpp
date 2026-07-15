@@ -90,6 +90,12 @@ Dispatcher::dispatch(const Command& cmd,
           return this->handleGetSentFriendRequests(cmd);
         };
       },
+      [this](const GetServerStats& cmd)
+        -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          return this->handleGetServerStats(cmd);
+        };
+      },
       [](const Error& cmd) -> std::function<std::vector<Response>()> {
         auto job = [cmd]() -> std::vector<Response> {
           return std::vector<Response>{ cmd };
@@ -296,4 +302,18 @@ Dispatcher::handleGetSentFriendRequests(const GetSentFriendRequests& cmd)
   }
   return std::vector<Response>{ GetSentFriendRequestsResponse{
     cmd.client_id, status, sentRequests } };
+}
+
+std::vector<Response>
+Dispatcher::handleGetServerStats(const GetServerStats& cmd)
+{
+  const auto [status, total] = this->mServices.u_service->countUsers();
+  const unsigned int online{ this->mRegistry->totalOnline() };
+  if (status != OperationStatus::OK) {
+    qWarning(appDispatcher)
+      << QString("Command GetServerStats return status %1").arg((int)status);
+  } else {
+    qInfo(appDispatcher) << QString("Server stats: %1/%2").arg(online).arg(total);
+  }
+  return {GetServerStatsResponse{ cmd.client_id, status, online, total }};
 }

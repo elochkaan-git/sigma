@@ -53,6 +53,13 @@ public:
    */
   std::pair<OperationStatus, std::optional<User>> getUserByID(
     unsigned int user_id);
+  /**
+   * @brief Возвращает число зарегистрированных пользователей
+   *
+   * @return std::pair<OperationStatus, unsigned int> статус операции и число
+   * зарегистрированных пользователей
+   */
+   std::pair<OperationStatus, unsigned int> countUsers();
 
 private:
   UserRepository* mUserRepo;

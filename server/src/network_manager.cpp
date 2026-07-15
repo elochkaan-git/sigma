@@ -194,6 +194,13 @@ NetworkManager::serialize(const Response& response)
         payload["sent_requests"] = serializeUsers(r.sentRequests);
         return wrap("get_sent_friend_requests_response", std::move(payload));
       },
+      [](const GetServerStatsResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["online"] = static_cast<qint64>(r.online);
+        payload["total"] = static_cast<qint64>(r.total);
+        return wrap("get_server_stats_response", std::move(payload));
+      },
       [](const Error& r) {
         QJsonObject payload;
         payload["reason"] = r.reason;
@@ -266,7 +273,7 @@ NetworkManager::onNewConnection()
 {
   QWebSocket* newConnection = mServer->nextPendingConnection();
   QObject::connect(newConnection,
-                   &QWebSocket::textMessageReceived,
+                   &QWebSocket::binaryMessageReceived,
                    this,
                    &NetworkManager::onMessageReceived);
   QObject::connect(newConnection,
@@ -284,9 +291,8 @@ NetworkManager::onNewConnection()
   qInfo(appNetwork) << "New connection! ID: " << newConnectionId;
 }
 
-// Перевести на чтение бинарных данных, а не текстовых
 void
-NetworkManager::onMessageReceived(const QString& message)
+NetworkManager::onMessageReceived(const QByteArray& message)
 {
   qDebug(appNetwork) << "Size of message:" << message.size();
   QWebSocket* client = qobject_cast<QWebSocket*>(this->sender());
@@ -332,8 +338,7 @@ NetworkManager::onMessageReceived(const QString& message)
     cmd = Error{ client_id, reason };
     type = CommandType::OVERSIZED;
   } else {
-    const QByteArray data(message.toStdString());
-    cmd = this->deserialize(client_id, data);
+    cmd = this->deserialize(client_id, message);
     type = getTypeOfCommand(cmd);
   }
 

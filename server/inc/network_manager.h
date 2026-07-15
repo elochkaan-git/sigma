@@ -23,6 +23,7 @@
 #include <QtTypes>
 
 #include <functional>
+#include <qstringview.h>
 
 /**
  * @brief Спецификация поля в запросе
@@ -140,7 +141,7 @@ public slots:
   /**
    * @brief Вызывается при получении сообщения
    */
-  void onMessageReceived(const QString& message);
+  void onMessageReceived(const QByteArray& message);
   /**
    * @brief Вызывается при отключении сокета
    */
@@ -305,5 +306,11 @@ inline const QHash<QString, CommandSpec> kCommandSpecs = {
       true,
       [](QUuid client_id, unsigned int user_id, const QJsonObject&) -> Command {
         return GetSentFriendRequests{ client_id, user_id };
+      } } },
+      { "get_server_stats",
+    { {},
+      false,
+      [](QUuid client_id, unsigned int, const QJsonObject&) -> Command {
+        return GetServerStats{ client_id };
       } } }
 };

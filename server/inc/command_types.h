@@ -31,6 +31,7 @@ enum class CommandType
   GET_FRIENDS,
   GET_FRIEND_REQUESTS,
   GET_SENT_FRIEND_REQUESTS,
+  GET_SERVER_STATS,
   OVERSIZED
 };
 
@@ -48,7 +49,8 @@ using Response = std::variant<Error,
                               RemoveFriendResponse,
                               GetFriendsResponse,
                               GetFriendRequestsResponse,
-                              GetSentFriendRequestsResponse>;
+                              GetSentFriendRequestsResponse,
+                              GetServerStatsResponse>;
 /**
  * @brief сокращение для варианта команд
  */
@@ -62,7 +64,8 @@ using Command = std::variant<Error,
                              RemoveFriend,
                              GetFriends,
                              GetFriendRequests,
-                             GetSentFriendRequests>;
+                             GetSentFriendRequests,
+                             GetServerStats>;
 
 /**
  * @brief Возвращает тип команды

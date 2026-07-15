@@ -28,3 +28,10 @@ OnlineUsersRegistry::getClientId(unsigned int user_id)
     return std::nullopt;
   return mOnlineUsers.value(user_id);
 }
+
+unsigned int
+OnlineUsersRegistry::totalOnline()
+{
+  QReadLocker locker(&mLock);
+  return mOnlineUsers.size();
+}

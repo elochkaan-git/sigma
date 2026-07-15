@@ -146,6 +146,26 @@ UserRepository::getUsersById(const std::vector<unsigned int>& ids)
   return { OperationStatus::OK, users };
 }
 
+std::pair<OperationStatus, unsigned int>
+UserRepository::countUsers()
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  QSqlQuery query(connection);
+  bool status =
+    query.prepare("select id from users");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    return { OperationStatus::InternalError, 0 };
+  }
+  status = query.exec();
+  if (status) {
+    return { OperationStatus::OK, (unsigned int)query.size() };
+  }  else {
+    qCritical(appDatabase) << query.lastError().text();
+    return { OperationStatus::InternalError, 0 };
+  }
+}
+
 MessageRepository::MessageRepository(ConnectionManager* manager)
   : mConnManager(manager)
 {

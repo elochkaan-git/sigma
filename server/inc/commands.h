@@ -109,3 +109,12 @@ struct GetSentFriendRequests
   QUuid client_id;
   unsigned int user_id;
 };
+
+/**
+ * @brief Команда для получения статистики с сервера - число
+ * онлайн-пользователей и общее число пользователей
+ */
+struct GetServerStats
+{
+  QUuid client_id;
+};

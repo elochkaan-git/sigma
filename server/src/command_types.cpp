@@ -1,4 +1,5 @@
 #include "command_types.h"
+#include "commands.h"
 
 CommandType
 getTypeOfCommand(const Command& cmd)
@@ -21,7 +22,8 @@ getTypeOfCommand(const Command& cmd)
       [](const GetFriendRequests&) { return CommandType::GET_FRIEND_REQUESTS; },
       [](const GetSentFriendRequests&) {
         return CommandType::GET_SENT_FRIEND_REQUESTS;
-      } },
+      },
+      [](const GetServerStats&) { return CommandType::GET_SERVER_STATS; } },
     cmd);
 }
 
@@ -43,6 +45,8 @@ commandTypeToString(const CommandType& cmd_type)
       return "GetFriendRequests";
     case CommandType::GET_SENT_FRIEND_REQUESTS:
       return "GetSentFriendRequests";
+    case CommandType::GET_SERVER_STATS:
+      return "GetServerStats";
     case CommandType::REGISTER:
       return "RegisterUser";
     case CommandType::LOGIN:

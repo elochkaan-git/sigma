@@ -121,4 +121,11 @@ private:
    */
   std::vector<Response> handleGetSentFriendRequests(
     const GetSentFriendRequests& cmd);
+  /**
+   * @brief Метод обработки получения статистики сервера
+   * 
+   * @param cmd команда GetServerStats
+   * @return std::vector<Response> список ответов
+   */
+  std::vector<Response> handleGetServerStats(const GetServerStats& cmd);
 };

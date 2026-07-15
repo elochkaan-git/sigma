@@ -62,6 +62,13 @@ public:
    */
   std::pair<OperationStatus, std::optional<std::vector<User>>> getUsersById(
     const std::vector<unsigned int>& ids);
+  /**
+   * @brief Возвращает число зарегистрированных пользователей
+   *
+   * @return std::pair<OperationStatus, unsigned int> статус операции и число
+   * зарегистрированных пользователей
+   */
+  std::pair<OperationStatus, unsigned int> countUsers();
 
 private:
   ConnectionManager* mConnManager;

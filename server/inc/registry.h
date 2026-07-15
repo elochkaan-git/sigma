@@ -37,6 +37,12 @@ public:
    * std::nullopt
    */
   std::optional<QUuid> getClientId(unsigned int user_id);
+  /**
+   * @brief Возвращает число онлайн-пользователей
+   * 
+   * @return unsigned int число онлайн-пользователей
+   */
+  unsigned int totalOnline();
 
 private:
   QHash<unsigned int, QUuid> mOnlineUsers;
