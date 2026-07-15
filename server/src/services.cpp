@@ -118,8 +118,7 @@ RelationService::removeFriend(unsigned int user_id, unsigned int friend_id)
 std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getFriends(unsigned int user_id)
 {
-  const auto [status_users, friends] =
-    this->mRelRepo->getFriendsID(user_id);
+  const auto [status_users, friends] = this->mRelRepo->getFriendsID(user_id);
   if (status_users != OperationStatus::OK || !friends.has_value()) {
     return { status_users, std::nullopt };
   }
@@ -159,7 +158,8 @@ RelationService::getSentFriendRequests(unsigned int user_id)
   if (status_users != OperationStatus::OK || !sentRequests.has_value()) {
     return { status_users, std::nullopt };
   }
-  auto [status_rel, users] = this->mUserRepo->getUsersById(sentRequests.value());
+  auto [status_rel, users] =
+    this->mUserRepo->getUsersById(sentRequests.value());
   if (status_rel != OperationStatus::OK || !users.has_value()) {
     return { status_rel, std::nullopt };
   }

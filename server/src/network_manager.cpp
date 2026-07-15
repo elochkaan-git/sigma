@@ -95,8 +95,8 @@ NetworkManager::NetworkManager(Dispatcher* dispatcher,
     qWarning(appNetwork)
       << "There's no network section in config, using default values";
     mSettings.beginGroup("network");
-    mSettings.setValue("host", 0); // Localhost as decimal
-    mSettings.setValue("port", 5555);       // Default port
+    mSettings.setValue("host", 0);    // Localhost as decimal
+    mSettings.setValue("port", 5555); // Default port
     mSettings.endGroup();
   }
 
@@ -110,6 +110,11 @@ NetworkManager::NetworkManager(Dispatcher* dispatcher,
     checkAndGetValue("trust_proxy_server", false).toBool();
   mConfig.max_msg_size =
     checkAndGetValue("max_msg_size", 536870912).toULongLong();
+  mConfig.max_login_attempts =
+    checkAndGetValue("max_login_attempts", 4).toInt();
+  mConfig.max_oversized_msgs =
+    checkAndGetValue("max_oversized_msgs", 4).toInt();
+  mConfig.max_msgs_allowed = checkAndGetValue("max_msgs_allowed", 50).toInt();
   qInfo(appNetwork) << "Running server on" << mConfig.host.toString() << ":"
                     << mConfig.port;
   mSettings.endGroup();
@@ -284,7 +289,6 @@ void
 NetworkManager::onMessageReceived(const QString& message)
 {
   qDebug(appNetwork) << "Size of message:" << message.size();
-  qsizetype maxMsgSize = mConfig.max_msg_size;
   QWebSocket* client = qobject_cast<QWebSocket*>(this->sender());
   // FIXME: не забыть поменять название заголовка на нормальное
   QHostAddress addr(client->request().headers().value("IPv4").toByteArray());
@@ -322,10 +326,10 @@ NetworkManager::onMessageReceived(const QString& message)
     std::visit([](auto&& it) -> auto& { return *it; }, user);
   CommandType type;
 
-  if (message.size() > maxMsgSize) {
+  if (message.size() > mConfig.max_msg_size) {
     const QString reason("Message size bigger than " +
                          formatBytes(message.size()));
-    cmd = Error{ client_id, reason.arg(maxMsgSize / 1024 / 1024) };
+    cmd = Error{ client_id, reason };
     type = CommandType::OVERSIZED;
   } else {
     const QByteArray data(message.toStdString());
@@ -340,15 +344,15 @@ NetworkManager::onMessageReceived(const QString& message)
     milliseconds delta = now - state.timestamp;
     switch (state.status) {
       case ConnectionStatus::FLOOD:
-        timeLimitMinutes = 15;
+        timeLimitMinutes = mConfig.flood_limit;
         reason = "FLOOD";
         break;
       case ConnectionStatus::BAN:
-        timeLimitMinutes = 60;
+        timeLimitMinutes = mConfig.ban_limit;
         reason = "BAN";
         break;
       default:
-        timeLimitMinutes = 15;
+        timeLimitMinutes = mConfig.flood_limit;
         reason = "UNKNOWN";
         break;
     }
@@ -363,7 +367,8 @@ NetworkManager::onMessageReceived(const QString& message)
     }
   } else {
     state.last_cmds.removeIf([&](const Record& r) {
-      return duration_cast<minutes>(now - r.timestamp).count() > 15;
+      return duration_cast<minutes>(now - r.timestamp).count() >
+             mConfig.flood_limit;
     });
     QHash<CommandType, qsizetype> cmdTypesCount;
     for (const auto& cmd : state.last_cmds) {
@@ -373,25 +378,31 @@ NetworkManager::onMessageReceived(const QString& message)
         cmdTypesCount[cmd.type] = 0;
       }
     }
-    if (cmdTypesCount.value(CommandType::LOGIN, 0) > 4) {
+    if (cmdTypesCount.value(CommandType::LOGIN, 0) >
+        mConfig.max_login_attempts) {
       cmd =
-        Error{ client_id, QString("Too many login attempts. Now you in ban") };
+        Error{ client_id,
+               QString("Too many login attempts. Now you in ban for %1 minutes")
+                 .arg(mConfig.ban_limit) };
       state.last_cmds.clear();
       state.status = ConnectionStatus::BAN;
       state.timestamp = now;
-    } else if (cmdTypesCount.value(CommandType::OVERSIZED, 0) > 4) {
+    } else if (cmdTypesCount.value(CommandType::OVERSIZED, 0) >
+               mConfig.max_oversized_msgs) {
       cmd =
-        Error{ client_id, QString("Too many big messages. Now you in ban") };
+        Error{ client_id,
+               QString("Too many big messages. Now you in ban for %1 minutes")
+                 .arg(mConfig.ban_limit) };
       state.last_cmds.clear();
       state.status = ConnectionStatus::BAN;
       state.timestamp = now;
-    } else if (state.last_cmds.size() > 50) {
+    } else if (state.last_cmds.size() > mConfig.max_msgs_allowed) {
       state.status = ConnectionStatus::FLOOD;
       state.timestamp = now;
       cmd = Error{
         client_id,
-        QString(
-          "Too many messages. Now you block for 15 minutes due to flood")
+        QString("Too many messages. Now you block for %1 minutes due to flood")
+          .arg(mConfig.flood_limit)
       };
     } else {
       state.last_cmds.append({ type, now });

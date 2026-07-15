@@ -155,10 +155,13 @@ private:
   struct NetworkConfig
   {
     QHostAddress host;
-    quint64 max_msg_size;
+    qint64 max_msg_size;
     quint32 port;
     quint32 flood_limit;
     quint32 ban_limit;
+    quint8 max_login_attempts;
+    quint8 max_oversized_msgs;
+    quint8 max_msgs_allowed;
     bool trust_proxy_header;
   } mConfig;
 
