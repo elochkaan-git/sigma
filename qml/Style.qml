@@ -1,5 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+import Qt5Compat.GraphicalEffects 1.0
 
 QtObject {
     id: root
@@ -112,6 +114,7 @@ QtObject {
             placeholderTextColor: root.colors.fg_subtle
             verticalAlignment: TextInput.AlignVCenter
             leftPadding: 12
+            echoMode: TextInput.Normal
 
             background: Rectangle {
                 radius: 6
@@ -122,4 +125,129 @@ QtObject {
         }
     }
 
+    property Component chatTabButton: Component {
+        Button {
+            id: control
+            implicitHeight: 48
+            leftPadding: 12
+            rightPadding: 12
+            topPadding: 8
+            bottomPadding: 8
+            checkable: true
+
+            property string label: ""
+            property string avatarSource: "qrc:/Main/assets/person.png"
+            property bool isFriendsButton: false
+            property bool showRemoveButton: !isFriendsButton
+            property bool showAvatar: !isFriendsButton
+            signal removeRequested()
+
+            Behavior on checked {
+                ColorAnimation { duration: 150 }
+            }
+
+            contentItem: RowLayout {
+                spacing: 10
+                
+                //Avatar image with rounded corners
+                Item {
+                    id: avatarItem
+                    visible: control.showAvatar
+                    
+                    // 1. Фиксируем размеры компонента снаружи
+                    width: 24
+                    height: 24
+                    
+                    // Настройки, которые можно менять
+                    property int cornerRadius: 14 // Радиус закругления углов
+
+                    // Внутренний контейнер, который мы будем обрезать по маске
+                    Item {
+                        id: contentContainer
+                        anchors.fill: parent
+                        
+                        // Магия закругления: включаем слои и накладываем OpacityMask
+                        layer.enabled: true
+                        layer.effect: OpacityMask {
+                            // В качестве маски используем скрытый Rectangle с радиусом
+                            maskSource: Rectangle {
+                                width: avatarItem.width
+                                height: avatarItem.height
+                                radius: avatarItem.cornerRadius
+                            }
+                        }
+
+                        // --- 1. Основное изображение ---
+                        Image {
+                            id: mainImage
+                            anchors.fill: parent
+                            source: control.avatarSource
+                            // PreserveAspectCrop аккуратно заполняет фиксированный размер без искажения пропорций
+                            fillMode: Image.PreserveAspectCrop 
+                            asynchronous: true
+                        }
+
+                        // --- 2. Плейсхолдер ---
+                        Image {
+                            id: placeHolderImage
+                            anchors.fill: parent
+                            source: "qrc:/Main/assets/person.png"
+                            // PreserveAspectCrop аккуратно заполняет фиксированный размер без искажения пропорций
+                            fillMode: Image.PreserveAspectCrop 
+                            asynchronous: true
+                        }
+                    }
+                }
+
+                Text {
+                    text: control.label
+                    font: root.textStyles.messageText
+                    color: control.checked ? root.colors.fg_on_accent : root.colors.fg_muted
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment:  !control.showAvatar ? Text.AlignHCenter : Text.AligHLeft
+                }
+
+                Item {
+                    Layout.preferredWidth: control.showRemoveButton && control.hovered ? 18 : 0
+                    Layout.preferredHeight: 18
+                    visible: control.showRemoveButton && control.hovered
+                    opacity: visible ? 1 : 0
+
+                    Behavior on opacity { NumberAnimation { duration: 150 } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 9
+                        color: root.colors.bg_canvas_overlay
+                        border.color: root.colors.border_default
+                        border.width: 1
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "×"
+                        color: root.colors.fg_muted
+                        font: root.textStyles.system
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: control.removeRequested()
+                    }
+                }
+            }
+
+            background: Rectangle {
+                radius: 8
+                color: control.checked ? root.colors.accent_bg :
+                       (control.hovered ? root.colors.bg_canvas_subtle : "transparent")
+                border.color: root.colors.border_default
+                border.width: control.checked ? 0 : 1
+
+                Behavior on color { ColorAnimation { duration: 150 } }
+            }
+        }
+    }
 }
