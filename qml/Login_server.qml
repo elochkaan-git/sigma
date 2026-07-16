@@ -9,6 +9,7 @@ Page {
     property var colors: style.colors // Подключаем палитру из Style.qml
     property var textStyles: style.textStyles // Подключаем стили текста из Style.qml
     property string serverName: "Server Name" // Имя сервера, на который осуществляется вход
+    property string serverUrl: "Server URL" // URL сервера, на который осуществляется вход
 
     Rectangle {
         anchors.fill: parent
@@ -61,6 +62,7 @@ Page {
                     item.placeholderText = "Пароль/password"
                     item.implicitWidth = parent.width
                     item.implicitHeight = 30
+                    item.echoMode = TextInput.Password
                     
                 }
             }
@@ -134,8 +136,10 @@ Page {
                     item.implicitHeight = 32.5
                     item.clicked.connect(function() {
                         // Closing the login page and start main application logic in General_page.qml
+                        clientController.loginUser(loginInput.text, passwordInput.text);
                         var comp = Qt.createComponent("qrc:/Main/qml/General_window.qml");
                         if (comp.status === Component.Ready) {
+                            
                             var newWindow = comp.createObject(null);
                             if (newWindow) {
                                 // New window is created and shown

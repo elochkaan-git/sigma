@@ -13,11 +13,12 @@ Item {
     property int serverButtonSpacing: 10
 
     property bool isEditingServer: false
-    property var editingServerButton: null
+    property int editingServerIndex: -1
 
-    function openServerDialog(mode, serverName, serverUrl, targetButton) {
+
+    function openServerDialog(mode, serverName, serverUrl, targetIndex) {
         addServerDialog.isEditing = mode === "edit"
-        addServerDialog.editingServerButton = targetButton
+        addServerDialog.editingServerIndex = targetIndex
         addServerDialog.dialogServerName = serverName || ""
         addServerDialog.dialogServerUrl = serverUrl || ""
 
@@ -53,35 +54,16 @@ Item {
             return
         }
 
-        if (addServerDialog.isEditing && addServerDialog.editingServerButton) {
-            addServerDialog.editingServerButton.serverName = name
-            addServerDialog.editingServerButton.serverUrl = url
+        if (addServerDialog.isEditing && addServerDialog.editingServerIndex >= 0) {
+            clientController.updateServer(addServerDialog.editingServerIndex, name, url)
         } else {
-            var component = Qt.createComponent("ServerButton.qml")
-            if (component.status === Component.Ready) {
-                var button = component.createObject(serverListColumn, {
-                    "serverName": name,
-                    "serverUrl": url,
-                    "onlineText": "0/20",
-                    "isOnline": true
-                })
-                button.onClicked.connect(function() {
-                    console.log("Подключаемся к " + button.serverName + "...")
-                })
-                button.onDeleteRequested.connect(function() {
-                    button.destroy()
-                })
-                button.onEditRequested.connect(function() {
-                    openServerDialog("edit", button.serverName, button.serverUrl, button)
-                })
-            } else {
-                console.error(component.errorString())
-            }
+            clientController.addServer(name, url)
         }
 
         clearServerDialogFields()
     }
     
+    // Background rectangle to fill the entire area of the parent
     Rectangle {
         anchors.fill: parent
         color: colors.bg_canvas_default
@@ -91,6 +73,7 @@ Item {
         anchors.centerIn: parent
         spacing: 18
 
+        // Logo image at the top
         Image {
             width: 64
             height: 64
@@ -105,6 +88,8 @@ Item {
             font: textStyles.header
             anchors.horizontalCenter: parent.horizontalCenter
         }
+
+        Component.onCompleted: clientController.loadServersFromCsv() // Load servers when the component is completed
 
         ScrollView {
             id: serverListScroll
@@ -123,34 +108,40 @@ Item {
                 spacing: serverButtonSpacing
                 width: serverListScroll.availableWidth
 
-                ServerButton {
-                    serverName: "Основной выживач"
-                    serverUrl: "https://main.example"
-                    onlineText: "12/20"
-                    isOnline: true
-                    onClicked: root.StackView.view.push("qrc:/Main/qml/Login_server.qml")
-                    onEditRequested: openServerDialog("edit", serverName, serverUrl, this)
-                    onDeleteRequested: console.log("Запрос на удаление Основного сервера")
-                }
-
-                ServerButton {
-                    serverName: "Тестовый сервер"
-                    serverUrl: "https://test.example"
-                    onlineText: "0/20"
-                    isOnline: false
-                    onClicked: root.StackView.view.push("qrc:/Main/qml/Register_server.qml")
-                    onEditRequested: openServerDialog("edit", serverName, serverUrl, this)
-                    onDeleteRequested: console.log("Запрос на удаление Тестового сервера")
+                Repeater {
+                    model: clientController.serversList
+                    delegate: ServerButton {
+                        serverName: modelData.serverName
+                        serverUrl: modelData.serverUrl
+                        isOnline: modelData.isOnline
+                        onlineText: {
+                            if (modelData.isOnline !== false && modelData.onlineCount !== undefined) {
+                                return modelData.onlineCount + "/" + modelData.usersCount
+                            }
+                            return ""
+                        }
+                            
+                        onClicked: {
+                            root.StackView.view.push("qrc:/Main/qml/Login_server.qml", {
+                                "serverName": modelData.serverName,
+                                "serverUrl": modelData.serverUrl
+                            })
+                            clientController.setSelectedServer(modelData) // Set the selected server in the controller
+                        }
+                        onEditRequested: openServerDialog("edit", serverName, serverUrl, index)
+                        onDeleteRequested: clientController.removeServer(index)
+                    }
                 }
 
                 ServerButton {
                     serverName: "Добавить сервер"
                     isAddButton: true
-                    onClicked: openServerDialog("add", "", "", null)
+                    onClicked: openServerDialog("add", "", "", -1)
                 }
             }
         }
 
+        // Exit button at the bottom
         Loader {
             anchors.horizontalCenter: parent.horizontalCenter
             sourceComponent: style.customButton
@@ -169,7 +160,7 @@ Item {
     Dialog {
         id: addServerDialog
         property bool isEditing: false
-        property var editingServerButton: null
+        property int editingServerIndex: -1
         property string dialogServerName: ""
         property string dialogServerUrl: ""
         title: isEditing ? "Изменить сервер" : "Новый сервер"

@@ -61,7 +61,7 @@ Page {
                     item.placeholderText = "Пароль/password"
                     item.implicitWidth = parent.width
                     item.implicitHeight = 30
-                    
+                    item.echoMode = TextInput.Password
                 }
             }
             Loader {
@@ -73,7 +73,7 @@ Page {
                     item.placeholderText = "Подтверждение пароля"
                     item.implicitWidth = parent.width
                     item.implicitHeight = 30
-                    
+                    item.echoMode = TextInput.Password
                 }
             }
             Row{
@@ -111,10 +111,20 @@ Page {
                 item.buttonStyle = "accent"
                 item.implicitHeight = 32.5
                 item.clicked.connect(function() {
+                    if(passwordInput.item.text !== confirmPasswordInput.item.text) {
+                        errorToast.text = "Пароли не совпадают!";
+                        errorToast.open();
+                        return;
+                    }
+                    clientController.registerUser(loginInput.text, passwordInput.text);
                     registerPage.StackView.view.pop();
                 })
             }
         } 
+    }
+
+    Toast {
+        id: errorToast
     }
 
 }
