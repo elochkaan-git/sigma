@@ -13,10 +13,14 @@ set(ASSETS_FILES
     "assets/mic.png"
     "assets/video-camera.png"
     "assets/arrow down.png"
+    "assets/servers.csv"
+    "assets/person.png"
 )
 
 qt_add_executable(SigmaMessenger
     main.cpp
+    include/client_controller.hpp
+    src/client_controller.cpp
 )
 
 qt_add_qml_module(SigmaMessenger
@@ -31,9 +35,11 @@ qt_add_qml_module(SigmaMessenger
         qml/ServerButton.qml
         qml/Main.qml
         qml/General_window.qml
+        qml/Toast.qml
     RESOURCES ${ASSETS_FILES}
 
 )
+target_include_directories(SigmaMessenger PUBLIC include)
 
 target_link_libraries(SigmaMessenger PRIVATE Qt6::Gui Qt6::Qml Qt6::Quick)
 
