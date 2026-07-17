@@ -1,9 +1,9 @@
 #include "dispatcher.h"
 
 #include "command_types.h"
-#include "commands.h"
 #include "logging.h"
-#include "responses.h"
+#include "server_commands.h"
+#include "server_responses.h"
 #include "services.h"
 #include "structures.h"
 #include "task.h"
@@ -90,8 +90,8 @@ Dispatcher::dispatch(const Command& cmd,
           return this->handleGetSentFriendRequests(cmd);
         };
       },
-      [this](const GetServerStats& cmd)
-        -> std::function<std::vector<Response>()> {
+      [this](
+        const GetServerStats& cmd) -> std::function<std::vector<Response>()> {
         return [this, cmd]() -> std::vector<Response> {
           return this->handleGetServerStats(cmd);
         };
@@ -120,22 +120,31 @@ Dispatcher::handleRegisterUser(const RegisterUser& cmd)
     qInfo(appDispatcher)
       << QString("User %1 registered").arg(cmd.client_id.toString());
   }
-  return std::vector<Response>{ RegisterUserResponse{ cmd.client_id, status } };
+  RegisterUserResponse r;
+  r.client_id = cmd.client_id;
+  r.status = status;
+  return std::vector<Response>{ r };
 }
 
 std::vector<Response>
 Dispatcher::handleLoginUser(const LoginUser& cmd)
 {
   auto [status, user_id] = mServices.u_service->loginUser(cmd.login, cmd.pwd);
-  if (user_id.has_value()) {
-    std::vector<Response> responses{ LoginUserResponse{
-      cmd.client_id, user_id.value(), OperationStatus::OK } };
+  LoginUserResponse lur;
+  if (user_id.has_value() && status == OperationStatus::OK) {
+    lur.client_id = cmd.client_id;
+    lur.user_id = user_id.value();
+    lur.status = OperationStatus::OK;
+    std::vector<Response> responses{ lur };
     auto [status, msgs] =
       this->mServices.msg_service->getQueuedMessages(user_id.value());
     if (msgs.has_value() && status == OperationStatus::OK) {
       for (const auto& m : msgs.value()) {
-        responses.push_back(
-          NewMessageResponse{ cmd.client_id, m.sender_id, m.content });
+        NewMessageResponse nmr;
+        nmr.client_id = cmd.client_id;
+        nmr.sender_id = m.sender_id;
+        nmr.content = m.content;
+        responses.push_back(nmr);
         status = this->mServices.msg_service->deleteFromQueue(m.msg_id);
         if (status != OperationStatus::OK) {
           qWarning(appDispatcher)
@@ -153,8 +162,10 @@ Dispatcher::handleLoginUser(const LoginUser& cmd)
   } else {
     qWarning(appDispatcher)
       << QString("Command LoginUser return status %1").arg((int)status);
-    return std::vector<Response>{ LoginUserResponse{
-      cmd.client_id, 0, OperationStatus::InvalidCredentials } };
+    lur.client_id = cmd.client_id;
+    lur.user_id = 0;
+    lur.status = status;
+    return std::vector<Response>{ lur };
   }
 }
 
@@ -162,30 +173,37 @@ std::vector<Response>
 Dispatcher::handleMessage(const SendMessage& cmd)
 {
   OperationStatus status =
-    this->mServices.rel_service->areFriends(cmd.sender_id, cmd.receiver_id);
+    this->mServices.rel_service->areFriends(cmd.user_id, cmd.receiver_id);
+  SendMessageResponse smr;
+  smr.client_id = cmd.client_id;
+  smr.status = status;
   if (status != OperationStatus::OK) {
     qWarning(appDispatcher)
       << QString("Command SendMessage return status %1").arg((int)status);
-    return std::vector<Response>{ SendMessageResponse{ cmd.client_id,
-                                                       status } };
+    return std::vector<Response>{ smr };
   }
   std::optional<QUuid> receiver_id =
     this->mRegistry->getClientId(cmd.receiver_id);
   if (receiver_id.has_value()) {
     qInfo(appDispatcher) << QString("Sending message from %1 to %2")
-                              .arg(cmd.sender_id)
+                              .arg(cmd.user_id)
                               .arg(cmd.receiver_id);
-    return std::vector<Response>{
-      SendMessageResponse{ cmd.client_id, OperationStatus::OK },
-      NewMessageResponse{ receiver_id.value(), cmd.sender_id, cmd.content }
-    };
+    NewMessageResponse nmr;
+    nmr.client_id = cmd.client_id;
+    nmr.sender_id = cmd.user_id;
+    nmr.content = cmd.content;
+    return std::vector<Response>{ smr, nmr };
   } else {
     qInfo(appDispatcher)
-      << QString("Saving message from %1 in queue").arg(cmd.sender_id);
-    OperationStatus status = mServices.msg_service->saveToQueue(
-      cmd.sender_id, cmd.receiver_id, cmd.content);
-    return std::vector<Response>{ SendMessageResponse{ cmd.client_id,
-                                                       status } };
+      << QString("Saving message from %1 in queue").arg(cmd.user_id);
+    status = mServices.msg_service->saveToQueue(
+      cmd.user_id, cmd.receiver_id, cmd.content);
+    if (status !=
+        OperationStatus::OK) { // FIXME: добавить обработку не окейный статусов
+      qWarning(appDispatcher)
+        << QString("Message from %1 wasn't saved to queue").arg(cmd.user_id);
+    }
+    return std::vector<Response>{ smr };
   }
 }
 
@@ -203,8 +221,10 @@ Dispatcher::handleSendFriendRequest(const SendFriendRequest& cmd)
                               .arg(cmd.user_id)
                               .arg(cmd.friend_id);
   }
-  return std::vector<Response>{ SendFriendRequestResponse{ cmd.client_id,
-                                                           status } };
+  SendFriendRequestResponse sfrr;
+  sfrr.client_id = cmd.client_id;
+  sfrr.status = status;
+  return std::vector<Response>{ sfrr };
 }
 
 std::vector<Response>
@@ -220,8 +240,10 @@ Dispatcher::handleAcceptFriendRequest(const AcceptFriendRequest& cmd)
     qInfo(appDispatcher)
       << QString("%1 and %2 friends now").arg(cmd.user_id).arg(cmd.friend_id);
   }
-  return std::vector<Response>{ AcceptFriendRequestResponse{ cmd.client_id,
-                                                             status } };
+  AcceptFriendRequestResponse afrr;
+  afrr.client_id = cmd.client_id;
+  afrr.status = status;
+  return std::vector<Response>{ afrr };
 }
 
 std::vector<Response>
@@ -237,8 +259,10 @@ Dispatcher::handleRejectFriendRequest(const RejectFriendRequest& cmd)
     qInfo(appDispatcher)
       << QString("%1 reject %2").arg(cmd.user_id).arg(cmd.friend_id);
   }
-  return std::vector<Response>{ RejectFriendRequestResponse{ cmd.client_id,
-                                                             status } };
+  RejectFriendRequestResponse rfrr;
+  rfrr.client_id = cmd.client_id;
+  rfrr.status = status;
+  return std::vector<Response>{ rfrr };
 }
 
 std::vector<Response>
@@ -254,7 +278,10 @@ Dispatcher::handleRemoveFriend(const RemoveFriend& cmd)
                               .arg(cmd.user_id)
                               .arg(cmd.friend_id);
   }
-  return std::vector<Response>{ RemoveFriendResponse{ cmd.client_id, status } };
+  RemoveFriendResponse rfr;
+  rfr.client_id = cmd.client_id;
+  rfr.status = status;
+  return std::vector<Response>{ rfr };
 }
 
 std::vector<Response>
@@ -268,8 +295,11 @@ Dispatcher::handleGetFriends(const GetFriends& cmd)
     qInfo(appDispatcher)
       << QString("Sending friends list to %1").arg(cmd.user_id);
   }
-  return std::vector<Response>{ GetFriendsResponse{
-    cmd.client_id, status, friends } };
+  GetFriendsResponse gfr;
+  gfr.client_id = cmd.client_id;
+  gfr.status = status;
+  gfr.friends = friends;
+  return std::vector<Response>{ gfr };
 }
 
 std::vector<Response>
@@ -284,14 +314,17 @@ Dispatcher::handleGetFriendRequests(const GetFriendRequests& cmd)
     qInfo(appDispatcher)
       << QString("Sending friend requests list to %1").arg(cmd.user_id);
   }
-  return std::vector<Response>{ GetFriendRequestsResponse{
-    cmd.client_id, status, requests } };
+  GetFriendRequestsResponse gfrr;
+  gfrr.client_id = cmd.client_id;
+  gfrr.status = status;
+  gfrr.requests = requests;
+  return std::vector<Response>{ gfrr };
 }
 
 std::vector<Response>
 Dispatcher::handleGetSentFriendRequests(const GetSentFriendRequests& cmd)
 {
-  auto [status, sentRequests] =
+  auto [status, sent_requests] =
     this->mServices.rel_service->getSentFriendRequests(cmd.user_id);
   if (status != OperationStatus::OK) {
     qWarning(appDispatcher)
@@ -300,8 +333,11 @@ Dispatcher::handleGetSentFriendRequests(const GetSentFriendRequests& cmd)
     qInfo(appDispatcher)
       << QString("Sending sent friend requests list to %1").arg(cmd.user_id);
   }
-  return std::vector<Response>{ GetSentFriendRequestsResponse{
-    cmd.client_id, status, sentRequests } };
+  GetSentFriendRequestsResponse gsfrr;
+  gsfrr.client_id = cmd.client_id;
+  gsfrr.status = status;
+  gsfrr.sent_requests = sent_requests;
+  return std::vector<Response>{ gsfrr };
 }
 
 std::vector<Response>
@@ -313,7 +349,13 @@ Dispatcher::handleGetServerStats(const GetServerStats& cmd)
     qWarning(appDispatcher)
       << QString("Command GetServerStats return status %1").arg((int)status);
   } else {
-    qInfo(appDispatcher) << QString("Server stats: %1/%2").arg(online).arg(total);
+    qInfo(appDispatcher)
+      << QString("Server stats: %1/%2").arg(online).arg(total);
   }
-  return {GetServerStatsResponse{ cmd.client_id, status, online, total }};
+  GetServerStatsResponse gssr;
+  gssr.client_id = cmd.client_id;
+  gssr.status = status;
+  gssr.online = online;
+  gssr.total = total;
+  return { gssr };
 }

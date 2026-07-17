@@ -1,10 +1,9 @@
 #include "network_manager.h"
 
 #include "command_types.h"
-#include "commands.h"
 #include "logging.h"
 #include "registry.h"
-#include "responses.h"
+#include "server_responses.h"
 #include "structures.h"
 
 #include <QAbstractSocket>
@@ -190,7 +189,7 @@ NetworkManager::serialize(const Response& response)
       [](const GetSentFriendRequestsResponse& r) {
         QJsonObject payload;
         payload["status"] = QJsonValue(static_cast<int>(r.status));
-        payload["sent_requests"] = serializeUsers(r.sentRequests);
+        payload["sent_requests"] = serializeUsers(r.sent_requests);
         return wrap("get_sent_friend_requests_response", std::move(payload));
       },
       [](const GetServerStatsResponse& r) {
@@ -216,8 +215,11 @@ NetworkManager::deserialize(const QUuid& client_id, const QByteArray& message)
 {
   QJsonParseError parseError;
   QJsonDocument doc = QJsonDocument::fromJson(message, &parseError);
+  Error error_response;
   if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
-    return Error{ client_id, "Can't parse JSON document" };
+    error_response.client_id = client_id;
+    error_response.reason = "Can't parse JSON document";
+    return error_response;
   }
 
   QJsonObject obj = doc.object();
@@ -226,7 +228,9 @@ NetworkManager::deserialize(const QUuid& client_id, const QByteArray& message)
                                              return v.isObject();
                                            } } });
   if (error.has_value()) {
-    return Error{ client_id, error.value() };
+    error_response.client_id = client_id;
+    error_response.reason = error.value();
+    return error_response;
   }
 
   QString type = obj["type"].toString();
@@ -235,7 +239,9 @@ NetworkManager::deserialize(const QUuid& client_id, const QByteArray& message)
 
   auto it = kCommandSpecs.find(type);
   if (it == kCommandSpecs.end()) {
-    return Error{ client_id, "No such type of command" };
+    error_response.client_id = client_id;
+    error_response.reason = "No such type of command";
+    return error_response;
   }
   const CommandSpec& spec = *it;
 
@@ -243,14 +249,18 @@ NetworkManager::deserialize(const QUuid& client_id, const QByteArray& message)
   if (spec.requiresAuth) {
     QVariant uid = this->mConnections[client_id]->property("user_id");
     if (!uid.isValid()) {
-      return Error{ client_id, "You are not logged in" };
+      error_response.client_id = client_id;
+      error_response.reason = "You are not logged in";
+      return error_response;
     }
     user_id = uid.toUInt();
   }
 
   error = validate(payload, spec.fields);
   if (error.has_value()) {
-    return Error{ client_id, error.value() };
+    error_response.client_id = client_id;
+    error_response.reason = error.value();
+    return error_response;
   }
 
   return spec.build(client_id, user_id, payload);
@@ -330,11 +340,14 @@ NetworkManager::onMessageReceived(const QByteArray& message)
   ConnectionState& state =
     std::visit([](auto&& it) -> auto& { return *it; }, user);
   CommandType type;
+  Error error_cmd;
 
   if (message.size() > mConfig.max_msg_size) {
     const QString reason("Message size bigger than " +
                          formatBytes(message.size()));
-    cmd = Error{ client_id, reason };
+    error_cmd.client_id = client_id;
+    error_cmd.reason = reason;
+    cmd = error_cmd;
     type = CommandType::OVERSIZED;
   } else {
     cmd = this->deserialize(client_id, message);
@@ -361,9 +374,10 @@ NetworkManager::onMessageReceived(const QByteArray& message)
         break;
     }
     if (duration_cast<minutes>(delta).count() < timeLimitMinutes) {
-      cmd =
-        Error{ client_id,
-               QString("You cannot send messages due to a %1").arg(reason) };
+      error_cmd.client_id = client_id;
+      error_cmd.reason =
+        QString("You cannot send messages due to a %1").arg(reason);
+      cmd = error_cmd;
     } else {
       state.status = ConnectionStatus::COMMON;
       state.last_cmds.clear();
@@ -384,30 +398,32 @@ NetworkManager::onMessageReceived(const QByteArray& message)
     }
     if (cmdTypesCount.value(CommandType::LOGIN, 0) >
         mConfig.max_login_attempts) {
-      cmd =
-        Error{ client_id,
-               QString("Too many login attempts. Now you in ban for %1 minutes")
-                 .arg(mConfig.ban_limit) };
+      error_cmd.client_id = client_id;
+      error_cmd.reason =
+        QString("Too many login attempts. Now you in ban for %1 minutes")
+          .arg(mConfig.ban_limit);
+      cmd = error_cmd;
       state.last_cmds.clear();
       state.status = ConnectionStatus::BAN;
       state.timestamp = now;
     } else if (cmdTypesCount.value(CommandType::OVERSIZED, 0) >
                mConfig.max_oversized_msgs) {
-      cmd =
-        Error{ client_id,
-               QString("Too many big messages. Now you in ban for %1 minutes")
-                 .arg(mConfig.ban_limit) };
+      error_cmd.client_id = client_id;
+      error_cmd.reason =
+        QString("Too many big messages. Now you in ban for %1 minutes")
+          .arg(mConfig.ban_limit);
+      cmd = error_cmd;
       state.last_cmds.clear();
       state.status = ConnectionStatus::BAN;
       state.timestamp = now;
     } else if (state.last_cmds.size() > mConfig.max_msgs_allowed) {
       state.status = ConnectionStatus::FLOOD;
       state.timestamp = now;
-      cmd = Error{
-        client_id,
+      error_cmd.client_id = client_id;
+      error_cmd.reason =
         QString("Too many messages. Now you block for %1 minutes due to flood")
-          .arg(mConfig.flood_limit)
-      };
+          .arg(mConfig.flood_limit);
+      cmd = error_cmd;
     } else {
       state.last_cmds.append({ type, now });
     }

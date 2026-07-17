@@ -1,8 +1,8 @@
 #pragma once
 #include "command_types.h"
-#include "commands.h"
 #include "dispatcher.h"
 #include "registry.h"
+#include "server_commands.h"
 
 #include <QAbstractSocket>
 #include <QByteArray>
@@ -108,7 +108,7 @@ public:
    *
    * @param response ответ Response
    * @return QByteArray Json в виде массива байтов
-   * @see responses.h
+   * @see server_responses.h
    */
   QByteArray serialize(const Response& response);
   /**
@@ -119,7 +119,7 @@ public:
    * @param message сообщение
    * @return Command команда
    * @see Dispatcher
-   * @see commands.h
+   * @see server_commands.h
    */
   Command deserialize(const QUuid& client_id, const QByteArray& message);
   /**
@@ -127,7 +127,7 @@ public:
    * пользователь не в сети, то ничего не отправляется
    *
    * @param response ответ от Dispatcher
-   * @see responses.h
+   * @see server_responses.h
    * @see Dispatcher
    * @see OnlineUsersRegistry
    */
@@ -182,7 +182,7 @@ private:
    *
    * @param response ответ от Dispatcher
    * @return QUuid ID сокета
-   * @see responses.h
+   * @see server_responses.h
    */
   QUuid getClientId(const Response& response);
   /**
@@ -192,7 +192,7 @@ private:
    * а при LoginUserResponse нужно добавить пользователя в OnlineUsersRegistry
    *
    * @param response ответ от Dispatcher
-   * @see responses.h
+   * @see server_responses.h
    */
   void handleSideEffect(const Response& response);
   /**
@@ -224,93 +224,122 @@ inline const QHash<QString, CommandSpec> kCommandSpecs = {
     { { { "login", isString }, { "pwd", isString } },
       false,
       [](QUuid client_id, unsigned int, const QJsonObject& p) -> Command {
-        return RegisterUser{ client_id,
-                             p["login"].toString(),
-                             p["pwd"].toString() };
+        RegisterUser cmd;
+        cmd.client_id = client_id;
+        cmd.login = p["login"].toString();
+        cmd.pwd = p["pwd"].toString();
+        return cmd;
       } } },
+
   { "login_user",
     { { { "login", isString }, { "pwd", isString } },
       false,
       [](QUuid client_id, unsigned int, const QJsonObject& p) -> Command {
-        return LoginUser{ client_id,
-                          p["login"].toString(),
-                          p["pwd"].toString() };
+        LoginUser cmd;
+        cmd.client_id = client_id;
+        cmd.login = p["login"].toString();
+        cmd.pwd = p["pwd"].toString();
+        return cmd;
       } } },
+
   { "send_friend_request",
     { { { "friend_id", isNumber } },
       true,
       [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
         -> Command {
-        return SendFriendRequest{ client_id,
-                                  user_id,
-                                  static_cast<unsigned int>(
-                                    p["friend_id"].toInteger()) };
+        SendFriendRequest cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.friend_id = static_cast<unsigned int>(p["friend_id"].toInteger());
+        return cmd;
       } } },
+
   { "accept_friend_request",
     { { { "friend_id", isNumber } },
       true,
       [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
         -> Command {
-        return AcceptFriendRequest{ client_id,
-                                    user_id,
-                                    static_cast<unsigned int>(
-                                      p["friend_id"].toInteger()) };
+        AcceptFriendRequest cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.friend_id = static_cast<unsigned int>(p["friend_id"].toInteger());
+        return cmd;
       } } },
+
   { "reject_friend_request",
     { { { "friend_id", isNumber } },
       true,
       [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
         -> Command {
-        return RejectFriendRequest{ client_id,
-                                    user_id,
-                                    static_cast<unsigned int>(
-                                      p["friend_id"].toInteger()) };
+        RejectFriendRequest cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.friend_id = static_cast<unsigned int>(p["friend_id"].toInteger());
+        return cmd;
       } } },
+
   { "remove_friend",
     { { { "friend_id", isNumber } },
       true,
       [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
         -> Command {
-        return RemoveFriend{ client_id,
-                             user_id,
-                             static_cast<unsigned int>(
-                               p["friend_id"].toInteger()) };
+        RemoveFriend cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.friend_id = static_cast<unsigned int>(p["friend_id"].toInteger());
+        return cmd;
       } } },
+
   { "send_message",
     { { { "receiver_id", isNumber }, { "content", isString } },
       true,
       [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
         -> Command {
-        return SendMessage{
-          client_id,
-          user_id,
-          static_cast<unsigned int>(
-            p["receiver_id"].toInteger()), // было obj[...] — баг
-          p["content"].toString()
-        };
+        SendMessage cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.receiver_id =
+          static_cast<unsigned int>(p["receiver_id"].toInteger());
+        cmd.content = p["content"].toString();
+        return cmd;
       } } },
+
   { "get_friends",
     { {},
       true,
       [](QUuid client_id, unsigned int user_id, const QJsonObject&) -> Command {
-        return GetFriends{ client_id, user_id };
+        GetFriends cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        return cmd;
       } } },
+
   { "get_friend_requests",
     { {},
       true,
       [](QUuid client_id, unsigned int user_id, const QJsonObject&) -> Command {
-        return GetFriendRequests{ client_id, user_id };
+        GetFriendRequests cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        return cmd;
       } } },
+
   { "get_sent_friend_requests",
     { {},
       true,
       [](QUuid client_id, unsigned int user_id, const QJsonObject&) -> Command {
-        return GetSentFriendRequests{ client_id, user_id };
+        GetSentFriendRequests cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        return cmd;
       } } },
-      { "get_server_stats",
+
+  { "get_server_stats",
     { {},
       false,
       [](QUuid client_id, unsigned int, const QJsonObject&) -> Command {
-        return GetServerStats{ client_id };
+        GetServerStats cmd;
+        cmd.client_id = client_id;
+        return cmd;
       } } }
 };

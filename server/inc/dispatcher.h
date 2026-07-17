@@ -1,7 +1,7 @@
 #pragma once
 #include "command_types.h"
-#include "commands.h"
 #include "registry.h"
+#include "server_commands.h"
 #include "services.h"
 
 #include <QThreadPool>
@@ -34,7 +34,7 @@ public:
    * и передаваемый объект. Необходимо, что испускаемые сигналы были в том же
    * потоке, что и NetworkManager
    * @param onResponseReady
-   * @see commands.h
+   * @see server_commands.h
    * @see Task
    * @see NetworkManager
    */
@@ -123,7 +123,7 @@ private:
     const GetSentFriendRequests& cmd);
   /**
    * @brief Метод обработки получения статистики сервера
-   * 
+   *
    * @param cmd команда GetServerStats
    * @return std::vector<Response> список ответов
    */
