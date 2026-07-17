@@ -69,6 +69,8 @@ public:
    * зарегистрированных пользователей
    */
   std::pair<OperationStatus, unsigned int> countUsers();
+  std::pair<OperationStatus, std::optional<QString>> getUserPwdHash(
+    const QString& login);
 
 private:
   ConnectionManager* mConnManager;
