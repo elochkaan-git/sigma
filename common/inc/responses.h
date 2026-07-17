@@ -4,6 +4,8 @@
 #include <QString>
 #include <QUuid>
 
+namespace wire {
+
 /**
  * @brief Ответ на регистрацию пользователя
  * @see RegisterUser
@@ -11,7 +13,6 @@
  */
 struct RegisterUserResponse
 {
-  QUuid client_id;
   OperationStatus status;
 };
 
@@ -22,7 +23,6 @@ struct RegisterUserResponse
  */
 struct LoginUserResponse
 {
-  QUuid client_id;
   unsigned int user_id;
   OperationStatus status;
 };
@@ -35,7 +35,6 @@ struct LoginUserResponse
  */
 struct SendMessageResponse
 {
-  QUuid client_id;
   OperationStatus status;
 };
 
@@ -46,7 +45,6 @@ struct SendMessageResponse
  */
 struct NewMessageResponse
 {
-  QUuid client_id; // Получатель
   unsigned int sender_id;
   QString content;
 };
@@ -56,7 +54,6 @@ struct NewMessageResponse
  */
 struct SendFriendRequestResponse
 {
-  QUuid client_id;
   OperationStatus status;
 };
 
@@ -65,7 +62,6 @@ struct SendFriendRequestResponse
  */
 struct AcceptFriendRequestResponse
 {
-  QUuid client_id;
   OperationStatus status;
 };
 
@@ -74,7 +70,6 @@ struct AcceptFriendRequestResponse
  */
 struct RejectFriendRequestResponse
 {
-  QUuid client_id;
   OperationStatus status;
 };
 
@@ -83,7 +78,6 @@ struct RejectFriendRequestResponse
  */
 struct RemoveFriendResponse
 {
-  QUuid client_id;
   OperationStatus status;
 };
 
@@ -92,7 +86,6 @@ struct RemoveFriendResponse
  */
 struct GetFriendsResponse
 {
-  QUuid client_id;
   OperationStatus status;
   std::optional<std::vector<User>>
     friends; /**< Список пользователей, может быть std::nullopt */
@@ -103,7 +96,6 @@ struct GetFriendsResponse
  */
 struct GetFriendRequestsResponse
 {
-  QUuid client_id;
   OperationStatus status;
   std::optional<std::vector<User>>
     requests; /**< Список пользователей, может быть std::nullopt */
@@ -114,10 +106,9 @@ struct GetFriendRequestsResponse
  */
 struct GetSentFriendRequestsResponse
 {
-  QUuid client_id;
   OperationStatus status;
   std::optional<std::vector<User>>
-    sentRequests; /**< Список пользователей, может быть std::nullopt */
+    sent_requests; /**< Список пользователей, может быть std::nullopt */
 };
 
 /**
@@ -126,58 +117,9 @@ struct GetSentFriendRequestsResponse
  */
 struct GetServerStatsResponse
 {
-  QUuid client_id;
   OperationStatus status;
   unsigned int online;
   unsigned int total;
 };
 
-struct StartCallResponse
-{
-  QUuid client_id;
-  QUuid call_id;
-  OperationStatus status;
-};
-
-struct IncomingCall
-{
-  QUuid client_id;
-  QUuid call_id;
-  unsigned int caller_id;
-};
-
-struct AcceptCallResponse
-{
-  QUuid client_id;
-  QUuid call_id;
-  OperationStatus status;
-};
-
-struct RejectCallResponse
-{
-  QUuid client_id;
-  QUuid call_id;
-  OperationStatus status;
-};
-
-struct EndCallResponse
-{
-  QUuid client_id;
-  QUuid call_id;
-  OperationStatus status;
-};
-
-struct SdpResponse
-{
-  QUuid client_id;
-  QUuid call_id;
-  QString sdp;
-};
-
-struct IceCandidateResponse
-{
-  QUuid client_id;
-  QUuid call_id;
-  QString candidate;
-  QString mid;
-};
+}

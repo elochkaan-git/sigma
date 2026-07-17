@@ -2,13 +2,14 @@
 #include <QString>
 #include <QUuid>
 
+namespace wire {
+
 /**
  * @brief Команда регистрации пользователя
  *
  */
 struct RegisterUser
 {
-  QUuid client_id;
   QString login;
   QString pwd;
 };
@@ -19,7 +20,6 @@ struct RegisterUser
  */
 struct LoginUser
 {
-  QUuid client_id;
   QString login;
   QString pwd;
 };
@@ -30,8 +30,6 @@ struct LoginUser
  */
 struct SendMessage
 {
-  QUuid client_id;
-  unsigned int sender_id;
   unsigned int receiver_id;
   QString content;
 };
@@ -42,8 +40,6 @@ struct SendMessage
  */
 struct SendFriendRequest
 {
-  QUuid client_id;
-  unsigned int user_id;
   unsigned int friend_id;
 };
 
@@ -53,8 +49,6 @@ struct SendFriendRequest
  */
 struct AcceptFriendRequest
 {
-  QUuid client_id;
-  unsigned int user_id;
   unsigned int friend_id;
 };
 
@@ -64,8 +58,6 @@ struct AcceptFriendRequest
  */
 struct RejectFriendRequest
 {
-  QUuid client_id;
-  unsigned int user_id;
   unsigned int friend_id;
 };
 
@@ -75,8 +67,6 @@ struct RejectFriendRequest
  */
 struct RemoveFriend
 {
-  QUuid client_id;
-  unsigned int user_id;
   unsigned int friend_id;
 };
 
@@ -86,8 +76,6 @@ struct RemoveFriend
  */
 struct GetFriends
 {
-  QUuid client_id;
-  unsigned int user_id;
 };
 
 /**
@@ -96,8 +84,6 @@ struct GetFriends
  */
 struct GetFriendRequests
 {
-  QUuid client_id;
-  unsigned int user_id;
 };
 
 /**
@@ -106,8 +92,6 @@ struct GetFriendRequests
  */
 struct GetSentFriendRequests
 {
-  QUuid client_id;
-  unsigned int user_id;
 };
 
 /**
@@ -116,45 +100,39 @@ struct GetSentFriendRequests
  */
 struct GetServerStats
 {
-  QUuid client_id;
 };
 
 struct StartCall
 {
-  QUuid client_id;
-  unsigned int caller_id;
   unsigned int callee_id;
 };
 
 struct AcceptCall
 {
-  QUuid client_id;
   QUuid call_id;
 };
 
 struct RejectCall
 {
-  QUuid client_id;
   QUuid call_id;
 };
 
 struct EndCall
 {
-  QUuid client_id;
   QUuid call_id;
 };
 
 struct Sdp
 {
-  QUuid client_id;
   QUuid call_id;
   QString sdp;
 };
 
 struct IceCandidate
 {
-  QUuid client_id;
   QUuid call_id;
   QString candidate;
   QString mid;
 };
+
+}
