@@ -1,7 +1,7 @@
 #pragma once
 #include <QHash>
-#include <QUuid>
 #include <QReadWriteLock>
+#include <QUuid>
 
 #include <optional>
 

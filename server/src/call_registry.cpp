@@ -1,7 +1,7 @@
 #include "call_registry.h"
 
-#include <QUuid>
 #include <QReadLocker>
+#include <QUuid>
 #include <QWriteLocker>
 
 #include <optional>
@@ -11,7 +11,7 @@ CallRegistry::createRecord(unsigned int caller_id, unsigned int callee_id)
 {
   QWriteLocker locker(&mLock);
   QUuid call_id = QUuid::createUuid();
-  mCalls[call_id] = {caller_id, callee_id, CallStatus::Ringing};
+  mCalls[call_id] = { caller_id, callee_id, CallStatus::Ringing };
   return call_id;
 }
 
