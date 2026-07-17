@@ -24,8 +24,9 @@ std::optional<QUuid>
 OnlineUsersRegistry::getClientId(unsigned int user_id)
 {
   QReadLocker locker(&mLock);
-  if (!mOnlineUsers.contains(user_id))
+  if (!mOnlineUsers.contains(user_id)) {
     return std::nullopt;
+  }
   return mOnlineUsers.value(user_id);
 }
 
