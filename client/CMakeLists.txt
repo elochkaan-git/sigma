@@ -4,14 +4,17 @@ set(CLIENT_NAME client)
 
 file(GLOB SERVER_SOURCES CONFIGURE_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+  ${CMAKE_SOURCE_DIR}/common/src/*.cpp
 )
 file(GLOB SERVER_HEADERS CONFIGURE_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/inc/*.h
+  ${CMAKE_SOURCE_DIR}/common/inc/*.h
 )
 
 add_executable(${CLIENT_NAME} ${SERVER_SOURCES} ${SERVER_HEADERS} client.cpp)
-target_include_directories(${CLIENT_NAME}
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/inc
+target_include_directories(${CLIENT_NAME} PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/inc
+  ${CMAKE_SOURCE_DIR}/common/inc
 )
 
 find_package(Qt6 REQUIRED COMPONENTS Core Network WebSockets)

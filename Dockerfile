@@ -3,6 +3,7 @@ from base:latest as build
 workdir /app
 copy third-party ./third-party
 copy CMakeLists.txt ./
+copy common ./common
 copy server ./server
 copy client ./client
 
