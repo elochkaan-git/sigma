@@ -25,7 +25,6 @@
 #include <QtTypes>
 
 #include <chrono>
-#include <cmath>
 #include <optional>
 #include <variant>
 

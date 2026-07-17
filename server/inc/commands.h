@@ -118,3 +118,43 @@ struct GetServerStats
 {
   QUuid client_id;
 };
+
+struct StartCall
+{
+  QUuid client_id;
+  unsigned int caller_id;
+  unsigned int callee_id;
+};
+
+struct AcceptCall
+{
+  QUuid client_id;
+  QUuid call_id;
+};
+
+struct RejectCall
+{
+  QUuid client_id;
+  QUuid call_id;
+};
+
+struct EndCall
+{
+  QUuid client_id;
+  QUuid call_id;
+};
+
+struct Sdp
+{
+  QUuid client_id;
+  QUuid call_id;
+  QString sdp;
+};
+
+struct IceCandidate
+{
+  QUuid client_id;
+  QUuid call_id;
+  QString candidate;
+  QString mid;
+};

@@ -131,3 +131,53 @@ struct GetServerStatsResponse
   unsigned int online;
   unsigned int total;
 };
+
+struct StartCallResponse
+{
+  QUuid client_id;
+  QUuid call_id;
+  OperationStatus status;
+};
+
+struct IncomingCall
+{
+  QUuid client_id;
+  QUuid call_id;
+  unsigned int caller_id;
+};
+
+struct AcceptCallResponse
+{
+  QUuid client_id;
+  QUuid call_id;
+  OperationStatus status;
+};
+
+struct RejectCallResponse
+{
+  QUuid client_id;
+  QUuid call_id;
+  OperationStatus status;
+};
+
+struct EndCallResponse
+{
+  QUuid client_id;
+  QUuid call_id;
+  OperationStatus status;
+};
+
+struct SdpResponse
+{
+  QUuid client_id;
+  QUuid call_id;
+  QString sdp;
+};
+
+struct IceCandidateResponse
+{
+  QUuid client_id;
+  QUuid call_id;
+  QString candidate;
+  QString mid;
+};
