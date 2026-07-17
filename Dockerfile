@@ -3,11 +3,13 @@ from base:latest as build
 workdir /app
 copy third-party ./third-party
 copy CMakeLists.txt ./
+copy common ./common
 copy server ./server
+copy client ./client
 
 run mkdir build \
     && cd build \
-    && cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug \
+    && cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release \
     && cmake --build . -j"$(nproc)"
 
 

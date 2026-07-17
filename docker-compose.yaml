@@ -7,7 +7,7 @@ services:
   server:
     build:
       context: .
-      dockerfile: server/Dockerfile
+      dockerfile: Dockerfile
     image: server:latest
     depends_on:
       - db

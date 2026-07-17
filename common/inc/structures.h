@@ -41,8 +41,9 @@ struct User
 {
   unsigned int user_id;
   QString login;
-  QString pwd_hash;
 };
+
+namespace wire {
 
 /**
  * @brief Универсальная структура ошибки для случаев, не заложенных в
@@ -51,6 +52,7 @@ struct User
  */
 struct Error
 {
-  QUuid client_id; /**< id клиента */
   QString reason;  /**< причина ошибки */
 };
+
+}

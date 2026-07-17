@@ -52,7 +52,7 @@ UserRepository::getUserByLogin(const QString& login)
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
   bool status =
-    query.prepare("select id, login, passwd from users where login = :login");
+    query.prepare("select id, login from users where login = :login");
   if (!status) {
     qCritical(appDatabase) << query.lastError().text();
     return { OperationStatus::InternalError, std::nullopt };
@@ -63,8 +63,7 @@ UserRepository::getUserByLogin(const QString& login)
   if (status && isValue) {
     unsigned int user_id = query.value(0).toUInt();
     QString user_login = query.value(1).toString();
-    QString user_pwd_hash = query.value(2).toString();
-    return { OperationStatus::OK, User{ user_id, user_login, user_pwd_hash } };
+    return { OperationStatus::OK, User{ user_id, user_login } };
   } else if (status && !isValue) {
     qWarning(appDatabase) << "No user with login '" << login << "' found";
     return { OperationStatus::UserNotExist, std::nullopt };
@@ -79,8 +78,7 @@ UserRepository::getUserByID(unsigned int user_id)
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
-  bool status =
-    query.prepare("select id, login, passwd from users where id = :id");
+  bool status = query.prepare("select id, login from users where id = :id");
   if (!status) {
     qCritical(appDatabase) << query.lastError().text();
     return { OperationStatus::InternalError, std::nullopt };
@@ -91,8 +89,7 @@ UserRepository::getUserByID(unsigned int user_id)
   if (status && isValue) {
     unsigned int user_id = query.value(0).toUInt();
     QString user_login = query.value(1).toString();
-    QString user_pwd_hash = query.value(2).toString();
-    return { OperationStatus::OK, User{ user_id, user_login, user_pwd_hash } };
+    return { OperationStatus::OK, User{ user_id, user_login } };
   } else if (status && !isValue) {
     qWarning(appDatabase) << "No user with id '" << user_id << "' found";
     return { OperationStatus::UserNotExist, std::nullopt };
@@ -117,8 +114,8 @@ UserRepository::getUsersById(const std::vector<unsigned int>& ids)
   }
   placeholders += QString(":id%1)").arg(ids.size() - 1);
 
-  bool status = query.prepare(
-    "select id, login, passwd from users where id in " + placeholders);
+  bool status =
+    query.prepare("select id, login from users where id in " + placeholders);
   if (!status) {
     qCritical(appDatabase) << query.lastError().text();
     return { OperationStatus::InternalError, std::nullopt };
@@ -136,8 +133,7 @@ UserRepository::getUsersById(const std::vector<unsigned int>& ids)
   while (query.next()) {
     unsigned int user_id = query.value(0).toUInt();
     QString user_login = query.value(1).toString();
-    QString user_pwd_hash = query.value(2).toString();
-    users.push_back(User{ user_id, user_login, user_pwd_hash });
+    users.push_back(User{ user_id, user_login });
   }
   if (users.empty()) {
     qWarning(appDatabase) << "No such users, sorry";
@@ -151,8 +147,7 @@ UserRepository::countUsers()
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
-  bool status =
-    query.prepare("select id from users");
+  bool status = query.prepare("select id from users");
   if (!status) {
     qCritical(appDatabase) << query.lastError().text();
     return { OperationStatus::InternalError, 0 };
@@ -160,9 +155,34 @@ UserRepository::countUsers()
   status = query.exec();
   if (status) {
     return { OperationStatus::OK, (unsigned int)query.size() };
-  }  else {
+  } else {
     qCritical(appDatabase) << query.lastError().text();
     return { OperationStatus::InternalError, 0 };
+  }
+}
+
+std::pair<OperationStatus, std::optional<QString>>
+UserRepository::getUserPwdHash(const QString& login)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  QSqlQuery query(connection);
+  bool status = query.prepare("select passwd from users where login = :login");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    return { OperationStatus::InternalError, std::nullopt };
+  }
+  query.bindValue(":login", login);
+  status = query.exec();
+  bool isValue = query.next();
+  if (status && isValue) {
+    QString pwd = query.value(0).toString();
+    return { OperationStatus::OK, pwd };
+  } else if (status && !isValue) {
+    qWarning(appDatabase) << "No user with login '" << login << "' found";
+    return { OperationStatus::UserNotExist, std::nullopt };
+  } else {
+    qCritical(appDatabase) << query.lastError().text();
+    return { OperationStatus::InternalError, std::nullopt };
   }
 }
 

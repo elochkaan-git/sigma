@@ -23,7 +23,7 @@ signals:
    * быть испущено несколько сигналов
    *
    * @param result ответ
-   * @see responses.h
+   * @see server_responses.h
    */
   void responseReady(Response result);
 

@@ -42,20 +42,23 @@ UserService::registerUser(QString login, QString passwd)
 std::pair<OperationStatus, std::optional<unsigned int>>
 UserService::loginUser(QString login, QString passwd)
 {
-  auto [status, user_info] = mUserRepo->getUserByLogin(login);
-  if (status == OperationStatus::UserNotExist) {
-    qWarning(appService) << QString("User %1 not exists").arg(login);
-    return { OperationStatus::UserNotExist, std::nullopt };
-  } else {
-    std::string pwd = passwd.toStdString();
+  auto [status, pwd_hash] = mUserRepo->getUserPwdHash(login);
+  if (status == OperationStatus::OK) {
+    std::string s_pwd = passwd.toStdString();
+    std::string s_pwd_hash = pwd_hash.value().toStdString();
     if (crypto_pwhash_str_verify(
-          user_info.value().pwd_hash.toStdString().c_str(),
-          pwd.c_str(),
-          pwd.length()) != 0) {
+          s_pwd_hash.c_str(), s_pwd.c_str(), s_pwd.length()) != 0) {
       qWarning(appService) << QString("Wrong password, %1").arg(login);
       return { OperationStatus::InvalidCredentials, std::nullopt };
     }
+    const auto [_, user_info] = mUserRepo->getUserByLogin(login);
     return { OperationStatus::OK, user_info.value().user_id };
+  } else if (status == OperationStatus::UserNotExist) {
+    qWarning(appService) << QString("User %1 not exists").arg(login);
+    return { OperationStatus::UserNotExist, std::nullopt };
+  } else {
+    qCritical(appService) << QString("Internal error");
+    return { OperationStatus::InternalError, std::nullopt };
   }
 }
 
@@ -145,9 +148,6 @@ RelationService::getFriends(unsigned int user_id)
       << QString("No users with such ids or error %1").arg((int)status_users);
     return { status_rel, std::nullopt };
   }
-  for (auto& u : users.value()) {
-    u.pwd_hash.clear();
-  }
   return { OperationStatus::OK, users };
 }
 
@@ -168,9 +168,6 @@ RelationService::getFriendRequests(unsigned int user_id)
     qWarning(appService)
       << QString("No users with such ids or error %1").arg((int)status_users);
     return { status_rel, std::nullopt };
-  }
-  for (auto& u : users.value()) {
-    u.pwd_hash.clear();
   }
   return { OperationStatus::OK, users };
 }
@@ -193,9 +190,6 @@ RelationService::getSentFriendRequests(unsigned int user_id)
     qWarning(appService)
       << QString("No users with such ids or error %1").arg((int)status_users);
     return { status_rel, std::nullopt };
-  }
-  for (auto& u : users.value()) {
-    u.pwd_hash.clear();
   }
   return { OperationStatus::OK, users };
 }

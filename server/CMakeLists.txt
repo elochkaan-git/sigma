@@ -4,14 +4,18 @@ set(SERVER_NAME server)
 
 file(GLOB SERVER_SOURCES CONFIGURE_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+  ${CMAKE_SOURCE_DIR}/common/src/*.cpp
 )
 file(GLOB SERVER_HEADERS CONFIGURE_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/inc/*.h
+  ${CMAKE_SOURCE_DIR}/common/inc/*.h
 )
 
 add_executable(${SERVER_NAME} ${SERVER_SOURCES} ${SERVER_HEADERS} server.cpp)
-target_include_directories(${SERVER_NAME}
-  PRIVATE ${CMAKE_SOURCE_DIR}/third-party/libsodium/include ${CMAKE_CURRENT_SOURCE_DIR}/inc
+target_include_directories(${SERVER_NAME} PRIVATE
+  ${CMAKE_SOURCE_DIR}/third-party/libsodium/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/inc
+  ${CMAKE_SOURCE_DIR}/common/inc
 )
 if (WIN32)
   set(LIBSODIUM_LIB_DIR "${CMAKE_SOURCE_DIR}/third-party/libsodium/lib/windows")

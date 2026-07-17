@@ -59,7 +59,7 @@ public:
    * @return std::pair<OperationStatus, unsigned int> статус операции и число
    * зарегистрированных пользователей
    */
-   std::pair<OperationStatus, unsigned int> countUsers();
+  std::pair<OperationStatus, unsigned int> countUsers();
 
 private:
   UserRepository* mUserRepo;
