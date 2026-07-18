@@ -42,8 +42,6 @@ services:
     network_mode: host
     volumes:
       - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
-    networks:
-      - app-network
 
 networks:
   app-network:
