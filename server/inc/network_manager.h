@@ -217,6 +217,16 @@ static const auto isString = [](const QJsonValue& v) { return v.isString(); };
 static const auto isNumber = [](const QJsonValue& v) { return v.isDouble(); };
 
 /**
+ * @brief Проверяет, что значение является строкой, представляющей корректный
+ * QUuid
+ */
+static const auto isUuid = [](const QJsonValue& v) {
+  if (!v.isString())
+    return false;
+  return !QUuid::fromString(v.toString()).isNull();
+};
+
+/**
  * @brief Словарь спецификаций комманд
  */
 inline const QHash<QString, CommandSpec> kCommandSpecs = {
@@ -340,6 +350,81 @@ inline const QHash<QString, CommandSpec> kCommandSpecs = {
       [](QUuid client_id, unsigned int, const QJsonObject&) -> Command {
         GetServerStats cmd;
         cmd.client_id = client_id;
+        return cmd;
+      } } },
+
+  { "start_call",
+    { { { "callee_id", isNumber } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        StartCall cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.callee_id = static_cast<unsigned int>(p["callee_id"].toInteger());
+        return cmd;
+      } } },
+
+  { "accept_call",
+    { { { "call_id", isUuid } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        AcceptCall cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.call_id = QUuid::fromString(p["call_id"].toString());
+        return cmd;
+      } } },
+
+  { "reject_call",
+    { { { "call_id", isUuid } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        RejectCall cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.call_id = QUuid::fromString(p["call_id"].toString());
+        return cmd;
+      } } },
+
+  { "end_call",
+    { { { "call_id", isUuid } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        EndCall cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.call_id = QUuid::fromString(p["call_id"].toString());
+        return cmd;
+      } } },
+
+  { "sdp",
+    { { { "call_id", isUuid }, { "sdp", isString } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        Sdp cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.call_id = QUuid::fromString(p["call_id"].toString());
+        cmd.sdp = p["sdp"].toString();
+        return cmd;
+      } } },
+
+  { "ice_candidate",
+    { { { "call_id", isUuid }, { "candidate", isString }, { "mid", isString } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        IceCandidate cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.call_id = QUuid::fromString(p["call_id"].toString());
+        cmd.candidate = p["candidate"].toString();
+        cmd.mid = p["mid"].toString();
         return cmd;
       } } }
 };

@@ -199,6 +199,64 @@ NetworkManager::serialize(const Response& response)
         payload["total"] = static_cast<qint64>(r.total);
         return wrap("get_server_stats_response", std::move(payload));
       },
+      [](const StartCallResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("start_call_response", std::move(payload));
+      },
+      [](const IncomingCallResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        payload["caller_id"] = static_cast<qint64>(r.caller_id);
+        return wrap("incoming_call", std::move(payload));
+      },
+      [](const AcceptCallResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("accept_call_response", std::move(payload));
+      },
+      [](const CallAcceptedResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("call_accepted", std::move(payload));
+      },
+      [](const RejectCallResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("reject_call_response", std::move(payload));
+      },
+      [](const CallRejectedResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("call_rejected", std::move(payload));
+      },
+      [](const EndCallResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("end_call_response", std::move(payload));
+      },
+      [](const CallEndedResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("call_ended", std::move(payload));
+      },
+      [](const SdpResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        payload["sdp"] = r.sdp;
+        return wrap("sdp", std::move(payload));
+      },
+      [](const IceCandidateResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        payload["candidate"] = r.candidate;
+        payload["mid"] = r.mid;
+        return wrap("ice_candidate", std::move(payload));
+      },
       [](const Error& r) {
         QJsonObject payload;
         payload["reason"] = r.reason;
