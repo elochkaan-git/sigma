@@ -1,3 +1,4 @@
+#include "call_registry.h"
 #include "connection_manager.h"
 #include "dispatcher.h"
 #include "logging.h"
@@ -31,6 +32,7 @@ main(int argc, char* argv[])
                                      getenv("DB_USER"),
                                      getenv("DB_PASSWORD") });
     OnlineUsersRegistry registry;
+    CallRegistry call_registry;
     UserRepository userRepo(&conn_manager);
     MessageRepository msgRepo(&conn_manager);
     RelationRepository relRepo(&conn_manager);
@@ -38,7 +40,8 @@ main(int argc, char* argv[])
     MessageService msgService(&msgRepo);
     RelationService relService(&relRepo, &userRepo);
     Dispatcher dispatcher({ &userServive, &msgService, &relService },
-                          &registry);
+                          &registry,
+                          &call_registry);
     NetworkManager net_manager(&dispatcher, &registry, "config.ini");
 
     return application.exec();
