@@ -36,6 +36,10 @@
 | `5`   | `RelationWithYourself`  | Попытка отправить заявку/добавить в друзья самого себя           |
 | `6`   | `NoSuchRelation`        | Нет такой заявки/связи (например, принять несуществующую заявку) |
 | `7`   | `UserNotInFriends`      | Попытка удалить из друзей того, кто не в друзьях                 |
+| `8`   | `UserOffline`           | Вызываемый пользователь не в сети                                |
+| `9`   | `NoSuchCall`            | Звонка с таким `call_id` не существует                           |
+| `10`  | `NotCallParticipant`    | Пользователь не является участником данного звонка               |
+| `11`  | `CallWithYourself`      | Попытка позвонить самому себе                                     |
 | `255` | `InternalError`         | Внутренняя ошибка сервера                                         |
 
 ---
@@ -395,3 +399,198 @@
   }
 }
 ```
+
+---
+
+## 4. Звонки (WebRTC signaling)
+
+Звонок идентифицируется по `call_id` (UUID-строка без фигурных скобок,
+например `"550e8400-e29b-41d4-a716-446655440000"`), который сервер выдаёт
+в ответ на `start_call`. Позвонить можно только пользователю, который
+находится в друзьях у инициатора и в сети.
+
+### 4.1 `start_call` — инициировать звонок
+
+```json
+{
+  "type": "start_call",
+  "payload": { "callee_id": 2 }
+}
+```
+
+**Ответ:** [`start_call_response`](#47-start_call_response) инициатору.
+Если `status == OK`, вызываемому дополнительно приходит
+[`incoming_call`](#48-incoming_call).
+
+### 4.2 `accept_call` — принять звонок
+
+```json
+{
+  "type": "accept_call",
+  "payload": { "call_id": "..." }
+}
+```
+
+**Ответ:** [`accept_call_response`](#49-accept_call_response) вызываемому.
+Если `status == OK`, инициатору (если он ещё в сети) приходит
+[`call_accepted`](#410-call_accepted).
+
+### 4.3 `reject_call` — отклонить звонок
+
+```json
+{
+  "type": "reject_call",
+  "payload": { "call_id": "..." }
+}
+```
+
+**Ответ:** [`reject_call_response`](#411-reject_call_response) вызываемому.
+Если `status == OK`, инициатору (если он ещё в сети) приходит
+[`call_rejected`](#412-call_rejected).
+
+### 4.4 `end_call` — завершить звонок
+
+Может отправить любая из сторон звонка.
+
+```json
+{
+  "type": "end_call",
+  "payload": { "call_id": "..." }
+}
+```
+
+**Ответ:** [`end_call_response`](#413-end_call_response) отправителю.
+Если `status == OK`, второй стороне (если она ещё в сети) приходит
+[`call_ended`](#414-call_ended).
+
+### 4.5 `sdp` — обмен SDP (offer/answer)
+
+```json
+{
+  "type": "sdp",
+  "payload": { "call_id": "...", "sdp": "v=0..." }
+}
+```
+
+Ретранслируется без изменений второй стороне звонка как
+[`sdp`](#415-sdp-1). Отправителю ничего не приходит; если звонок не
+найден, отправитель не участник звонка, либо собеседник не в сети —
+отправителю приходит [`error`](#313-error).
+
+### 4.6 `ice_candidate` — обмен ICE-кандидатами
+
+```json
+{
+  "type": "ice_candidate",
+  "payload": { "call_id": "...", "candidate": "candidate:...", "mid": "0" }
+}
+```
+
+Ретранслируется без изменений второй стороне звонка как
+[`ice_candidate`](#416-ice_candidate-1). Правила ошибок — как у `sdp`.
+
+---
+
+### 4.7 `start_call_response`
+
+Возможные статусы: `OK` (0), `CallWithYourself` (11), `UserNotInFriends` (7),
+`UserOffline` (8), `InternalError` (255). Поле `call_id` валидно только
+при `status == OK`.
+
+```json
+{
+  "type": "start_call_response",
+  "payload": { "status": 0, "call_id": "550e8400-e29b-41d4-a716-446655440000" }
+}
+```
+
+### 4.8 `incoming_call`
+
+Уведомление о входящем звонке. Отправляется вызываемому в момент
+`start_call`, если он в сети.
+
+```json
+{
+  "type": "incoming_call",
+  "payload": { "call_id": "...", "caller_id": 1 }
+}
+```
+
+### 4.9 `accept_call_response`
+
+Возможные статусы: `OK` (0), `NoSuchCall` (9), `NotCallParticipant` (10),
+`InternalError` (255).
+
+```json
+{
+  "type": "accept_call_response",
+  "payload": { "status": 0, "call_id": "..." }
+}
+```
+
+### 4.10 `call_accepted`
+
+Уведомление инициатору о том, что вызываемый принял звонок.
+
+```json
+{
+  "type": "call_accepted",
+  "payload": { "call_id": "..." }
+}
+```
+
+### 4.11 `reject_call_response`
+
+Возможные статусы: `OK` (0), `NoSuchCall` (9), `NotCallParticipant` (10),
+`InternalError` (255).
+
+```json
+{
+  "type": "reject_call_response",
+  "payload": { "status": 0, "call_id": "..." }
+}
+```
+
+### 4.12 `call_rejected`
+
+Уведомление инициатору о том, что вызываемый отклонил звонок.
+
+```json
+{
+  "type": "call_rejected",
+  "payload": { "call_id": "..." }
+}
+```
+
+### 4.13 `end_call_response`
+
+Возможные статусы: `OK` (0), `NoSuchCall` (9), `NotCallParticipant` (10),
+`InternalError` (255).
+
+```json
+{
+  "type": "end_call_response",
+  "payload": { "status": 0, "call_id": "..." }
+}
+```
+
+### 4.14 `call_ended`
+
+Уведомление второй стороне о том, что звонок завершен.
+
+```json
+{
+  "type": "call_ended",
+  "payload": { "call_id": "..." }
+}
+```
+
+### 4.15 `sdp` (сервер → клиент)
+
+Ретрансляция SDP второй стороне звонка. Формат совпадает с командой
+`sdp`, отправленной клиентом.
+
+### 4.16 `ice_candidate` (сервер → клиент)
+
+Ретрансляция ICE-кандидата второй стороне звонка. Формат совпадает с
+командой `ice_candidate`, отправленной клиентом.
