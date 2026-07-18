@@ -122,4 +122,103 @@ struct GetServerStatsResponse
   unsigned int total;
 };
 
+/**
+ * @brief Ответ инициатору звонка на команду StartCall
+ * @see StartCall
+ * @see OperationStatus
+ */
+struct StartCallResponse
+{
+  OperationStatus status;
+  QUuid call_id; /**< Валиден только при status == OK */
+};
+
+/**
+ * @brief Уведомление о входящем звонке. Отправляется вызываемому в момент
+ * StartCall, если он в сети
+ */
+struct IncomingCallResponse
+{
+  QUuid call_id;
+  unsigned int caller_id;
+};
+
+/**
+ * @brief Ответ вызываемому на команду AcceptCall
+ * @see AcceptCall
+ * @see OperationStatus
+ */
+struct AcceptCallResponse
+{
+  OperationStatus status;
+  QUuid call_id;
+};
+
+/**
+ * @brief Уведомление инициатору о том, что вызываемый принял звонок
+ */
+struct CallAcceptedResponse
+{
+  QUuid call_id;
+};
+
+/**
+ * @brief Ответ вызываемому на команду RejectCall
+ * @see RejectCall
+ * @see OperationStatus
+ */
+struct RejectCallResponse
+{
+  OperationStatus status;
+  QUuid call_id;
+};
+
+/**
+ * @brief Уведомление инициатору о том, что вызываемый отклонил звонок
+ */
+struct CallRejectedResponse
+{
+  QUuid call_id;
+};
+
+/**
+ * @brief Ответ на команду EndCall тому, кто завершил звонок
+ * @see EndCall
+ * @see OperationStatus
+ */
+struct EndCallResponse
+{
+  OperationStatus status;
+  QUuid call_id;
+};
+
+/**
+ * @brief Уведомление второй стороне о том, что звонок завершен
+ */
+struct CallEndedResponse
+{
+  QUuid call_id;
+};
+
+/**
+ * @brief Ретрансляция SDP (offer/answer) второй стороне звонка
+ * @see Sdp
+ */
+struct SdpResponse
+{
+  QUuid call_id;
+  QString sdp;
+};
+
+/**
+ * @brief Ретрансляция ICE-кандидата второй стороне звонка
+ * @see IceCandidate
+ */
+struct IceCandidateResponse
+{
+  QUuid call_id;
+  QString candidate;
+  QString mid;
+};
+
 }

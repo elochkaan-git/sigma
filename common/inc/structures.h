@@ -19,6 +19,13 @@ enum class OperationStatus
   RelationWithYourself = 5,
   NoSuchRelation = 6,
   UserNotInFriends = 7,
+  UserOffline = 8,       /**< Пользователь не в сети (например, попытка позвонить
+                           оффлайн-пользователю) */
+  NoSuchCall = 9,        /**< Звонка с таким call_id не существует (уже завершен
+                           или никогда не существовал) */
+  NotCallParticipant = 10, /**< Пользователь не является участником данного
+                             звонка (не caller и не callee) */
+  CallWithYourself = 11, /**< Попытка позвонить самому себе */
   InternalError = 255
 };
 
