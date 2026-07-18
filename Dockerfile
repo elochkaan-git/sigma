@@ -26,6 +26,7 @@ run apt-get update && apt-get install -y --no-install-recommends \
   
 workdir /app
 copy --from=build /app/build/server/server ./server
+copy ./config.ini ./
 cmd ["./server"]
 
 
