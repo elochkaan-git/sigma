@@ -20,7 +20,17 @@ using Response = std::variant<Error,
                               GetFriendsResponse,
                               GetFriendRequestsResponse,
                               GetSentFriendRequestsResponse,
-                              GetServerStatsResponse>;
+                              GetServerStatsResponse,
+                              StartCallResponse,
+                              IncomingCallResponse,
+                              AcceptCallResponse,
+                              CallAcceptedResponse,
+                              RejectCallResponse,
+                              CallRejectedResponse,
+                              EndCallResponse,
+                              CallEndedResponse,
+                              SdpResponse,
+                              IceCandidateResponse>;
 /**
  * @brief сокращение для варианта команд
  */
@@ -35,7 +45,13 @@ using Command = std::variant<Error,
                              GetFriends,
                              GetFriendRequests,
                              GetSentFriendRequests,
-                             GetServerStats>;
+                             GetServerStats,
+                             StartCall,
+                             AcceptCall,
+                             RejectCall,
+                             EndCall,
+                             Sdp,
+                             IceCandidate>;
 
 /**
  * @brief Возвращает тип команды
