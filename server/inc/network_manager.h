@@ -1,6 +1,7 @@
 #pragma once
 #include "command_types.h"
 #include "dispatcher.h"
+#include "logging.h"
 #include "registry.h"
 #include "server_commands.h"
 
@@ -215,6 +216,7 @@ static const auto isString = [](const QJsonValue& v) { return v.isString(); };
  * @brief Проверяет, что значение является числом
  */
 static const auto isNumber = [](const QJsonValue& v) { return v.isDouble(); };
+static const auto isBool = [](const QJsonValue& v) { return v.isBool(); };
 
 /**
  * @brief Проверяет, что значение является строкой, представляющей корректный
@@ -354,7 +356,7 @@ inline const QHash<QString, CommandSpec> kCommandSpecs = {
       } } },
 
   { "start_call",
-    { { { "callee_id", isNumber } },
+    { { { "callee_id", isNumber }, { "with_video", isBool } },
       true,
       [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
         -> Command {
@@ -362,6 +364,7 @@ inline const QHash<QString, CommandSpec> kCommandSpecs = {
         cmd.client_id = client_id;
         cmd.user_id = user_id;
         cmd.callee_id = static_cast<unsigned int>(p["callee_id"].toInteger());
+        cmd.with_video = p["with_video"].toBool();
         return cmd;
       } } },
 

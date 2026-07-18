@@ -438,6 +438,7 @@ Dispatcher::handleStartCall(const StartCall& cmd)
   icr.client_id = callee_client_id.value();
   icr.call_id = call_id;
   icr.caller_id = cmd.user_id;
+  icr.with_video = cmd.with_video;
 
   return std::vector<Response>{ scr, icr };
 }

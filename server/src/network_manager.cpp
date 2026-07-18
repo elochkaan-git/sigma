@@ -93,7 +93,7 @@ NetworkManager::NetworkManager(Dispatcher* dispatcher,
     qWarning(appNetwork)
       << "There's no network section in config, using default values";
     mSettings.beginGroup("network");
-    mSettings.setValue("host", 0);    // Localhost as decimal
+    mSettings.setValue("host", 0);    // Any interface as decimal
     mSettings.setValue("port", 5555); // Default port
     mSettings.endGroup();
   }
@@ -209,6 +209,7 @@ NetworkManager::serialize(const Response& response)
         QJsonObject payload;
         payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
         payload["caller_id"] = static_cast<qint64>(r.caller_id);
+        payload["with_video"] = r.with_video;
         return wrap("incoming_call", std::move(payload));
       },
       [](const AcceptCallResponse& r) {
