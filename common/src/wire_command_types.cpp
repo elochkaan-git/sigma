@@ -20,6 +20,18 @@ commandTypeToString(const CommandType& cmd_type)
       return "GetSentFriendRequests";
     case CommandType::GET_SERVER_STATS:
       return "GetServerStats";
+    case CommandType::START_CALL:
+      return "StartCall";
+    case CommandType::ACCEPT_CALL:
+      return "AcceptCall";
+    case CommandType::REJECT_CALL:
+      return "RejectCall";
+    case CommandType::END_CALL:
+      return "EndCall";
+    case CommandType::SDP:
+      return "Sdp";
+    case CommandType::ICE_CANDIDATE:
+      return "IceCandidate";
     case CommandType::REGISTER:
       return "RegisterUser";
     case CommandType::LOGIN:
