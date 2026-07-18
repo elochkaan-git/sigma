@@ -52,6 +52,7 @@ private:
   Services mServices;
   OnlineUsersRegistry* mRegistry;
   CallRegistry* mCallRegistry;
+  QString mTurnSecret;
 
 private:
   /**
@@ -176,4 +177,5 @@ private:
    * @return std::vector<Response> список ответов (ретрансляция или Error)
    */
   std::vector<Response> handleIceCandidate(const IceCandidate& cmd);
+  std::vector<Response> handleGetTurnCredentials(const GetTurnCredentials& cmd);
 };

@@ -222,4 +222,12 @@ struct IceCandidateResponse
   QString mid;
 };
 
+struct GetTurnCredentialsResponse
+{
+  QString username;   // временный логин (Unix timestamp)
+  QString password;   // HMAC-SHA1(secret, username) в hex
+  OperationStatus status;
+  int ttl;
+};
+
 }

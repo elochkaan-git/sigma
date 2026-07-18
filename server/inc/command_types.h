@@ -30,7 +30,8 @@ using Response = std::variant<Error,
                               EndCallResponse,
                               CallEndedResponse,
                               SdpResponse,
-                              IceCandidateResponse>;
+                              IceCandidateResponse,
+                              GetTurnCredentialsResponse>;
 /**
  * @brief сокращение для варианта команд
  */
@@ -51,7 +52,8 @@ using Command = std::variant<Error,
                              RejectCall,
                              EndCall,
                              Sdp,
-                             IceCandidate>;
+                             IceCandidate,
+                             GetTurnCredentials>;
 
 /**
  * @brief Возвращает тип команды

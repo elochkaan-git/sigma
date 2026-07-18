@@ -1,7 +1,6 @@
 #pragma once
 #include "command_types.h"
 #include "dispatcher.h"
-#include "logging.h"
 #include "registry.h"
 #include "server_commands.h"
 
@@ -429,5 +428,16 @@ inline const QHash<QString, CommandSpec> kCommandSpecs = {
         cmd.candidate = p["candidate"].toString();
         cmd.mid = p["mid"].toString();
         return cmd;
-      } } }
+      } } },
+  { "get_turn_credentials",
+    { {},
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject&) -> Command {
+        GetTurnCredentials cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        return cmd;
+      }
+    }
+  },
 };

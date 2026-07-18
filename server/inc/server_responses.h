@@ -190,3 +190,8 @@ struct IceCandidateResponse
   : public wire::IceCandidateResponse
   , public ClientCtx
 {};
+
+struct GetTurnCredentialsResponse
+  : public wire::GetTurnCredentialsResponse
+  , public ClientCtx
+{};

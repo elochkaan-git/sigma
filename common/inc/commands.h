@@ -136,4 +136,8 @@ struct IceCandidate
   QString mid;
 };
 
+struct GetTurnCredentials
+{
+};
+
 }

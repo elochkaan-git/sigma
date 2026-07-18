@@ -262,7 +262,15 @@ NetworkManager::serialize(const Response& response)
         QJsonObject payload;
         payload["reason"] = r.reason;
         return wrap("error", std::move(payload));
-      } },
+      },
+      [](const GetTurnCredentialsResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["username"] = r.username;
+        payload["password"] = r.password;
+        payload["ttl"] = r.ttl;
+        return wrap("get_turn_credentials_response", std::move(payload));
+      }, },
     response);
 
   qInfo(appNetwork) << "Preparing" << obj["type"] << "command";

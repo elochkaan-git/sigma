@@ -38,6 +38,8 @@ commandTypeToString(const CommandType& cmd_type)
       return "LoginUser";
     case CommandType::SEND_MESSAGE:
       return "SendMessage";
+    case CommandType::GET_TURN_CREDENTIALS:
+      return "GetTurnCredentials";
     default:
       return "Error";
   }

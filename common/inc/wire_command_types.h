@@ -34,6 +34,7 @@ enum class CommandType
   END_CALL,
   SDP,
   ICE_CANDIDATE,
+  GET_TURN_CREDENTIALS,
   OVERSIZED
 };
 

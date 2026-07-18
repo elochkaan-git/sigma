@@ -8,7 +8,10 @@
 #include "structures.h"
 #include "task.h"
 
+#include <QCryptographicHash>
+#include <QMessageAuthenticationCode>
 #include <QObject>
+#include <QSettings>
 #include <QThreadPool>
 
 #include <functional>
@@ -25,6 +28,13 @@ Dispatcher::Dispatcher(Services services,
   , mCallRegistry(call_registry)
 {
   mThreadPool = std::make_unique<QThreadPool>();
+  QSettings settings("config.ini", QSettings::IniFormat);
+  settings.beginGroup("turn");
+  mTurnSecret = settings.value("secret", "").toString();
+  settings.endGroup();
+  if (mTurnSecret.isEmpty()) {
+    qCritical(appDispatcher) << "TURN secret not set in config! TURN credentials will not work.";
+  }
 }
 
 void
@@ -128,6 +138,11 @@ Dispatcher::dispatch(const Command& cmd,
         const IceCandidate& cmd) -> std::function<std::vector<Response>()> {
         return [this, cmd]() -> std::vector<Response> {
           return this->handleIceCandidate(cmd);
+        };
+      },
+      [this](const GetTurnCredentials& cmd) -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          return this->handleGetTurnCredentials(cmd);
         };
       },
       [](const Error& cmd) -> std::function<std::vector<Response>()> {
@@ -651,4 +666,41 @@ Dispatcher::handleIceCandidate(const IceCandidate& cmd)
   icr.candidate = cmd.candidate;
   icr.mid = cmd.mid;
   return std::vector<Response>{ icr };
+}
+
+std::vector<Response>
+Dispatcher::handleGetTurnCredentials(const GetTurnCredentials& cmd)
+{
+  GetTurnCredentialsResponse response;
+  response.client_id = cmd.client_id;
+  response.status = OperationStatus::OK;
+
+  if (mTurnSecret.isEmpty()) {
+    response.status = OperationStatus::InternalError;
+    response.username = "";
+    response.password = "";
+    response.ttl = 0;
+    qCritical(appDispatcher) << "TURN secret not configured, cannot generate credentials";
+    return std::vector<Response>{ response };
+  }
+
+  int ttl = 3600;
+  qint64 expiry = QDateTime::currentSecsSinceEpoch() + ttl;
+  QString username = QString::number(expiry);
+
+  QByteArray secret = mTurnSecret.toUtf8();
+  QByteArray msg = username.toUtf8();
+  QByteArray hmac = QCryptographicHash::hash(secret + msg, QCryptographicHash::Sha1); 
+  QByteArray hmacResult = QMessageAuthenticationCode::hash(msg, secret, QCryptographicHash::Sha1);
+  QString password = hmacResult.toHex();
+
+  response.username = username;
+  response.password = password;
+  response.ttl = ttl;
+  response.status = OperationStatus::OK;
+
+  qInfo(appDispatcher) << "Generated TURN credentials for user" << cmd.user_id
+                        << "expiring at" << expiry;
+
+  return std::vector<Response>{ response };
 }
