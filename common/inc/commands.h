@@ -105,6 +105,7 @@ struct GetServerStats
 struct StartCall
 {
   unsigned int callee_id;
+  bool with_video;
 };
 
 struct AcceptCall

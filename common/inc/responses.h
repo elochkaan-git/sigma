@@ -141,6 +141,7 @@ struct IncomingCallResponse
 {
   QUuid call_id;
   unsigned int caller_id;
+  bool with_video;
 };
 
 /**
