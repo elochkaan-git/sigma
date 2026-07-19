@@ -440,5 +440,27 @@ inline const QHash<QString, CommandSpec> kCommandSpecs = {
         cmd.client_id = client_id;
         cmd.user_id = user_id;
         return cmd;
+      } } },
+
+  { "set_avatar",
+    { { { "avatar", isString } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        SetAvatar cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.avatar = p["avatar"].toString();
+        return cmd;
+      } } },
+
+  { "get_online_users",
+    { {},
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject&) -> Command {
+        GetOnlineUsers cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        return cmd;
       } } }
 };

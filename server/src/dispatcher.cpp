@@ -19,7 +19,27 @@
 #include <memory>
 #include <optional>
 #include <qlogging.h>
+#include <type_traits>
 #include <vector>
+
+namespace {
+
+/**
+ * @brief Type-trait, определяющий, есть ли у команды публичное поле user_id
+ * (т.е. является ли она SessionCtx-командой, пришедшей от авторизованного
+ * пользователя). Используется для централизованного обновления времени
+ * последней активности пользователя в Dispatcher::dispatch
+ */
+template<typename T, typename = void>
+struct has_user_id : std::false_type
+{};
+
+template<typename T>
+struct has_user_id<T, std::void_t<decltype(std::declval<T>().user_id)>>
+  : std::true_type
+{};
+
+} // namespace
 
 Dispatcher::Dispatcher(Services services,
                        OnlineUsersRegistry* registry,
@@ -46,6 +66,21 @@ Dispatcher::dispatch(const Command& cmd,
 {
   qInfo(appDispatcher) << "Got new command: " +
                             commandTypeToString(getTypeOfCommand(cmd));
+
+  // Централизованное обновление времени последней активности: срабатывает
+  // для любой команды, у которой есть публичное поле user_id (то есть для
+  // всех SessionCtx-команд от уже авторизованных пользователей). LoginUser
+  // обрабатывается отдельно в handleLoginUser, так как на момент прихода
+  // команды user_id еще не известен.
+  std::visit(
+    [this](auto&& c) {
+      using T = std::decay_t<decltype(c)>;
+      if constexpr (has_user_id<T>::value) {
+        this->mServices.u_service->updateLastSeen(c.user_id);
+      }
+    },
+    cmd);
+
   std::function<std::vector<Response>()> job = std::visit(
     overloaded{
       [this](
@@ -148,6 +183,17 @@ Dispatcher::dispatch(const Command& cmd,
           return this->handleGetTurnCredentials(cmd);
         };
       },
+      [this](const SetAvatar& cmd) -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          return this->handleSetAvatar(cmd);
+        };
+      },
+      [this](
+        const GetOnlineUsers& cmd) -> std::function<std::vector<Response>()> {
+        return [this, cmd]() -> std::vector<Response> {
+          return this->handleGetOnlineUsers(cmd);
+        };
+      },
       [](const Error& cmd) -> std::function<std::vector<Response>()> {
         auto job = [cmd]() -> std::vector<Response> {
           return std::vector<Response>{ cmd };
@@ -188,6 +234,8 @@ Dispatcher::handleLoginUser(const LoginUser& cmd)
   if (user_id.has_value() && status == OperationStatus::OK) {
     lur.user_id = user_id.value();
     lur.status = OperationStatus::OK;
+
+    this->mServices.u_service->updateLastSeen(user_id.value());
 
     auto [status, msgs] =
       this->mServices.msg_service->getQueuedMessages(user_id.value());
@@ -763,4 +811,49 @@ Dispatcher::handleGetTurnCredentials(const GetTurnCredentials& cmd)
                        << "expiring at" << expiry;
 
   return std::vector<Response>{ response };
+}
+
+std::vector<Response>
+Dispatcher::handleSetAvatar(const SetAvatar& cmd)
+{
+  OperationStatus status =
+    this->mServices.u_service->setAvatar(cmd.user_id, cmd.avatar);
+  if (status != OperationStatus::OK) {
+    qWarning(appDispatcher)
+      << QString("Command SetAvatar return status %1").arg((int)status);
+  } else {
+    qInfo(appDispatcher)
+      << QString("Avatar updated for user %1").arg(cmd.user_id);
+  }
+  SetAvatarResponse sar;
+  sar.client_id = cmd.client_id;
+  sar.status = status;
+  return std::vector<Response>{ sar };
+}
+
+std::vector<Response>
+Dispatcher::handleGetOnlineUsers(const GetOnlineUsers& cmd)
+{
+  GetOnlineUsersResponse gour;
+  gour.client_id = cmd.client_id;
+
+  std::vector<unsigned int> ids = this->mRegistry->getOnlineUserIds();
+  if (ids.empty()) {
+    qInfo(appDispatcher) << "No users online";
+    gour.status = OperationStatus::OK;
+    gour.users = std::nullopt;
+    return std::vector<Response>{ gour };
+  }
+
+  auto [status, users] = this->mServices.u_service->getUsersByID(ids);
+  gour.status = status;
+  gour.users = users;
+  if (status != OperationStatus::OK) {
+    qWarning(appDispatcher)
+      << QString("Command GetOnlineUsers return status %1").arg((int)status);
+  } else {
+    qInfo(appDispatcher)
+      << QString("Sending online users list to %1").arg(cmd.user_id);
+  }
+  return std::vector<Response>{ gour };
 }

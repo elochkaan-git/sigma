@@ -4,6 +4,7 @@
 #include "repositories.h"
 #include "structures.h"
 
+#include <QByteArray>
 #include <QString>
 #include <qlogging.h>
 #include <sodium.h>
@@ -13,6 +14,45 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+namespace {
+
+/**
+ * @brief Максимальный размер аватарки после декодирования из base64 (в
+ * байтах)
+ */
+constexpr qsizetype kMaxAvatarBytes = 1 * 1024 * 1024; // 1 MB
+
+/**
+ * @brief Проверяет магические байты (сигнатуру формата), чтобы убедиться, что
+ * присланные данные действительно являются изображением одного из
+ * поддерживаемых форматов (PNG, JPEG, GIF, WEBP)
+ */
+bool
+isValidImage(const QByteArray& data)
+{
+  if (data.isEmpty() || data.size() > kMaxAvatarBytes) {
+    return false;
+  }
+  static const QByteArray pngSig = QByteArray::fromHex("89504e470d0a1a0a");
+  if (data.startsWith(pngSig)) {
+    return true; // PNG
+  }
+  if (data.size() >= 3 && static_cast<unsigned char>(data[0]) == 0xFF &&
+      static_cast<unsigned char>(data[1]) == 0xD8 &&
+      static_cast<unsigned char>(data[2]) == 0xFF) {
+    return true; // JPEG
+  }
+  if (data.startsWith("GIF87a") || data.startsWith("GIF89a")) {
+    return true; // GIF
+  }
+  if (data.size() >= 12 && data.startsWith("RIFF") && data.mid(8, 4) == "WEBP") {
+    return true; // WEBP
+  }
+  return false;
+}
+
+}
 
 UserService::UserService(UserRepository* u_repo)
   : mUserRepo(u_repo)
@@ -75,6 +115,32 @@ std::pair<OperationStatus, unsigned int>
 UserService::countUsers()
 {
   return this->mUserRepo->countUsers();
+}
+
+std::pair<OperationStatus, std::optional<std::vector<User>>>
+UserService::getUsersByID(const std::vector<unsigned int>& ids)
+{
+  return this->mUserRepo->getUsersById(ids);
+}
+
+OperationStatus
+UserService::setAvatar(unsigned int user_id, QString avatar_base64)
+{
+  QByteArray decoded = QByteArray::fromBase64(
+    avatar_base64.toUtf8(), QByteArray::AbortOnBase64DecodingErrors);
+  if (!isValidImage(decoded)) {
+    qWarning(appService)
+      << QString("Rejected avatar for user %1: invalid or too big")
+           .arg(user_id);
+    return OperationStatus::InvalidAvatar;
+  }
+  return this->mUserRepo->setAvatar(user_id, avatar_base64);
+}
+
+OperationStatus
+UserService::updateLastSeen(unsigned int user_id)
+{
+  return this->mUserRepo->updateLastSeen(user_id);
 }
 
 MessageService::MessageService(MessageRepository* repo)

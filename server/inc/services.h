@@ -60,6 +60,33 @@ public:
    * зарегистрированных пользователей
    */
   std::pair<OperationStatus, unsigned int> countUsers();
+  /**
+   * @brief Возвращает пользователей по списку id
+   *
+   * @param ids список id пользователей
+   * @return std::pair<OperationStatus, std::optional<std::vector<User>>>
+   * статус операции и данные пользователей, если есть, иначе std::nullopt
+   */
+  std::pair<OperationStatus, std::optional<std::vector<User>>> getUsersByID(
+    const std::vector<unsigned int>& ids);
+  /**
+   * @brief Устанавливает/обновляет аватарку пользователя. Принимает
+   * изображение в base64, проверяет размер и валидность (по магическим
+   * байтам), после чего сохраняет как есть (в виде base64-строки)
+   *
+   * @param user_id id пользователя
+   * @param avatar_base64 изображение, закодированное в base64
+   * @return OperationStatus статус операции. InvalidAvatar, если данные не
+   * прошли валидацию
+   */
+  OperationStatus setAvatar(unsigned int user_id, QString avatar_base64);
+  /**
+   * @brief Обновляет время последней активности пользователя на текущее
+   *
+   * @param user_id id пользователя
+   * @return OperationStatus статус операции
+   */
+  OperationStatus updateLastSeen(unsigned int user_id);
 
 private:
   UserRepository* mUserRepo;

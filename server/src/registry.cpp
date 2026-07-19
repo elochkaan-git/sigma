@@ -41,3 +41,10 @@ OnlineUsersRegistry::totalOnline()
   QReadLocker locker(&mLock);
   return mOnlineUsers.size();
 }
+
+std::vector<unsigned int>
+OnlineUsersRegistry::getOnlineUserIds()
+{
+  QReadLocker locker(&mLock);
+  return std::vector<unsigned int>(mOnlineUsers.constBegin(), mOnlineUsers.constEnd());
+}

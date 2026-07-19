@@ -178,4 +178,18 @@ private:
    */
   std::vector<Response> handleIceCandidate(const IceCandidate& cmd);
   std::vector<Response> handleGetTurnCredentials(const GetTurnCredentials& cmd);
+  /**
+   * @brief Метод обработки установки/обновления аватарки
+   *
+   * @param cmd команда SetAvatar
+   * @return std::vector<Response> список ответов
+   */
+  std::vector<Response> handleSetAvatar(const SetAvatar& cmd);
+  /**
+   * @brief Метод обработки получения списка онлайн-пользователей
+   *
+   * @param cmd команда GetOnlineUsers
+   * @return std::vector<Response> список ответов
+   */
+  std::vector<Response> handleGetOnlineUsers(const GetOnlineUsers& cmd);
 };

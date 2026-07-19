@@ -71,6 +71,21 @@ public:
   std::pair<OperationStatus, unsigned int> countUsers();
   std::pair<OperationStatus, std::optional<QString>> getUserPwdHash(
     const QString& login);
+  /**
+   * @brief Обновляет аватарку пользователя. Хранится как base64-строка
+   *
+   * @param user_id id пользователя
+   * @param avatar_base64 изображение, закодированное в base64
+   * @return OperationStatus статус выполнения операции
+   */
+  OperationStatus setAvatar(unsigned int user_id, const QString& avatar_base64);
+  /**
+   * @brief Обновляет время последней активности пользователя на текущее
+   *
+   * @param user_id id пользователя
+   * @return OperationStatus статус выполнения операции
+   */
+  OperationStatus updateLastSeen(unsigned int user_id);
 
 private:
   ConnectionManager* mConnManager;

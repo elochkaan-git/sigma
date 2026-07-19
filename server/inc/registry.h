@@ -48,6 +48,7 @@ public:
    * @return unsigned int число онлайн-пользователей
    */
   unsigned int totalOnline();
+  std::vector<unsigned int> getOnlineUserIds();
 
 private:
   QHash<unsigned int, QUuid> mOnlineUsers;

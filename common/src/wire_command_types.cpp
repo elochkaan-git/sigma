@@ -40,6 +40,10 @@ commandTypeToString(const CommandType& cmd_type)
       return "SendMessage";
     case CommandType::GET_TURN_CREDENTIALS:
       return "GetTurnCredentials";
+    case CommandType::SET_AVATAR:
+      return "SetAvatar";
+    case CommandType::GET_ONLINE_USERS:
+      return "GetOnlineUsers";
     default:
       return "Error";
   }

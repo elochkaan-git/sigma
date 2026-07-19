@@ -35,6 +35,8 @@ enum class CommandType
   SDP,
   ICE_CANDIDATE,
   GET_TURN_CREDENTIALS,
+  SET_AVATAR,
+  GET_ONLINE_USERS,
   OVERSIZED
 };
 

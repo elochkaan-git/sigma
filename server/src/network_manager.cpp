@@ -78,6 +78,10 @@ serializeUsers(const std::optional<std::vector<User>>& users)
     QJsonObject o;
     o["user_id"] = static_cast<qint64>(u.user_id);
     o["login"] = u.login;
+    o["avatar"] = u.avatar;
+    o["last_seen"] = u.last_seen.isValid()
+                       ? QJsonValue(u.last_seen.toString(Qt::ISODate))
+                       : QJsonValue(QJsonValue::Null);
     arr.append(o);
   }
   return arr;
@@ -266,6 +270,17 @@ NetworkManager::serialize(const Response& response)
         payload["password"] = r.password;
         payload["ttl"] = r.ttl;
         return wrap("get_turn_credentials_response", std::move(payload));
+      },
+      [](const SetAvatarResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        return wrap("set_avatar_response", std::move(payload));
+      },
+      [](const GetOnlineUsersResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["users"] = serializeUsers(r.users);
+        return wrap("get_online_users_response", std::move(payload));
       },
     },
     response);

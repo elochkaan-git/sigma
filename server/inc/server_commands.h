@@ -138,3 +138,21 @@ struct GetTurnCredentials
   : public wire::GetTurnCredentials
   , public SessionCtx
 {};
+
+/**
+ * @brief Команда установки/обновления аватарки пользователя
+ *
+ */
+struct SetAvatar
+  : public wire::SetAvatar
+  , public SessionCtx
+{};
+ 
+/**
+ * @brief Команда для получения списка всех онлайн-пользователей
+ *
+ */
+struct GetOnlineUsers
+  : public wire::GetOnlineUsers
+  , public SessionCtx
+{};

@@ -230,4 +230,23 @@ struct GetTurnCredentialsResponse
   int ttl;
 };
 
+/**
+ * @brief Ответ на установку/обновление аватарки
+ */
+struct SetAvatarResponse
+{
+  OperationStatus status;
+};
+ 
+/**
+ * @brief Ответ на получение списка всех онлайн-пользователей
+ */
+struct GetOnlineUsersResponse
+{
+  OperationStatus status;
+  std::optional<std::vector<User>>
+    users; /**< Список онлайн-пользователей, может быть std::nullopt */
+};
+
+
 }

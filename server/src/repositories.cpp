@@ -62,8 +62,8 @@ UserRepository::getUserByLogin(const QString& login)
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
-  bool status =
-    query.prepare("select id, login from users where login = :login");
+  bool status = query.prepare(
+    "select id, login, avatar, last_seen from users where login = :login");
   if (!status) {
     qCritical(appDatabase) << query.lastError().text();
     return { OperationStatus::InternalError, std::nullopt };
@@ -74,7 +74,9 @@ UserRepository::getUserByLogin(const QString& login)
   if (status && isValue) {
     unsigned int user_id = query.value(0).toUInt();
     QString user_login = query.value(1).toString();
-    return { OperationStatus::OK, User{ user_id, user_login } };
+    QString avatar = query.value(2).toString();
+    QDateTime last_seen = query.value(3).toDateTime();
+    return { OperationStatus::OK, User{ user_id, user_login, avatar, last_seen } };
   } else if (status && !isValue) {
     qWarning(appDatabase) << "No user with login '" << login << "' found";
     return { OperationStatus::UserNotExist, std::nullopt };
@@ -89,7 +91,8 @@ UserRepository::getUserByID(unsigned int user_id)
 {
   QSqlDatabase& connection = mConnManager->currentConnection();
   QSqlQuery query(connection);
-  bool status = query.prepare("select id, login from users where id = :id");
+  bool status = query.prepare(
+    "select id, login, avatar, last_seen from users where id = :id");
   if (!status) {
     qCritical(appDatabase) << query.lastError().text();
     return { OperationStatus::InternalError, std::nullopt };
@@ -100,7 +103,9 @@ UserRepository::getUserByID(unsigned int user_id)
   if (status && isValue) {
     unsigned int user_id = query.value(0).toUInt();
     QString user_login = query.value(1).toString();
-    return { OperationStatus::OK, User{ user_id, user_login } };
+    QString avatar = query.value(2).toString();
+    QDateTime last_seen = query.value(3).toDateTime();
+    return { OperationStatus::OK, User{ user_id, user_login, avatar, last_seen } };
   } else if (status && !isValue) {
     qWarning(appDatabase) << "No user with id '" << user_id << "' found";
     return { OperationStatus::UserNotExist, std::nullopt };
@@ -125,8 +130,9 @@ UserRepository::getUsersById(const std::vector<unsigned int>& ids)
   }
   placeholders += QString(":id%1)").arg(ids.size() - 1);
 
-  bool status =
-    query.prepare("select id, login from users where id in " + placeholders);
+  bool status = query.prepare(
+    "select id, login, avatar, last_seen from users where id in " +
+    placeholders);
   if (!status) {
     qCritical(appDatabase) << query.lastError().text();
     return { OperationStatus::InternalError, std::nullopt };
@@ -144,7 +150,9 @@ UserRepository::getUsersById(const std::vector<unsigned int>& ids)
   while (query.next()) {
     unsigned int user_id = query.value(0).toUInt();
     QString user_login = query.value(1).toString();
-    users.push_back(User{ user_id, user_login });
+    QString avatar = query.value(2).toString();
+    QDateTime last_seen = query.value(3).toDateTime();
+    users.push_back(User{ user_id, user_login, avatar, last_seen });
   }
   if (users.empty()) {
     qWarning(appDatabase) << "No such users, sorry";
@@ -199,6 +207,55 @@ UserRepository::getUserPwdHash(const QString& login)
     qCritical(appDatabase) << query.lastError().text();
     return { OperationStatus::InternalError, std::nullopt };
   }
+}
+
+OperationStatus
+UserRepository::setAvatar(unsigned int user_id, const QString& avatar_base64)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  QSqlQuery query(connection);
+  bool status =
+    query.prepare("update users set avatar = :avatar where id = :id");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":avatar", avatar_base64);
+  query.bindValue(":id", user_id);
+  status = query.exec();
+  if (!status) {
+    qWarning(appDatabase) << query.lastError().text();
+    return OperationStatus::InternalError;
+  }
+  if (query.numRowsAffected() == 0) {
+    qWarning(appDatabase) << "No user with id '" << user_id << "' found";
+    return OperationStatus::UserNotExist;
+  }
+  return OperationStatus::OK;
+}
+
+OperationStatus
+UserRepository::updateLastSeen(unsigned int user_id)
+{
+  QSqlDatabase& connection = mConnManager->currentConnection();
+  QSqlQuery query(connection);
+  bool status = query.prepare(
+    "update users set last_seen = current_timestamp where id = :id");
+  if (!status) {
+    qCritical(appDatabase) << query.lastError().text();
+    return OperationStatus::InternalError;
+  }
+  query.bindValue(":id", user_id);
+  status = query.exec();
+  if (!status) {
+    qWarning(appDatabase) << query.lastError().text();
+    return OperationStatus::InternalError;
+  }
+  if (query.numRowsAffected() == 0) {
+    qWarning(appDatabase) << "No user with id '" << user_id << "' found";
+    return OperationStatus::UserNotExist;
+  }
+  return OperationStatus::OK;
 }
 
 MessageRepository::MessageRepository(ConnectionManager* manager)

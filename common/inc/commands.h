@@ -140,4 +140,22 @@ struct GetTurnCredentials
 {
 };
 
+/**
+ * @brief Команда установки/обновления аватарки пользователя
+ *
+ */
+struct SetAvatar
+{
+  QString avatar; /**< Изображение, закодированное в base64 */
+};
+ 
+/**
+ * @brief Команда для получения списка всех онлайн-пользователей
+ *
+ */
+struct GetOnlineUsers
+{
+};
+
+
 }

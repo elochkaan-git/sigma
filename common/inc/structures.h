@@ -28,6 +28,8 @@ enum class OperationStatus
   CallWithYourself = 11, /**< Попытка позвонить самому себе */
   UserAlreadyInCall = 12,
   CallAlreadyProceeded = 13,
+  InvalidAvatar = 14, /**< Присланные данные не являются валидным изображением
+                        или превышают допустимый размер */
   InternalError = 255
 };
 
@@ -50,7 +52,13 @@ struct User
 {
   unsigned int user_id;
   QString login;
+  QString avatar;      /**< Аватарка пользователя, закодированная в base64.
+                         Пустая строка, если аватарка не установлена */
+  QDateTime last_seen;  /**< Время последней активности пользователя.
+                         Невалидный QDateTime, если пользователь еще ни разу
+                         не проявлял активность */
 };
+
 
 namespace wire {
 

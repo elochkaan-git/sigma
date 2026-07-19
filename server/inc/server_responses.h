@@ -195,3 +195,19 @@ struct GetTurnCredentialsResponse
   : public wire::GetTurnCredentialsResponse
   , public ClientCtx
 {};
+
+/**
+ * @brief Ответ на установку/обновление аватарки
+ */
+struct SetAvatarResponse
+  : public wire::SetAvatarResponse
+  , public ClientCtx
+{};
+ 
+/**
+ * @brief Ответ на получение списка всех онлайн-пользователей
+ */
+struct GetOnlineUsersResponse
+  : public wire::GetOnlineUsersResponse
+  , public ClientCtx
+{};

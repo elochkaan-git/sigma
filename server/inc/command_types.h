@@ -31,7 +31,9 @@ using Response = std::variant<Error,
                               CallEndedResponse,
                               SdpResponse,
                               IceCandidateResponse,
-                              GetTurnCredentialsResponse>;
+                              GetTurnCredentialsResponse,
+                              SetAvatarResponse,
+                              GetOnlineUsersResponse>;
 /**
  * @brief сокращение для варианта команд
  */
@@ -53,7 +55,9 @@ using Command = std::variant<Error,
                              EndCall,
                              Sdp,
                              IceCandidate,
-                             GetTurnCredentials>;
+                             GetTurnCredentials,
+                             SetAvatar,
+                             GetOnlineUsers>;
 
 /**
  * @brief Возвращает тип команды
