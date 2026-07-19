@@ -42,6 +42,10 @@ UserRepository::registerUser(const QString& login, const QString& pwd_hash)
 
   status = query.exec();
   if (status) {
+    if (!connection.commit()) {
+      qWarning(appDatabase) << "Commit failed:" << connection.lastError().text();
+      return OperationStatus::InternalError;
+    }
     return OperationStatus::OK;
   } else if (query.lastError().nativeErrorCode() == "23505") {
     connection.rollback();
