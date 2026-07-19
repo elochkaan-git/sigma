@@ -22,8 +22,6 @@ UserRepository::UserRepository(ConnectionManager* manager)
 OperationStatus
 UserRepository::registerUser(const QString& login, const QString& pwd_hash)
 {
-  // FIXME: добавить откат транзакции, чтобы при UserExists не было перехода на
-  // следующий id
   QSqlDatabase& connection = mConnManager->currentConnection();
   bool status = connection.transaction();
   if (!status) {
