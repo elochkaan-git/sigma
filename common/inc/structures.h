@@ -30,6 +30,8 @@ enum class OperationStatus
   CallAlreadyProceeded = 13,
   InvalidAvatar = 14, /**< Присланные данные не являются валидным изображением
                         или превышают допустимый размер */
+  CallNotEstablished = 15, /**< Звонок существует, но еще не находится в
+                            статусе Active (например, еще не принят) */
   InternalError = 255
 };
 
@@ -58,7 +60,6 @@ struct User
                          Невалидный QDateTime, если пользователь еще ни разу
                          не проявлял активность */
 };
-
 
 namespace wire {
 

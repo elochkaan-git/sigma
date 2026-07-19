@@ -202,17 +202,24 @@ struct CallEndedResponse
 };
 
 /**
- * @brief Ретрансляция SDP (offer/answer) второй стороне звонка
+ * @brief Ретрансляция SDP (offer/answer) второй стороне звонка.
+ * Также используется как ответ отправителю при ошибке (тогда call_id
+ * содержит переданный call_id, а sdp пустая строка)
  * @see Sdp
  */
 struct SdpResponse
 {
   QUuid call_id;
   QString sdp;
+  OperationStatus status; /**< OK — при успешной ретрансляции второй стороне;
+                           NoSuchCall, NotCallParticipant, CallNotEstablished,
+                           UserOffline или InternalError — при ошибке (тогда
+                           ответ уходит отправителю, а не второй стороне) */
 };
 
 /**
- * @brief Ретрансляция ICE-кандидата второй стороне звонка
+ * @brief Ретрансляция ICE-кандидата второй стороне звонка. Также
+ * используется как ответ отправителю при ошибке (см. SdpResponse)
  * @see IceCandidate
  */
 struct IceCandidateResponse
@@ -220,6 +227,7 @@ struct IceCandidateResponse
   QUuid call_id;
   QString candidate;
   QString mid;
+  OperationStatus status;
 };
 
 struct GetTurnCredentialsResponse
@@ -237,7 +245,7 @@ struct SetAvatarResponse
 {
   OperationStatus status;
 };
- 
+
 /**
  * @brief Ответ на получение списка всех онлайн-пользователей
  */
@@ -247,6 +255,5 @@ struct GetOnlineUsersResponse
   std::optional<std::vector<User>>
     users; /**< Список онлайн-пользователей, может быть std::nullopt */
 };
-
 
 }

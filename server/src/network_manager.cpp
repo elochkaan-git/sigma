@@ -249,6 +249,7 @@ NetworkManager::serialize(const Response& response)
         QJsonObject payload;
         payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
         payload["sdp"] = r.sdp;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
         return wrap("sdp", std::move(payload));
       },
       [](const IceCandidateResponse& r) {
@@ -256,6 +257,7 @@ NetworkManager::serialize(const Response& response)
         payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
         payload["candidate"] = r.candidate;
         payload["mid"] = r.mid;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
         return wrap("ice_candidate", std::move(payload));
       },
       [](const Error& r) {

@@ -680,27 +680,33 @@ Dispatcher::handleSdp(const Sdp& cmd)
   if (!record.has_value()) {
     qWarning(appDispatcher)
       << QString("Call %1 doesn't exist").arg(cmd.call_id.toString());
-    Error error;
-    error.client_id = cmd.client_id;
-    error.reason = "No such call";
-    return std::vector<Response>{ error };
+    SdpResponse sr;
+    sr.client_id = cmd.client_id;
+    sr.call_id = cmd.call_id;
+    sr.sdp = "";
+    sr.status = OperationStatus::NoSuchCall;
+    return std::vector<Response>{ sr };
   }
   if (record->caller_id != cmd.user_id && record->callee_id != cmd.user_id) {
     qWarning(appDispatcher)
       << QString("User %1 is not a participant of call %2")
            .arg(cmd.user_id)
            .arg(cmd.call_id.toString());
-    Error error;
-    error.client_id = cmd.client_id;
-    error.reason = "You are not a participant of this call";
-    return std::vector<Response>{ error };
+    SdpResponse sr;
+    sr.client_id = cmd.client_id;
+    sr.call_id = cmd.call_id;
+    sr.sdp = "";
+    sr.status = OperationStatus::NotCallParticipant;
+    return std::vector<Response>{ sr };
   } else if (record->status != CallStatus::Active) {
     qWarning(appDispatcher)
       << QString("Call %1 not established").arg(cmd.client_id.toString());
-    Error error;
-    error.client_id = cmd.client_id;
-    error.reason = "Call not established";
-    return std::vector<Response>{ error };
+    SdpResponse sr;
+    sr.client_id = cmd.client_id;
+    sr.call_id = cmd.call_id;
+    sr.sdp = "";
+    sr.status = OperationStatus::CallNotEstablished;
+    return std::vector<Response>{ sr };
   }
 
   unsigned int other_id =
@@ -710,16 +716,19 @@ Dispatcher::handleSdp(const Sdp& cmd)
     qWarning(appDispatcher) << QString("Other party %1 of call %2 is offline")
                                  .arg(other_id)
                                  .arg(cmd.call_id.toString());
-    Error error;
-    error.client_id = cmd.client_id;
-    error.reason = "Other party is offline";
-    return std::vector<Response>{ error };
+    SdpResponse sr;
+    sr.client_id = cmd.client_id;
+    sr.call_id = cmd.call_id;
+    sr.sdp = "";
+    sr.status = OperationStatus::UserOffline;
+    return std::vector<Response>{ sr };
   }
 
   SdpResponse sr;
   sr.client_id = other_client_id.value();
   sr.call_id = cmd.call_id;
   sr.sdp = cmd.sdp;
+  sr.status = OperationStatus::OK;
   return std::vector<Response>{ sr };
 }
 
@@ -731,27 +740,36 @@ Dispatcher::handleIceCandidate(const IceCandidate& cmd)
   if (!record.has_value()) {
     qWarning(appDispatcher)
       << QString("Call %1 doesn't exist").arg(cmd.call_id.toString());
-    Error error;
-    error.client_id = cmd.client_id;
-    error.reason = "No such call";
-    return std::vector<Response>{ error };
+    IceCandidateResponse icr;
+    icr.client_id = cmd.client_id;
+    icr.call_id = cmd.call_id;
+    icr.candidate = "";
+    icr.mid = "";
+    icr.status = OperationStatus::NoSuchCall;
+    return std::vector<Response>{ icr };
   }
   if (record->caller_id != cmd.user_id && record->callee_id != cmd.user_id) {
     qWarning(appDispatcher)
       << QString("User %1 is not a participant of call %2")
            .arg(cmd.user_id)
            .arg(cmd.call_id.toString());
-    Error error;
-    error.client_id = cmd.client_id;
-    error.reason = "You are not a participant of this call";
-    return std::vector<Response>{ error };
+    IceCandidateResponse icr;
+    icr.client_id = cmd.client_id;
+    icr.call_id = cmd.call_id;
+    icr.candidate = "";
+    icr.mid = "";
+    icr.status = OperationStatus::NotCallParticipant;
+    return std::vector<Response>{ icr };
   } else if (record->status != CallStatus::Active) {
     qWarning(appDispatcher)
       << QString("Call %1 not established").arg(cmd.client_id.toString());
-    Error error;
-    error.client_id = cmd.client_id;
-    error.reason = "Call not established";
-    return std::vector<Response>{ error };
+    IceCandidateResponse icr;
+    icr.client_id = cmd.client_id;
+    icr.call_id = cmd.call_id;
+    icr.candidate = "";
+    icr.mid = "";
+    icr.status = OperationStatus::CallNotEstablished;
+    return std::vector<Response>{ icr };
   }
 
   unsigned int other_id =
@@ -761,10 +779,13 @@ Dispatcher::handleIceCandidate(const IceCandidate& cmd)
     qWarning(appDispatcher) << QString("Other party %1 of call %2 is offline")
                                  .arg(other_id)
                                  .arg(cmd.call_id.toString());
-    Error error;
-    error.client_id = cmd.client_id;
-    error.reason = "Other party is offline";
-    return std::vector<Response>{ error };
+    IceCandidateResponse icr;
+    icr.client_id = cmd.client_id;
+    icr.call_id = cmd.call_id;
+    icr.candidate = "";
+    icr.mid = "";
+    icr.status = OperationStatus::UserOffline;
+    return std::vector<Response>{ icr };
   }
 
   IceCandidateResponse icr;
@@ -772,6 +793,7 @@ Dispatcher::handleIceCandidate(const IceCandidate& cmd)
   icr.call_id = cmd.call_id;
   icr.candidate = cmd.candidate;
   icr.mid = cmd.mid;
+  icr.status = OperationStatus::OK;
   return std::vector<Response>{ icr };
 }
 

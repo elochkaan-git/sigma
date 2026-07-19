@@ -21,8 +21,11 @@
 | `QString`       | `string`                           |
 | `unsigned int`  | `number` (целое, ≥ 0)              |
 | `OperationStatus` | `number` (целое, код статуса — см. таблицу ниже) |
-| `User`          | `object` (`{ "user_id": number, "login": string }`) |
+| `User`          | `object` (`{ "user_id": number, "login": string, "avatar": string, "last_seen": string \| null }`) |
 | `std::vector<User>` (опционально) | `array` объектов `User`; если данных нет — пустой массив `[]` |
+
+`User.avatar` — аватарка пользователя в base64 (см. [`set_avatar`](#212-set_avatar--установкаобновление-аватарки)); пустая строка, если не установлена.
+`User.last_seen` — время последней активности пользователя в формате ISO 8601 (`Qt::ISODate`); `null`, если пользователь еще ни разу не проявлял активность.
 
 ### Коды `status` (`OperationStatus`)
 
@@ -36,10 +39,14 @@
 | `5`   | `RelationWithYourself`  | Попытка отправить заявку/добавить в друзья самого себя           |
 | `6`   | `NoSuchRelation`        | Нет такой заявки/связи (например, принять несуществующую заявку) |
 | `7`   | `UserNotInFriends`      | Попытка удалить из друзей того, кто не в друзьях                 |
-| `8`   | `UserOffline`           | Вызываемый пользователь не в сети                                |
+| `8`   | `UserOffline`           | Вызываемый пользователь / собеседник по звонку не в сети          |
 | `9`   | `NoSuchCall`            | Звонка с таким `call_id` не существует                           |
 | `10`  | `NotCallParticipant`    | Пользователь не является участником данного звонка               |
 | `11`  | `CallWithYourself`      | Попытка позвонить самому себе                                     |
+| `12`  | `UserAlreadyInCall`     | Инициатор или вызываемый уже участвует в другом звонке            |
+| `13`  | `CallAlreadyProceeded`  | Звонок уже принят/отклонен/завершен ранее                        |
+| `14`  | `InvalidAvatar`         | Присланные данные не являются валидным изображением, либо превышен допустимый размер |
+| `15`  | `CallNotEstablished`    | Звонок существует, но еще не находится в статусе `Active` (например, еще не принят) |
 | `255` | `InternalError`         | Внутренняя ошибка сервера                                         |
 
 ---
@@ -208,6 +215,55 @@
 
 ---
 
+### 2.12 `get_turn_credentials` — получение временных учетных данных TURN-сервера
+
+Требует авторизации.
+
+```json
+{
+  "type": "get_turn_credentials",
+  "payload": {}
+}
+```
+
+**Ответ:** [`get_turn_credentials_response`](#313-get_turn_credentials_response)
+
+---
+
+### 2.13 `set_avatar` — установка/обновление аватарки
+
+Требует авторизации. `avatar` — изображение в формате PNG, JPEG, GIF или WEBP,
+закодированное в base64. Декодированный размер не должен превышать 1 МБ,
+иначе вернется статус `InvalidAvatar` (14).
+
+```json
+{
+  "type": "set_avatar",
+  "payload": {
+    "avatar": "base64-encoded-image-data..."
+  }
+}
+```
+
+**Ответ:** [`set_avatar_response`](#314-set_avatar_response)
+
+---
+
+### 2.14 `get_online_users` — получение списка всех онлайн-пользователей
+
+Требует авторизации.
+
+```json
+{
+  "type": "get_online_users",
+  "payload": {}
+}
+```
+
+**Ответ:** [`get_online_users_response`](#315-get_online_users_response)
+
+---
+
 ## 3. Ответы (сервер → клиент)
 
 ### 3.1 `register_user_response`
@@ -331,8 +387,8 @@
   "payload": {
     "status": 0,
     "friends": [
-      { "user_id": 2, "login": "alice" },
-      { "user_id": 3, "login": "bob" }
+      { "user_id": 2, "login": "alice", "avatar": "", "last_seen": "2026-07-19T10:15:00" },
+      { "user_id": 3, "login": "bob", "avatar": "iVBORw0KGgo...", "last_seen": null }
     ]
   }
 }
@@ -349,7 +405,7 @@
   "payload": {
     "status": 0,
     "requests": [
-      { "user_id": 4, "login": "carol" }
+      { "user_id": 4, "login": "carol", "avatar": "", "last_seen": "2026-07-18T21:03:00" }
     ]
   }
 }
@@ -366,7 +422,7 @@
   "payload": {
     "status": 0,
     "sent_requests": [
-      { "user_id": 5, "login": "dave" }
+      { "user_id": 5, "login": "dave", "avatar": "", "last_seen": null }
     ]
   }
 }
@@ -387,9 +443,69 @@
 }
 ```
 
-### 3.13 `error`
+### 3.13 `get_turn_credentials_response`
 
-Возвращают ошибку, непредусмотренную в OperationStatus, в виде текста.
+Возможные статусы: `OK` (0), `InternalError` (255) — если TURN-секрет не
+настроен на сервере. `username`/`password` — временные учетные данные для
+TURN-сервера (схема REST API, HMAC-SHA1), `ttl` — время их жизни в секундах.
+
+```json
+{
+  "type": "get_turn_credentials_response",
+  "payload": {
+    "status": 0,
+    "username": "1700000000",
+    "password": "a1b2c3...",
+    "ttl": 3600
+  }
+}
+```
+
+### 3.14 `set_avatar_response`
+
+Возможные статусы: `OK` (0), `InvalidAvatar` (14) — данные не являются
+валидным изображением или превышают 1 МБ, `UserNotExist` (2),
+`InternalError` (255).
+
+```json
+{
+  "type": "set_avatar_response",
+  "payload": {
+    "status": 0
+  }
+}
+```
+
+### 3.15 `get_online_users_response`
+
+Возможные статусы: `OK` (0), `InternalError` (255). Поле `users` — массив
+всех онлайн-пользователей (включая себя); пустой массив, если онлайн никого
+нет.
+
+```json
+{
+  "type": "get_online_users_response",
+  "payload": {
+    "status": 0,
+    "users": [
+      { "user_id": 1, "login": "alice", "avatar": "", "last_seen": "2026-07-19T12:00:00" }
+    ]
+  }
+}
+```
+
+### 3.16 `error`
+
+Возвращает ошибку, непредусмотренную в `OperationStatus` — то есть
+сетевые/протокольные сбои, не относящиеся к бизнес-логике конкретной
+команды: невалидный JSON, отсутствие обязательного поля, неизвестный `type`,
+попытка выполнить команду, требующую авторизации, без нее, превышение
+допустимого размера сообщения, а также блокировки за флуд/брутфорс.
+
+Ошибки бизнес-логики (например, "звонок не найден" при `sdp`/`ice_candidate`)
+теперь возвращаются с соответствующим `OperationStatus` в самом ответе
+команды (см. [4.5](#45-sdp--обмен-sdp-offeranswer) и
+[4.6](#46-ice_candidate--обмен-ice-кандидатами)), а не через `error`.
 
 ```json
 {
@@ -472,10 +588,13 @@
 }
 ```
 
-Ретранслируется без изменений второй стороне звонка как
-[`sdp`](#415-sdp-1). Отправителю ничего не приходит; если звонок не
-найден, отправитель не участник звонка, либо собеседник не в сети —
-отправителю приходит [`error`](#313-error).
+При успехе ретранслируется без изменений второй стороне звонка как
+[`sdp`](#415-sdp-1) со `status: 0`. Если звонок не найден, отправитель не
+участник звонка, звонок еще не установлен, либо собеседник не в сети —
+ответ с соответствующим статусом (`NoSuchCall` (9), `NotCallParticipant`
+(10), `CallNotEstablished` (15) или `UserOffline` (8)) приходит не
+собеседнику, а самому отправителю, тем же типом `sdp` (поле `sdp` в этом
+случае пустое).
 
 ### 4.6 `ice_candidate` — обмен ICE-кандидатами
 
@@ -486,16 +605,18 @@
 }
 ```
 
-Ретранслируется без изменений второй стороне звонка как
-[`ice_candidate`](#416-ice_candidate-1). Правила ошибок — как у `sdp`.
+Ретранслируется второй стороне звонка как
+[`ice_candidate`](#416-ice_candidate-1) со `status: 0`. Правила ошибок — как
+у `sdp` (ответ с ненулевым статусом уходит отправителю, поля `candidate` и
+`mid` в этом случае пустые).
 
 ---
 
 ### 4.7 `start_call_response`
 
 Возможные статусы: `OK` (0), `CallWithYourself` (11), `UserNotInFriends` (7),
-`UserOffline` (8), `InternalError` (255). Поле `call_id` валидно только
-при `status == OK`.
+`UserOffline` (8), `UserAlreadyInCall` (12), `InternalError` (255). Поле
+`call_id` валидно только при `status == OK`.
 
 ```json
 {
@@ -519,7 +640,7 @@
 ### 4.9 `accept_call_response`
 
 Возможные статусы: `OK` (0), `NoSuchCall` (9), `NotCallParticipant` (10),
-`InternalError` (255).
+`CallAlreadyProceeded` (13), `InternalError` (255).
 
 ```json
 {
@@ -542,7 +663,7 @@
 ### 4.11 `reject_call_response`
 
 Возможные статусы: `OK` (0), `NoSuchCall` (9), `NotCallParticipant` (10),
-`InternalError` (255).
+`CallAlreadyProceeded` (13), `InternalError` (255).
 
 ```json
 {
@@ -587,10 +708,13 @@
 
 ### 4.15 `sdp` (сервер → клиент)
 
-Ретрансляция SDP второй стороне звонка. Формат совпадает с командой
-`sdp`, отправленной клиентом.
+Ретрансляция SDP второй стороне звонка (`status: 0`), либо ответ об ошибке
+отправителю (см. [4.5](#45-sdp--обмен-sdp-offeranswer)). Формат payload
+совпадает с командой `sdp`, отправленной клиентом, плюс поле `status`.
 
 ### 4.16 `ice_candidate` (сервер → клиент)
 
-Ретрансляция ICE-кандидата второй стороне звонка. Формат совпадает с
-командой `ice_candidate`, отправленной клиентом.
+Ретрансляция ICE-кандидата второй стороне звонка (`status: 0`), либо ответ
+об ошибке отправителю (см.
+[4.6](#46-ice_candidate--обмен-ice-кандидатами)). Формат payload совпадает
+с командой `ice_candidate`, отправленной клиентом, плюс поле `status`.
