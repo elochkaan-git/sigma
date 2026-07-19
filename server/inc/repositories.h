@@ -228,6 +228,7 @@ private:
    * @return OperationStatus статус операции
    */
   OperationStatus handleQueryErrors(QSqlQuery& query);
-  std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
-  getUsers(unsigned int user_id, QString user_status);
+  std::pair<OperationStatus, std::optional<std::vector<unsigned int>>> getUsers(
+    unsigned int user_id,
+    QString user_status);
 };

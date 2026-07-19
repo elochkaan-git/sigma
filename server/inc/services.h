@@ -207,6 +207,11 @@ public:
 private:
   RelationRepository* mRelRepo;
   UserRepository* mUserRepo;
+
+private:
+  std::pair<OperationStatus, std::optional<std::vector<User>>> getUsers(
+    unsigned int user_id,
+    QString user_status);
 };
 
 /**
