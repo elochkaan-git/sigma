@@ -20,6 +20,6 @@ Task::run()
       emit responseReady(r);
     }
   } catch (...) {
-    qFatal(appDispatcher) << "Unexpected error in Task::run()";
+    qCritical(appDispatcher) << "Unexpected error in Task::run()";
   }
 }

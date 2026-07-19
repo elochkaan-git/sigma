@@ -414,7 +414,7 @@
 ```json
 {
   "type": "start_call",
-  "payload": { "callee_id": 2 }
+  "payload": { "callee_id": 2, "with_video": false }
 }
 ```
 
