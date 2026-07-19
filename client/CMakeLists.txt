@@ -1,55 +1,97 @@
-######## CLIENT CONFIG ########
-#                             #
-set(CLIENT_NAME client)
+<<<<<<< HEAD
+cmake_minimum_required(VERSION 3.25)
+project(sigma LANGUAGES CXX)
 
-file(GLOB SERVER_SOURCES CONFIGURE_DEPENDS
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
-  ${CMAKE_SOURCE_DIR}/common/src/*.cpp
-)
-file(GLOB SERVER_HEADERS CONFIGURE_DEPENDS
-  ${CMAKE_CURRENT_SOURCE_DIR}/inc/*.h
-  ${CMAKE_SOURCE_DIR}/common/inc/*.h
-)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_AUTOMOC ON)
 
-add_executable(${CLIENT_NAME} ${SERVER_SOURCES} ${SERVER_HEADERS} client.cpp)
-target_include_directories(${CLIENT_NAME} PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/inc
-  ${CMAKE_SOURCE_DIR}/common/inc
-)
+add_subdirectory(server)
+add_subdirectory(client)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Network WebSockets)
+if (PACKAGING)
+  message(STATUS "Setting version")
+  # Generating package with version
+  execute_process(
+    COMMAND git describe --abbrev=0 --tags
+    OUTPUT_VARIABLE tag
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  # Tags like "v1.2.3" or "1.2.3" are both supported
+  string(REGEX REPLACE "^v" "" clear_tag "${tag}")
+  string(REPLACE "." ";" list_tag "${clear_tag}")
+  list(GET list_tag 0 MAJOR_VERSION)
+  list(GET list_tag 1 MINOR_VERSION)
+  list(GET list_tag 2 PATCH_VERSION)
+
+  set(CPACK_PACKAGE_VERSION_MAJOR "${MAJOR_VERSION}")
+  set(CPACK_PACKAGE_VERSION_MINOR "${MINOR_VERSION}")
+  set(CPACK_PACKAGE_VERSION_PATCH "${PATCH_VERSION}")
+  set(CPACK_PACKAGE_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
+  set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+  set(CPACK_PACKAGE_CONTACT elochkaan@gmail.com)
+  set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/package")
+
+  set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME}")
+
+  if (WIN32)
+    set(CPACK_GENERATOR ZIP)
+  else ()
+    set(CPACK_GENERATOR TGZ)
+  endif()
+
+  include(CPack)
+endif()
+=======
+cmake_minimum_required(VERSION 3.28)
+project(SigmaMessenger LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick)
+
 qt_standard_project_setup(REQUIRES 6.8)
 
-target_link_libraries(${CLIENT_NAME}
-  PRIVATE Qt6::Core Qt6::Network Qt6::WebSockets
+set(ASSETS_FILES
+    "assets/logo.png"
+    "assets/mic.png"
+    "assets/video-camera.png"
+    "assets/arrow down.png"
+    "assets/servers.csv"
+    "assets/person.png"
 )
 
-target_compile_options(${CLIENT_NAME} PRIVATE
-  $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra>
-  $<$<CXX_COMPILER_ID:MSVC>:/W4>
+qt_add_executable(SigmaMessenger
+    main.cpp
+    include/client_controller.hpp
+    src/client_controller.cpp
 )
 
-# if (UNIX AND NOT APPLE)
-#   set_target_properties(${CLIENT_NAME} PROPERTIES
-#     INSTALL_RPATH "$ORIGIN"
-#     BUILD_WITH_INSTALL_RPATH TRUE
-#   )
-# endif()
-#                             #
-###############################
+qt_add_qml_module(SigmaMessenger
+    URI Main
+    VERSION 1.0
+    RESOURCE_PREFIX "/"
+    QML_FILES 
+        qml/Server_choice.qml
+        qml/Login_server.qml
+        qml/Register_server.qml
+        qml/Style.qml
+        qml/ServerButton.qml
+        qml/Main.qml
+        qml/General_window.qml
+        qml/Toast.qml
+    RESOURCES ${ASSETS_FILES}
 
-########## PACKAGING ##########
-#                             #
-# install(TARGETS ${CLIENT_NAME}
-#   RUNTIME DESTINATION .
-#   LIBRARY DESTINATION .
-# )
+)
+target_include_directories(SigmaMessenger PUBLIC include)
 
-# qt_generate_deploy_app_script(
-#   TARGET ${CLIENT_NAME}
-#   OUTPUT_SCRIPT deploy_script
-#   NO_UNSUPPORTED_PLATFORM_ERROR
-# )
-# install(SCRIPT ${deploy_script})
-#                             #
-###############################
+target_link_libraries(SigmaMessenger PRIVATE Qt6::Gui Qt6::Qml Qt6::Quick)
+
+install(TARGETS SigmaMessenger
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+>>>>>>> origin/client
