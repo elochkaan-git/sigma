@@ -6,28 +6,33 @@
 
 #include <optional>
 
-void
+bool
 OnlineUsersRegistry::registerUser(unsigned int user_id, const QUuid& client_id)
 {
   QWriteLocker locker(&mLock);
+  if (mOnlineUsers.contains(user_id)) {
+    return false;
+  }
   mOnlineUsers[user_id] = client_id;
+  return true; 
 }
 
-void
+bool
 OnlineUsersRegistry::removeUser(unsigned int user_id)
 {
   QWriteLocker locker(&mLock);
-  mOnlineUsers.remove(user_id);
+  return mOnlineUsers.remove(user_id);
 }
 
 std::optional<QUuid>
 OnlineUsersRegistry::getClientId(unsigned int user_id)
 {
   QReadLocker locker(&mLock);
-  if (!mOnlineUsers.contains(user_id)) {
-    return std::nullopt;
+  auto it = mOnlineUsers.find(user_id);
+  if (it != mOnlineUsers.end()) {
+    return it.value();
   }
-  return mOnlineUsers.value(user_id);
+  return std::nullopt;
 }
 
 unsigned int

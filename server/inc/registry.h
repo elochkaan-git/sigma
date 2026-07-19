@@ -15,20 +15,25 @@ class OnlineUsersRegistry
 {
 public:
   /**
-   * @brief Регистрирует/перезаписывает пользователя в словаре. Так как это не
+   * @brief Регистрирует пользователя в словаре. Так как это не
    * мультисловарь, то невозможна ситуация множественного входа с разных
-   * устройств.
+   * устройств. При попытке входа с другого устройства запрос будет
+   * отклонен
    *
    * @param user_id ID пользователя
    * @param client_id ID клиента
+   * @return true если пользователь успешно зарегестрирован
+   * @return false если пользователь уже залогинен
    */
-  void registerUser(unsigned int user_id, const QUuid& client_id);
+  bool registerUser(unsigned int user_id, const QUuid& client_id);
   /**
    * @brief Удаляет пользователя из реестра
    *
    * @param user_id ID пользователя
+   * @return true если пользователь был удален
+   * @return false если такого пользователя нет
    */
-  void removeUser(unsigned int user_id);
+  bool removeUser(unsigned int user_id);
   /**
    * @brief Возвращает ID клиента по ID пользователя.
    *
