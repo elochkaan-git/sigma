@@ -1,0 +1,34 @@
+# --- BACKGROUNDS ---
+bg_canvas_default:   #0D1117   (Основной фон окна/приложения)
+bg_canvas_inset:     #01050A   (Глубокий темный фон для контраста)
+bg_canvas_overlay:   #161A21   (Фон всплывающих окон/панелей)
+bg_canvas_subtle:    #22272E   (Фон элементов: кнопок в дефолте, инпутов, серверов)
+
+# --- ACCENTS (PURPLE) ---
+accent_bg:           #8957E6   (Основной фиолетовый для кнопок/акцентов)
+accent_bg_hover:     #9C6ADE   (Фиолетовый при наведении)
+accent_bg_subtle:    #1D1330   (Темно-фиолетовый фон/подсветка)
+accent_fg:           #A472F7   (Яркий фиолетовый текст/иконки)
+
+# --- BORDERS ---
+border_default:      #30363D   (Граница для инпутов, активных зон)
+border_muted:        #22272E   (Скрытая/приглушенная граница)
+
+# --- TYPOGRAPHY ---
+fg_default:          #CAD1D9   (Основной текст: заголовки, поля)
+fg_muted:            #8B949E   (Второстепенный текст: "1/20", табы)
+fg_on_accent:        #FFFFFF   (Белый текст поверх фиолетовых кнопок)
+fg_subtle:           #495059   (Заблокированный/очень блеклый текст)
+
+# --- STATUSES (SUCCESS / DANGER / WARNING) ---
+status_success_bg:   #2EA34F
+status_success_fg:   #57D465   (Зеленый индикатор онлайна)
+status_success_subtle:#0F2113
+
+status_danger_bg:    #D93532
+status_danger_fg:    #FF7C73
+status_danger_subtle:#261717
+
+status_warning_bg:   #BF5600
+status_warning_fg:   #F0883E
+status_warning_subtle:#211710

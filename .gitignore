@@ -3,5 +3,6 @@
 .env
 .vscode
 build
-client
 docs
+build/
+.vscode/
