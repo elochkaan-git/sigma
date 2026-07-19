@@ -31,6 +31,8 @@ getTypeOfCommand(const Command& cmd)
       [](const EndCall&) { return CommandType::END_CALL; },
       [](const Sdp&) { return CommandType::SDP; },
       [](const IceCandidate&) { return CommandType::ICE_CANDIDATE; },
-      [](const GetTurnCredentials&) { return CommandType::GET_TURN_CREDENTIALS; } },
+      [](const GetTurnCredentials&) {
+        return CommandType::GET_TURN_CREDENTIALS;
+      } },
     cmd);
 }

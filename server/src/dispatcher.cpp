@@ -33,7 +33,8 @@ Dispatcher::Dispatcher(Services services,
   mTurnSecret = settings.value("secret", "").toString();
   settings.endGroup();
   if (mTurnSecret.isEmpty()) {
-    qCritical(appDispatcher) << "TURN secret not set in config! TURN credentials will not work.";
+    qCritical(appDispatcher)
+      << "TURN secret not set in config! TURN credentials will not work.";
   }
 }
 
@@ -140,7 +141,8 @@ Dispatcher::dispatch(const Command& cmd,
           return this->handleIceCandidate(cmd);
         };
       },
-      [this](const GetTurnCredentials& cmd) -> std::function<std::vector<Response>()> {
+      [this](const GetTurnCredentials& cmd)
+        -> std::function<std::vector<Response>()> {
         return [this, cmd]() -> std::vector<Response> {
           return this->handleGetTurnCredentials(cmd);
         };
@@ -247,11 +249,14 @@ Dispatcher::handleMessage(const SendMessage& cmd)
       << QString("Saving message from %1 in queue").arg(cmd.user_id);
     status = mServices.msg_service->saveToQueue(
       cmd.user_id, cmd.receiver_id, cmd.content);
-    if (status !=
-        OperationStatus::OK) { // FIXME: добавить обработку не окейный статусов
+    if (status != OperationStatus::OK) {
       qWarning(appDispatcher)
         << QString("Message from %1 wasn't saved to queue").arg(cmd.user_id);
+    } else {
+      qWarning(appDispatcher)
+        << QString("Messagese from %1 saved!").arg(cmd.user_id);
     }
+    smr.status = status;
     return std::vector<Response>{ smr };
   }
 }
@@ -475,8 +480,8 @@ Dispatcher::handleAcceptCall(const AcceptCall& cmd)
   }
   if (record->callee_id != cmd.user_id) {
     qWarning(appDispatcher) << QString("User %1 is not callee of call %2")
-                                .arg(cmd.user_id)
-                                .arg(cmd.call_id.toString());
+                                 .arg(cmd.user_id)
+                                 .arg(cmd.call_id.toString());
     acr.status = OperationStatus::NotCallParticipant;
     return std::vector<Response>{ acr };
   }
@@ -493,8 +498,8 @@ Dispatcher::handleAcceptCall(const AcceptCall& cmd)
     car.call_id = cmd.call_id;
     responses.push_back(car);
   } else {
-    qWarning(appDispatcher) << QString("Caller %1 is no longer online")
-                                .arg(record->caller_id);
+    qWarning(appDispatcher)
+      << QString("Caller %1 is no longer online").arg(record->caller_id);
   }
 
   return responses;
@@ -517,8 +522,8 @@ Dispatcher::handleRejectCall(const RejectCall& cmd)
   }
   if (record->callee_id != cmd.user_id) {
     qWarning(appDispatcher) << QString("User %1 is not callee of call %2")
-                                .arg(cmd.user_id)
-                                .arg(cmd.call_id.toString());
+                                 .arg(cmd.user_id)
+                                 .arg(cmd.call_id.toString());
     rcr.status = OperationStatus::NotCallParticipant;
     return std::vector<Response>{ rcr };
   }
@@ -555,9 +560,10 @@ Dispatcher::handleEndCall(const EndCall& cmd)
     return std::vector<Response>{ ecr };
   }
   if (record->caller_id != cmd.user_id && record->callee_id != cmd.user_id) {
-    qWarning(appDispatcher) << QString("User %1 is not a participant of call %2")
-                                .arg(cmd.user_id)
-                                .arg(cmd.call_id.toString());
+    qWarning(appDispatcher)
+      << QString("User %1 is not a participant of call %2")
+           .arg(cmd.user_id)
+           .arg(cmd.call_id.toString());
     ecr.status = OperationStatus::NotCallParticipant;
     return std::vector<Response>{ ecr };
   }
@@ -566,8 +572,8 @@ Dispatcher::handleEndCall(const EndCall& cmd)
   ecr.status = OperationStatus::OK;
   std::vector<Response> responses{ ecr };
 
-  unsigned int other_id = (cmd.user_id == record->caller_id) ? record->callee_id
-                                                              : record->caller_id;
+  unsigned int other_id =
+    (cmd.user_id == record->caller_id) ? record->callee_id : record->caller_id;
   std::optional<QUuid> other_client_id = this->mRegistry->getClientId(other_id);
   if (other_client_id.has_value()) {
     CallEndedResponse cer;
@@ -593,23 +599,23 @@ Dispatcher::handleSdp(const Sdp& cmd)
     return std::vector<Response>{ error };
   }
   if (record->caller_id != cmd.user_id && record->callee_id != cmd.user_id) {
-    qWarning(appDispatcher) << QString("User %1 is not a participant of call %2")
-                                .arg(cmd.user_id)
-                                .arg(cmd.call_id.toString());
+    qWarning(appDispatcher)
+      << QString("User %1 is not a participant of call %2")
+           .arg(cmd.user_id)
+           .arg(cmd.call_id.toString());
     Error error;
     error.client_id = cmd.client_id;
     error.reason = "You are not a participant of this call";
     return std::vector<Response>{ error };
   }
 
-  unsigned int other_id = (cmd.user_id == record->caller_id) ? record->callee_id
-                                                              : record->caller_id;
+  unsigned int other_id =
+    (cmd.user_id == record->caller_id) ? record->callee_id : record->caller_id;
   std::optional<QUuid> other_client_id = this->mRegistry->getClientId(other_id);
   if (!other_client_id.has_value()) {
-    qWarning(appDispatcher)
-      << QString("Other party %1 of call %2 is offline")
-           .arg(other_id)
-           .arg(cmd.call_id.toString());
+    qWarning(appDispatcher) << QString("Other party %1 of call %2 is offline")
+                                 .arg(other_id)
+                                 .arg(cmd.call_id.toString());
     Error error;
     error.client_id = cmd.client_id;
     error.reason = "Other party is offline";
@@ -637,23 +643,23 @@ Dispatcher::handleIceCandidate(const IceCandidate& cmd)
     return std::vector<Response>{ error };
   }
   if (record->caller_id != cmd.user_id && record->callee_id != cmd.user_id) {
-    qWarning(appDispatcher) << QString("User %1 is not a participant of call %2")
-                                .arg(cmd.user_id)
-                                .arg(cmd.call_id.toString());
+    qWarning(appDispatcher)
+      << QString("User %1 is not a participant of call %2")
+           .arg(cmd.user_id)
+           .arg(cmd.call_id.toString());
     Error error;
     error.client_id = cmd.client_id;
     error.reason = "You are not a participant of this call";
     return std::vector<Response>{ error };
   }
 
-  unsigned int other_id = (cmd.user_id == record->caller_id) ? record->callee_id
-                                                              : record->caller_id;
+  unsigned int other_id =
+    (cmd.user_id == record->caller_id) ? record->callee_id : record->caller_id;
   std::optional<QUuid> other_client_id = this->mRegistry->getClientId(other_id);
   if (!other_client_id.has_value()) {
-    qWarning(appDispatcher)
-      << QString("Other party %1 of call %2 is offline")
-           .arg(other_id)
-           .arg(cmd.call_id.toString());
+    qWarning(appDispatcher) << QString("Other party %1 of call %2 is offline")
+                                 .arg(other_id)
+                                 .arg(cmd.call_id.toString());
     Error error;
     error.client_id = cmd.client_id;
     error.reason = "Other party is offline";
@@ -680,7 +686,8 @@ Dispatcher::handleGetTurnCredentials(const GetTurnCredentials& cmd)
     response.username = "";
     response.password = "";
     response.ttl = 0;
-    qCritical(appDispatcher) << "TURN secret not configured, cannot generate credentials";
+    qCritical(appDispatcher)
+      << "TURN secret not configured, cannot generate credentials";
     return std::vector<Response>{ response };
   }
 
@@ -690,8 +697,10 @@ Dispatcher::handleGetTurnCredentials(const GetTurnCredentials& cmd)
 
   QByteArray secret = mTurnSecret.toUtf8();
   QByteArray msg = username.toUtf8();
-  QByteArray hmac = QCryptographicHash::hash(secret + msg, QCryptographicHash::Sha1); 
-  QByteArray hmacResult = QMessageAuthenticationCode::hash(msg, secret, QCryptographicHash::Sha1);
+  QByteArray hmac =
+    QCryptographicHash::hash(secret + msg, QCryptographicHash::Sha1);
+  QByteArray hmacResult =
+    QMessageAuthenticationCode::hash(msg, secret, QCryptographicHash::Sha1);
   QString password = hmacResult.toHex();
 
   response.username = username;
@@ -700,7 +709,7 @@ Dispatcher::handleGetTurnCredentials(const GetTurnCredentials& cmd)
   response.status = OperationStatus::OK;
 
   qInfo(appDispatcher) << "Generated TURN credentials for user" << cmd.user_id
-                        << "expiring at" << expiry;
+                       << "expiring at" << expiry;
 
   return std::vector<Response>{ response };
 }

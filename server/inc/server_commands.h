@@ -137,5 +137,4 @@ struct IceCandidate
 struct GetTurnCredentials
   : public wire::GetTurnCredentials
   , public SessionCtx
-{
-};
+{};
