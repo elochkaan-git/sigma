@@ -33,6 +33,8 @@ getTypeOfCommand(const Command& cmd)
       [](const IceCandidate&) { return CommandType::ICE_CANDIDATE; },
       [](const GetTurnCredentials&) {
         return CommandType::GET_TURN_CREDENTIALS;
-      } },
+      },
+      [](const GetOnlineUsers&) { return CommandType::GET_ONLINE_USERS; },
+      [](const SetAvatar&) { return CommandType::SET_AVATAR; } },
     cmd);
 }

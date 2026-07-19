@@ -46,5 +46,6 @@ std::vector<unsigned int>
 OnlineUsersRegistry::getOnlineUserIds()
 {
   QReadLocker locker(&mLock);
-  return std::vector<unsigned int>(mOnlineUsers.constBegin(), mOnlineUsers.constEnd());
+  const auto keys{ mOnlineUsers.keys().toList() };
+  return std::vector<unsigned int>(keys.constBegin(), keys.constEnd());
 }
