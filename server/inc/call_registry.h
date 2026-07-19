@@ -26,6 +26,7 @@ public:
   bool forceEndCall(unsigned int user_id);
   bool updateRecord(const QUuid& call_id, CallStatus new_status);
   std::optional<CallRecord> getCallRecord(const QUuid& call_id);
+  bool isUserInCall(unsigned int user_id);
 
 private:
   QHash<QUuid, CallRecord> mCalls;

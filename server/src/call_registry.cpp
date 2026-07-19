@@ -6,6 +6,7 @@
 #include <QUuid>
 #include <QWriteLocker>
 
+#include <algorithm>
 #include <optional>
 
 QUuid
@@ -63,4 +64,21 @@ CallRegistry::getCallRecord(const QUuid& call_id)
     return it.value();
   }
   return std::nullopt;
+}
+
+bool
+CallRegistry::isUserInCall(unsigned int user_id)
+{
+  QWriteLocker locker(&mLock);
+  qDebug(appCalls) << QString("Searching user %1").arg(user_id);
+  auto it =
+    std::find_if(mCalls.begin(),
+                 mCalls.end(),
+                 [user_id](CallRecord& r) {
+                   return user_id == r.callee_id || user_id == r.caller_id;
+                 });
+  if (it != mCalls.end()) {
+    return true;
+  }
+  return false;
 }
