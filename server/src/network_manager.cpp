@@ -371,9 +371,13 @@ NetworkManager::onNewConnection()
   qInfo(appNetwork) << "New connection! ID: " << newConnectionId;
 
   mIDConstraints.removeIf(
-    [&](ConnectionState& r) { return r.status == ConnectionStatus::COMMON; });
+    [](QHash<unsigned int, ConnectionState>::iterator it) {
+      return it->status == ConnectionStatus::COMMON;
+    });
   mIPConstraints.removeIf(
-    [&](ConnectionState& r) { return r.status == ConnectionStatus::COMMON; });
+    [](QHash<QHostAddress, ConnectionState>::iterator it) {
+      return it->status == ConnectionStatus::COMMON;
+    });
 }
 
 void
@@ -524,14 +528,18 @@ NetworkManager::onDisconnected()
   unsigned int user_id = sender->property("user_id").toUInt();
   mConnections.remove(client_id);
   mRegistry->removeUser(user_id);
-  mCallRegistry->deleteRecord(user_id);
+  mCallRegistry->forceEndCall(user_id);
   qInfo(appNetwork) << client_id << "disconnected";
   sender->deleteLater();
 
   mIDConstraints.removeIf(
-    [&](ConnectionState& r) { return r.status == ConnectionStatus::COMMON; });
+    [](QHash<unsigned int, ConnectionState>::iterator it) {
+      return it->status == ConnectionStatus::COMMON;
+    });
   mIPConstraints.removeIf(
-    [&](ConnectionState& r) { return r.status == ConnectionStatus::COMMON; });
+    [](QHash<QHostAddress, ConnectionState>::iterator it) {
+      return it->status == ConnectionStatus::COMMON;
+    });
 }
 
 void
