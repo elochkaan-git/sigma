@@ -1,4 +1,5 @@
 #pragma once
+#include "call_registry.h"
 #include "command_types.h"
 #include "dispatcher.h"
 #include "registry.h"
@@ -102,6 +103,7 @@ public:
    */
   NetworkManager(Dispatcher* dispatcher,
                  OnlineUsersRegistry* registry,
+                 CallRegistry* call_registry,
                  const QString& iniPath);
   /**
    * @brief Сериализует Response в Json
@@ -154,6 +156,7 @@ public slots:
 private:
   Dispatcher* mDispatcher;
   OnlineUsersRegistry* mRegistry;
+  CallRegistry* mCallRegistry;
   QWebSocketServer* mServer;
   QHash<QUuid, QWebSocket*> mConnections;
   QHash<unsigned int, ConnectionState> mIDConstraints;
@@ -215,6 +218,17 @@ static const auto isString = [](const QJsonValue& v) { return v.isString(); };
  * @brief Проверяет, что значение является числом
  */
 static const auto isNumber = [](const QJsonValue& v) { return v.isDouble(); };
+static const auto isBool = [](const QJsonValue& v) { return v.isBool(); };
+
+/**
+ * @brief Проверяет, что значение является строкой, представляющей корректный
+ * QUuid
+ */
+static const auto isUuid = [](const QJsonValue& v) {
+  if (!v.isString())
+    return false;
+  return !QUuid::fromString(v.toString()).isNull();
+};
 
 /**
  * @brief Словарь спецификаций комманд
@@ -340,6 +354,91 @@ inline const QHash<QString, CommandSpec> kCommandSpecs = {
       [](QUuid client_id, unsigned int, const QJsonObject&) -> Command {
         GetServerStats cmd;
         cmd.client_id = client_id;
+        return cmd;
+      } } },
+
+  { "start_call",
+    { { { "callee_id", isNumber }, { "with_video", isBool } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        StartCall cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.callee_id = static_cast<unsigned int>(p["callee_id"].toInteger());
+        cmd.with_video = p["with_video"].toBool();
+        return cmd;
+      } } },
+
+  { "accept_call",
+    { { { "call_id", isUuid } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        AcceptCall cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.call_id = QUuid::fromString(p["call_id"].toString());
+        return cmd;
+      } } },
+
+  { "reject_call",
+    { { { "call_id", isUuid } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        RejectCall cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.call_id = QUuid::fromString(p["call_id"].toString());
+        return cmd;
+      } } },
+
+  { "end_call",
+    { { { "call_id", isUuid } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        EndCall cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.call_id = QUuid::fromString(p["call_id"].toString());
+        return cmd;
+      } } },
+
+  { "sdp",
+    { { { "call_id", isUuid }, { "sdp", isString } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        Sdp cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.call_id = QUuid::fromString(p["call_id"].toString());
+        cmd.sdp = p["sdp"].toString();
+        return cmd;
+      } } },
+
+  { "ice_candidate",
+    { { { "call_id", isUuid }, { "candidate", isString }, { "mid", isString } },
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject& p)
+        -> Command {
+        IceCandidate cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
+        cmd.call_id = QUuid::fromString(p["call_id"].toString());
+        cmd.candidate = p["candidate"].toString();
+        cmd.mid = p["mid"].toString();
+        return cmd;
+      } } },
+  { "get_turn_credentials",
+    { {},
+      true,
+      [](QUuid client_id, unsigned int user_id, const QJsonObject&) -> Command {
+        GetTurnCredentials cmd;
+        cmd.client_id = client_id;
+        cmd.user_id = user_id;
         return cmd;
       } } }
 };

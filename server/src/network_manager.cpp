@@ -5,6 +5,7 @@
 #include "registry.h"
 #include "server_responses.h"
 #include "structures.h"
+#include "wire_command_types.h"
 
 #include <QAbstractSocket>
 #include <QByteArray>
@@ -84,25 +85,20 @@ serializeUsers(const std::optional<std::vector<User>>& users)
 
 NetworkManager::NetworkManager(Dispatcher* dispatcher,
                                OnlineUsersRegistry* registry,
+                               CallRegistry* call_registry,
                                const QString& iniPath)
   : mDispatcher(dispatcher)
   , mRegistry(registry)
+  , mCallRegistry(call_registry)
   , mSettings(iniPath.isEmpty() ? "config.ini" : iniPath, QSettings::IniFormat)
 {
   if (!mSettings.childGroups().contains("network")) {
-    qWarning(appNetwork)
-      << "There's no network section in config, using default values";
-    mSettings.beginGroup("network");
-    mSettings.setValue("host", 0);    // Localhost as decimal
-    mSettings.setValue("port", 5555); // Default port
-    mSettings.endGroup();
+    qWarning(appNetwork) << "There's no network section in config";
   }
-
   mSettings.beginGroup("network");
-  // TODO: может, добавить проверку типа перед использованием?
-  mConfig.host.setAddress(checkAndGetValue("host", 0).toUInt());
+  mConfig.host.setAddress(checkAndGetValue("host", "0.0.0.0").toString());
   mConfig.port = checkAndGetValue("port", 5555).toUInt();
-  mConfig.flood_limit = checkAndGetValue("flood_limit", 15).toUInt();
+  mConfig.flood_limit = checkAndGetValue("flood_limit", 5).toUInt();
   mConfig.ban_limit = checkAndGetValue("ban_limit", 60).toUInt();
   mConfig.trust_proxy_header =
     checkAndGetValue("trust_proxy_server", false).toBool();
@@ -199,11 +195,79 @@ NetworkManager::serialize(const Response& response)
         payload["total"] = static_cast<qint64>(r.total);
         return wrap("get_server_stats_response", std::move(payload));
       },
+      [](const StartCallResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("start_call_response", std::move(payload));
+      },
+      [](const IncomingCallResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        payload["caller_id"] = static_cast<qint64>(r.caller_id);
+        payload["with_video"] = r.with_video;
+        return wrap("incoming_call", std::move(payload));
+      },
+      [](const AcceptCallResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("accept_call_response", std::move(payload));
+      },
+      [](const CallAcceptedResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("call_accepted", std::move(payload));
+      },
+      [](const RejectCallResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("reject_call_response", std::move(payload));
+      },
+      [](const CallRejectedResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("call_rejected", std::move(payload));
+      },
+      [](const EndCallResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("end_call_response", std::move(payload));
+      },
+      [](const CallEndedResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        return wrap("call_ended", std::move(payload));
+      },
+      [](const SdpResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        payload["sdp"] = r.sdp;
+        return wrap("sdp", std::move(payload));
+      },
+      [](const IceCandidateResponse& r) {
+        QJsonObject payload;
+        payload["call_id"] = r.call_id.toString(QUuid::WithoutBraces);
+        payload["candidate"] = r.candidate;
+        payload["mid"] = r.mid;
+        return wrap("ice_candidate", std::move(payload));
+      },
       [](const Error& r) {
         QJsonObject payload;
         payload["reason"] = r.reason;
         return wrap("error", std::move(payload));
-      } },
+      },
+      [](const GetTurnCredentialsResponse& r) {
+        QJsonObject payload;
+        payload["status"] = QJsonValue(static_cast<int>(r.status));
+        payload["username"] = r.username;
+        payload["password"] = r.password;
+        payload["ttl"] = r.ttl;
+        return wrap("get_turn_credentials_response", std::move(payload));
+      },
+    },
     response);
 
   qInfo(appNetwork) << "Preparing" << obj["type"] << "command";
@@ -247,13 +311,19 @@ NetworkManager::deserialize(const QUuid& client_id, const QByteArray& message)
 
   unsigned int user_id = 0;
   if (spec.requiresAuth) {
-    QVariant uid = this->mConnections[client_id]->property("user_id");
-    if (!uid.isValid()) {
+    if (mConnections.contains(client_id)) {
+      QVariant uid = this->mConnections.value(client_id)->property("user_id");
+      if (!uid.isValid()) {
+        error_response.client_id = client_id;
+        error_response.reason = "You are not logged in";
+        return error_response;
+      }
+      user_id = uid.toUInt();
+    } else {
       error_response.client_id = client_id;
-      error_response.reason = "You are not logged in";
+      error_response.reason = "No such socket";
       return error_response;
     }
-    user_id = uid.toUInt();
   }
 
   error = validate(payload, spec.fields);
@@ -298,6 +368,15 @@ NetworkManager::onNewConnection()
   newConnection->setProperty("client_id", newConnectionId);
   mConnections[newConnectionId] = newConnection;
   qInfo(appNetwork) << "New connection! ID: " << newConnectionId;
+
+  mIDConstraints.removeIf(
+    [](QHash<unsigned int, ConnectionState>::iterator it) {
+      return it->status == ConnectionStatus::COMMON;
+    });
+  mIPConstraints.removeIf(
+    [](QHash<QHostAddress, ConnectionState>::iterator it) {
+      return it->status == ConnectionStatus::COMMON;
+    });
 }
 
 void
@@ -305,8 +384,8 @@ NetworkManager::onMessageReceived(const QByteArray& message)
 {
   qDebug(appNetwork) << "Size of message:" << message.size();
   QWebSocket* client = qobject_cast<QWebSocket*>(this->sender());
-  // FIXME: не забыть поменять название заголовка на нормальное
-  QHostAddress addr(client->request().headers().value("IPv4").toByteArray());
+  QHostAddress addr(
+    client->request().headers().value("X-Real-IP").toByteArray());
   QUuid client_id = client->property("client_id").toUuid();
 
   QDateTime now = QDateTime::currentDateTime();
@@ -385,8 +464,13 @@ NetworkManager::onMessageReceived(const QByteArray& message)
     }
   } else {
     state.last_cmds.removeIf([&](const Record& r) {
-      return duration_cast<minutes>(now - r.timestamp).count() >
-             mConfig.flood_limit;
+      if (r.type == CommandType::LOGIN || r.type == CommandType::OVERSIZED) {
+        return duration_cast<minutes>(now - r.timestamp).count() >
+               mConfig.ban_limit;
+      } else {
+        return duration_cast<minutes>(now - r.timestamp).count() >
+               mConfig.flood_limit;
+      }
     });
     QHash<CommandType, qsizetype> cmdTypesCount;
     for (const auto& cmd : state.last_cmds) {
@@ -439,10 +523,22 @@ void
 NetworkManager::onDisconnected()
 {
   QWebSocket* sender = qobject_cast<QWebSocket*>(this->sender());
-  mConnections.remove(sender->property("client_id").toUuid());
-  mRegistry->removeUser(sender->property("user_id").toUInt());
-  qInfo(appNetwork) << sender->property("client_id").toUuid() << "disconnected";
+  QUuid client_id = sender->property("client_id").toUuid();
+  unsigned int user_id = sender->property("user_id").toUInt();
+  mConnections.remove(client_id);
+  mRegistry->removeUser(user_id);
+  mCallRegistry->forceEndCall(user_id);
+  qInfo(appNetwork) << client_id << "disconnected";
   sender->deleteLater();
+
+  mIDConstraints.removeIf(
+    [](QHash<unsigned int, ConnectionState>::iterator it) {
+      return it->status == ConnectionStatus::COMMON;
+    });
+  mIPConstraints.removeIf(
+    [](QHash<QHostAddress, ConnectionState>::iterator it) {
+      return it->status == ConnectionStatus::COMMON;
+    });
 }
 
 void

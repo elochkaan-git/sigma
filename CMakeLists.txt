@@ -7,7 +7,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_AUTOMOC ON)
 
 add_subdirectory(server)
-add_subdirectory(client)
+if (NOT NO_CLIENT)
+  add_subdirectory(client)
+endif()
 
 if (PACKAGING)
   message(STATUS "Setting version")

@@ -9,7 +9,7 @@ copy client ./client
 
 run mkdir build \
     && cd build \
-    && cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release \
+    && cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DNO_CLIENT=ON \
     && cmake --build . -j"$(nproc)"
 
 
@@ -26,6 +26,7 @@ run apt-get update && apt-get install -y --no-install-recommends \
   
 workdir /app
 copy --from=build /app/build/server/server ./server
+copy ./config.ini ./
 cmd ["./server"]
 
 

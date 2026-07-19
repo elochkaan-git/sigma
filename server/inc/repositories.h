@@ -120,7 +120,7 @@ public:
    * @return OperationStatus статус выполнения операции
    * @see OperationStatus
    */
-  OperationStatus deleteFromQueue(unsigned int msg_id);
+  OperationStatus deleteFromQueue(const std::vector<unsigned int>& msg_ids);
 
 private:
   ConnectionManager* mConnManager;
@@ -228,4 +228,7 @@ private:
    * @return OperationStatus статус операции
    */
   OperationStatus handleQueryErrors(QSqlQuery& query);
+  std::pair<OperationStatus, std::optional<std::vector<unsigned int>>> getUsers(
+    unsigned int user_id,
+    QString user_status);
 };

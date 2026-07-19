@@ -1,4 +1,6 @@
 #include "command_types.h"
+#include "server_commands.h"
+#include "wire_command_types.h"
 
 CommandType
 getTypeOfCommand(const Command& cmd)
@@ -22,6 +24,15 @@ getTypeOfCommand(const Command& cmd)
       [](const GetSentFriendRequests&) {
         return CommandType::GET_SENT_FRIEND_REQUESTS;
       },
-      [](const GetServerStats&) { return CommandType::GET_SERVER_STATS; } },
+      [](const GetServerStats&) { return CommandType::GET_SERVER_STATS; },
+      [](const StartCall&) { return CommandType::START_CALL; },
+      [](const AcceptCall&) { return CommandType::ACCEPT_CALL; },
+      [](const RejectCall&) { return CommandType::REJECT_CALL; },
+      [](const EndCall&) { return CommandType::END_CALL; },
+      [](const Sdp&) { return CommandType::SDP; },
+      [](const IceCandidate&) { return CommandType::ICE_CANDIDATE; },
+      [](const GetTurnCredentials&) {
+        return CommandType::GET_TURN_CREDENTIALS;
+      } },
     cmd);
 }

@@ -30,7 +30,7 @@ UserService::registerUser(QString login, QString passwd)
                         pwd_string.length(),
                         crypto_pwhash_OPSLIMIT_INTERACTIVE,
                         crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
-    qFatal(appService) << "Out of memory while computing hash";
+    qCritical(appService) << "Out of memory while computing hash";
     throw std::runtime_error("Out of memory");
   } else {
     qInfo(appService) << QString("Password hash of %1 computed").arg(login);
@@ -51,7 +51,10 @@ UserService::loginUser(QString login, QString passwd)
       qWarning(appService) << QString("Wrong password, %1").arg(login);
       return { OperationStatus::InvalidCredentials, std::nullopt };
     }
-    const auto [_, user_info] = mUserRepo->getUserByLogin(login);
+    const auto [status, user_info] = mUserRepo->getUserByLogin(login);
+    if (status != OperationStatus::OK) {
+      return { status, std::nullopt };
+    }
     return { OperationStatus::OK, user_info.value().user_id };
   } else if (status == OperationStatus::UserNotExist) {
     qWarning(appService) << QString("User %1 not exists").arg(login);
@@ -94,9 +97,9 @@ MessageService::getQueuedMessages(unsigned int user_id)
 }
 
 OperationStatus
-MessageService::deleteFromQueue(unsigned int msg_id)
+MessageService::deleteFromQueue(const std::vector<unsigned int>& msg_ids)
 {
-  return mMsgRepo->deleteFromQueue(msg_id);
+  return mMsgRepo->deleteFromQueue(msg_ids);
 }
 
 RelationService::RelationService(RelationRepository* rel_repo,
@@ -135,67 +138,58 @@ RelationService::removeFriend(unsigned int user_id, unsigned int friend_id)
 std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getFriends(unsigned int user_id)
 {
-  const auto [status_users, friends] = this->mRelRepo->getFriendsID(user_id);
-  if (status_users != OperationStatus::OK || !friends.has_value()) {
-    qWarning(appService) << QString("User %1 have no friends or have error %2")
-                              .arg(user_id)
-                              .arg((int)status_users);
-    return { status_users, std::nullopt };
-  }
-  auto [status_rel, users] = this->mUserRepo->getUsersById(friends.value());
-  if (status_rel != OperationStatus::OK || !users.has_value()) {
-    qWarning(appService)
-      << QString("No users with such ids or error %1").arg((int)status_users);
-    return { status_rel, std::nullopt };
-  }
-  return { OperationStatus::OK, users };
+  return this->getUsers(user_id, "friend");
 }
 
 std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getFriendRequests(unsigned int user_id)
 {
-  const auto [status_users, requests] =
-    this->mRelRepo->getFriendRequests(user_id);
-  if (status_users != OperationStatus::OK || !requests.has_value()) {
-    qWarning(appService)
-      << QString("User %1 have no friend requests or have error %2")
-           .arg(user_id)
-           .arg((int)status_users);
-    return { status_users, std::nullopt };
-  }
-  auto [status_rel, users] = this->mUserRepo->getUsersById(requests.value());
-  if (status_rel != OperationStatus::OK || !users.has_value()) {
-    qWarning(appService)
-      << QString("No users with such ids or error %1").arg((int)status_users);
-    return { status_rel, std::nullopt };
-  }
-  return { OperationStatus::OK, users };
+  return this->getUsers(user_id, "received");
 }
 
 std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getSentFriendRequests(unsigned int user_id)
 {
-  const auto [status_users, sentRequests] =
-    this->mRelRepo->getSentFriendRequests(user_id);
-  if (status_users != OperationStatus::OK || !sentRequests.has_value()) {
-    qWarning(appService)
-      << QString("User %1 have no sent friend requests or have error %2")
-           .arg(user_id)
-           .arg((int)status_users);
-    return { status_users, std::nullopt };
-  }
-  auto [status_rel, users] =
-    this->mUserRepo->getUsersById(sentRequests.value());
-  if (status_rel != OperationStatus::OK || !users.has_value()) {
-    qWarning(appService)
-      << QString("No users with such ids or error %1").arg((int)status_users);
-    return { status_rel, std::nullopt };
-  }
-  return { OperationStatus::OK, users };
+  return this->getUsers(user_id, "sent");
 }
 
 OperationStatus
 RelationService::areFriends(unsigned int user_id, unsigned int friend_id)
 {
   return this->mRelRepo->areFriends(user_id, friend_id);
+}
+
+std::pair<OperationStatus, std::optional<std::vector<User>>>
+RelationService::getUsers(unsigned int user_id, QString user_status)
+{
+  std::pair<OperationStatus, std::optional<std::vector<unsigned int>>> ids;
+  if (user_status == "friends") {
+    ids = this->mRelRepo->getFriendsID(user_id);
+  } else if (user_status == "received") {
+    ids = this->mRelRepo->getFriendRequests(user_id);
+  } else if (user_status == "sent") {
+    ids = this->mRelRepo->getSentFriendRequests(user_id);
+  }
+  OperationStatus status{ ids.first };
+  const auto users_ids{ ids.second };
+
+  if (status != OperationStatus::OK || !users_ids.has_value()) {
+    qWarning(appService)
+      << QString("User %1 have no sent friend requests or have error %2")
+           .arg(user_id)
+           .arg((int)status);
+    return { status, std::nullopt };
+  }
+
+  std::pair<OperationStatus, std::optional<std::vector<User>>> users_pair;
+  users_pair = this->mUserRepo->getUsersById(users_ids.value());
+  status = users_pair.first;
+  const auto users{ users_pair.second };
+
+  if (status != OperationStatus::OK || !users.has_value()) {
+    qWarning(appService)
+      << QString("No users with such ids or error %1").arg((int)status);
+    return { status, std::nullopt };
+  }
+  return { OperationStatus::OK, users };
 }

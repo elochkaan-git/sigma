@@ -105,6 +105,7 @@ struct GetServerStats
 struct StartCall
 {
   unsigned int callee_id;
+  bool with_video;
 };
 
 struct AcceptCall
@@ -133,6 +134,10 @@ struct IceCandidate
   QUuid call_id;
   QString candidate;
   QString mid;
+};
+
+struct GetTurnCredentials
+{
 };
 
 }

@@ -110,3 +110,88 @@ struct GetServerStatsResponse
   : public wire::GetServerStatsResponse
   , public ClientCtx
 {};
+
+/**
+ * @brief Ответ инициатору звонка на команду StartCall
+ */
+struct StartCallResponse
+  : public wire::StartCallResponse
+  , public ClientCtx
+{};
+
+/**
+ * @brief Уведомление о входящем звонке вызываемому
+ */
+struct IncomingCallResponse
+  : public wire::IncomingCallResponse
+  , public ClientCtx
+{};
+
+/**
+ * @brief Ответ вызываемому на команду AcceptCall
+ */
+struct AcceptCallResponse
+  : public wire::AcceptCallResponse
+  , public ClientCtx
+{};
+
+/**
+ * @brief Уведомление инициатору о принятии звонка
+ */
+struct CallAcceptedResponse
+  : public wire::CallAcceptedResponse
+  , public ClientCtx
+{};
+
+/**
+ * @brief Ответ вызываемому на команду RejectCall
+ */
+struct RejectCallResponse
+  : public wire::RejectCallResponse
+  , public ClientCtx
+{};
+
+/**
+ * @brief Уведомление инициатору об отклонении звонка
+ */
+struct CallRejectedResponse
+  : public wire::CallRejectedResponse
+  , public ClientCtx
+{};
+
+/**
+ * @brief Ответ на команду EndCall тому, кто завершил звонок
+ */
+struct EndCallResponse
+  : public wire::EndCallResponse
+  , public ClientCtx
+{};
+
+/**
+ * @brief Уведомление второй стороне о завершении звонка
+ */
+struct CallEndedResponse
+  : public wire::CallEndedResponse
+  , public ClientCtx
+{};
+
+/**
+ * @brief Ретрансляция SDP второй стороне звонка
+ */
+struct SdpResponse
+  : public wire::SdpResponse
+  , public ClientCtx
+{};
+
+/**
+ * @brief Ретрансляция ICE-кандидата второй стороне звонка
+ */
+struct IceCandidateResponse
+  : public wire::IceCandidateResponse
+  , public ClientCtx
+{};
+
+struct GetTurnCredentialsResponse
+  : public wire::GetTurnCredentialsResponse
+  , public ClientCtx
+{};

@@ -1,4 +1,5 @@
 #pragma once
+#include "call_registry.h"
 #include "command_types.h"
 #include "registry.h"
 #include "server_commands.h"
@@ -22,10 +23,14 @@ public:
    *
    * @param services структура с указателями на сервисы
    * @param registry реестр онлайн пользователей
+   * @param call_registry реестр активных звонков
    * @see Services
    * @see OnlineUsersRegistry
+   * @see CallRegistry
    */
-  Dispatcher(Services services, OnlineUsersRegistry* registry);
+  Dispatcher(Services services,
+             OnlineUsersRegistry* registry,
+             CallRegistry* call_registry);
   /**
    * @brief Метод распределения команд по разным потокам
    *
@@ -46,6 +51,8 @@ private:
   std::unique_ptr<QThreadPool> mThreadPool;
   Services mServices;
   OnlineUsersRegistry* mRegistry;
+  CallRegistry* mCallRegistry;
+  QString mTurnSecret;
 
 private:
   /**
@@ -128,4 +135,47 @@ private:
    * @return std::vector<Response> список ответов
    */
   std::vector<Response> handleGetServerStats(const GetServerStats& cmd);
+  /**
+   * @brief Метод обработки инициации звонка
+   *
+   * @param cmd команда StartCall
+   * @return std::vector<Response> список ответов
+   */
+  std::vector<Response> handleStartCall(const StartCall& cmd);
+  /**
+   * @brief Метод обработки принятия звонка
+   *
+   * @param cmd команда AcceptCall
+   * @return std::vector<Response> список ответов
+   */
+  std::vector<Response> handleAcceptCall(const AcceptCall& cmd);
+  /**
+   * @brief Метод обработки отклонения звонка
+   *
+   * @param cmd команда RejectCall
+   * @return std::vector<Response> список ответов
+   */
+  std::vector<Response> handleRejectCall(const RejectCall& cmd);
+  /**
+   * @brief Метод обработки завершения звонка
+   *
+   * @param cmd команда EndCall
+   * @return std::vector<Response> список ответов
+   */
+  std::vector<Response> handleEndCall(const EndCall& cmd);
+  /**
+   * @brief Метод обработки ретрансляции SDP второй стороне звонка
+   *
+   * @param cmd команда Sdp
+   * @return std::vector<Response> список ответов (ретрансляция или Error)
+   */
+  std::vector<Response> handleSdp(const Sdp& cmd);
+  /**
+   * @brief Метод обработки ретрансляции ICE-кандидата второй стороне звонка
+   *
+   * @param cmd команда IceCandidate
+   * @return std::vector<Response> список ответов (ретрансляция или Error)
+   */
+  std::vector<Response> handleIceCandidate(const IceCandidate& cmd);
+  std::vector<Response> handleGetTurnCredentials(const GetTurnCredentials& cmd);
 };
