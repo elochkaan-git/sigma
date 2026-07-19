@@ -36,6 +36,7 @@ target_link_libraries(${SERVER_NAME}
 
 target_compile_definitions(${SERVER_NAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:SODIUM_STATIC SODIUM_EXPORT>
+  QT_MESSAGELOGCONTEXT
 )
 
 target_compile_options(${SERVER_NAME} PRIVATE
