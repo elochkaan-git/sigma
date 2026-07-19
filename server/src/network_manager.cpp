@@ -96,7 +96,6 @@ NetworkManager::NetworkManager(Dispatcher* dispatcher,
     qWarning(appNetwork) << "There's no network section in config";
   }
   mSettings.beginGroup("network");
-  // TODO: может, добавить проверку типа перед использованием?
   mConfig.host.setAddress(checkAndGetValue("host", "0.0.0.0").toString());
   mConfig.port = checkAndGetValue("port", 5555).toUInt();
   mConfig.flood_limit = checkAndGetValue("flood_limit", 5).toUInt();
