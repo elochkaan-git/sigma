@@ -14,7 +14,7 @@ OnlineUsersRegistry::registerUser(unsigned int user_id, const QUuid& client_id)
     return false;
   }
   mOnlineUsers[user_id] = client_id;
-  return true; 
+  return true;
 }
 
 bool

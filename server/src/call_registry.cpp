@@ -34,8 +34,8 @@ CallRegistry::forceEndCall(unsigned int user_id)
 {
   QWriteLocker locker(&mLock);
   qDebug(appCalls) << QString("Deleting call with %1").arg(user_id);
-  return mCalls.removeIf([&](CallRecord& r) {
-    return r.caller_id == user_id || r.callee_id == user_id;
+  return mCalls.removeIf([user_id](QHash<QUuid, CallRecord>::iterator it) {
+    return it->callee_id == user_id || it->callee_id == user_id;
   });
 }
 
