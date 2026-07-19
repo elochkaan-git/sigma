@@ -22,9 +22,9 @@ class CallRegistry
 {
 public:
   QUuid createRecord(unsigned int caller_id, unsigned int callee_id);
-  void deleteRecord(const QUuid& call_id);
-  void deleteRecord(unsigned int user_id);
-  void updateRecord(const QUuid& call_id, CallStatus new_status);
+  bool deleteRecord(const QUuid& call_id);
+  bool forceEndCall(unsigned int user_id);
+  bool updateRecord(const QUuid& call_id, CallStatus new_status);
   std::optional<CallRecord> getCallRecord(const QUuid& call_id);
 
 private:
