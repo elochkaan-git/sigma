@@ -108,7 +108,7 @@ public:
    * @return OperationStatus статус выполнения операции
    * @see OperationStatus
    */
-  OperationStatus deleteFromQueue(unsigned int msg_id);
+  OperationStatus deleteFromQueue(const std::vector<unsigned int>& msg_ids);
 
 private:
   MessageRepository* mMsgRepo;

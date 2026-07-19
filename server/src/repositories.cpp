@@ -260,21 +260,41 @@ MessageRepository::getQueuedMessages(unsigned int receiver_id)
 }
 
 OperationStatus
-MessageRepository::deleteFromQueue(unsigned int msg_id)
+MessageRepository::deleteFromQueue(const std::vector<unsigned int>& msg_ids)
 {
+  if (msg_ids.empty()) {
+    return OperationStatus::OK;
+  }
+
   QSqlDatabase& connection = mConnManager->currentConnection();
+  if (!connection.transaction()) {
+    qWarning(appDatabase) << "Can't start transaction:"
+                          << connection.lastError().text();
+    return OperationStatus::InternalError;
+  }
+
   QSqlQuery query(connection);
   bool status = query.prepare("delete from msgs_queue where id = :id");
   if (!status) {
     qWarning(appDatabase) << query.lastError().text().toStdString();
     return OperationStatus::InternalError;
   }
-  query.bindValue(":id", msg_id);
-  status = query.exec();
-  if (!status) {
-    qWarning(appDatabase) << query.lastError().text().toStdString();
+
+  for (unsigned int msg_id : msg_ids) {
+    query.bindValue(":id", msg_id);
+    if (!query.exec()) {
+      qWarning(appDatabase)
+        << "Delete failed for id" << msg_id << ":" << query.lastError().text();
+      connection.rollback();
+      return OperationStatus::InternalError;
+    }
+  }
+
+  if (!connection.commit()) {
+    qWarning(appDatabase) << "Commit failed:" << connection.lastError().text();
     return OperationStatus::InternalError;
   }
+
   return OperationStatus::OK;
 }
 

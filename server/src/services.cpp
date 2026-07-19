@@ -30,7 +30,7 @@ UserService::registerUser(QString login, QString passwd)
                         pwd_string.length(),
                         crypto_pwhash_OPSLIMIT_INTERACTIVE,
                         crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
-    qFatal(appService) << "Out of memory while computing hash";
+    qCritical(appService) << "Out of memory while computing hash";
     throw std::runtime_error("Out of memory");
   } else {
     qInfo(appService) << QString("Password hash of %1 computed").arg(login);
@@ -97,9 +97,9 @@ MessageService::getQueuedMessages(unsigned int user_id)
 }
 
 OperationStatus
-MessageService::deleteFromQueue(unsigned int msg_id)
+MessageService::deleteFromQueue(const std::vector<unsigned int>& msg_ids)
 {
-  return mMsgRepo->deleteFromQueue(msg_id);
+  return mMsgRepo->deleteFromQueue(msg_ids);
 }
 
 RelationService::RelationService(RelationRepository* rel_repo,
@@ -185,7 +185,7 @@ RelationService::getUsers(unsigned int user_id, QString user_status)
   users_pair = this->mUserRepo->getUsersById(users_ids.value());
   status = users_pair.first;
   const auto users{ users_pair.second };
-    
+
   if (status != OperationStatus::OK || !users.has_value()) {
     qWarning(appService)
       << QString("No users with such ids or error %1").arg((int)status);

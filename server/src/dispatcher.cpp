@@ -1,5 +1,6 @@
 #include "dispatcher.h"
 
+#include "call_registry.h"
 #include "command_types.h"
 #include "logging.h"
 #include "server_commands.h"
@@ -182,40 +183,59 @@ Dispatcher::handleLoginUser(const LoginUser& cmd)
 {
   auto [status, user_id] = mServices.u_service->loginUser(cmd.login, cmd.pwd);
   LoginUserResponse lur;
+  lur.client_id = cmd.client_id;
+
   if (user_id.has_value() && status == OperationStatus::OK) {
-    lur.client_id = cmd.client_id;
     lur.user_id = user_id.value();
     lur.status = OperationStatus::OK;
-    std::vector<Response> responses{ lur };
+
     auto [status, msgs] =
       this->mServices.msg_service->getQueuedMessages(user_id.value());
+
+    std::vector<Response> responses{ lur };
+
     if (msgs.has_value() && status == OperationStatus::OK) {
-      for (const auto& m : msgs.value()) {
-        NewMessageResponse nmr;
-        nmr.client_id = cmd.client_id;
-        nmr.sender_id = m.sender_id;
-        nmr.content = m.content;
-        responses.push_back(nmr);
-        status = this->mServices.msg_service->deleteFromQueue(m.msg_id);
-        if (status != OperationStatus::OK) {
-          qWarning(appDispatcher)
-            << QString("Command LoginUser return status %1").arg((int)status);
-          break;
+      const auto& messages = msgs.value();
+      if (!messages.empty()) {
+        std::vector<unsigned int> ids;
+        ids.reserve(messages.size());
+
+        for (const auto& m : messages) {
+          ids.push_back(m.msg_id);
         }
-      }
-      if (status != OperationStatus::OK) {
-        qWarning(appDispatcher) << "Not all messages from queue was processed";
+
+        OperationStatus delStatus =
+          this->mServices.msg_service->deleteFromQueue(ids);
+        if (delStatus == OperationStatus::OK) {
+          for (const auto& m : messages) {
+            NewMessageResponse nmr;
+            nmr.client_id = cmd.client_id;
+            nmr.sender_id = m.sender_id;
+            nmr.content = m.content;
+            responses.push_back(nmr);
+          }
+          qInfo(appDispatcher)
+            << "Queued messages delivered to user" << user_id.value();
+        } else {
+          qWarning(appDispatcher)
+            << "Failed to delete queued messages for user" << user_id.value()
+            << "will retry on next login";
+        }
       } else {
-        qInfo(appDispatcher) << "All messages from queue was processed";
+        qInfo(appDispatcher)
+          << "No queued messages for user" << user_id.value();
       }
+    } else {
+      qWarning(appDispatcher)
+        << "Failed to get queued messages or no messages" << (int)status;
     }
+
     return responses;
   } else {
-    qWarning(appDispatcher)
-      << QString("Command LoginUser return status %1").arg((int)status);
-    lur.client_id = cmd.client_id;
     lur.user_id = 0;
     lur.status = status;
+    qWarning(appDispatcher)
+      << "Login failed for" << cmd.login << "status" << (int)status;
     return std::vector<Response>{ lur };
   }
 }
@@ -445,6 +465,16 @@ Dispatcher::handleStartCall(const StartCall& cmd)
     return std::vector<Response>{ scr };
   }
 
+  bool isCall = this->mCallRegistry->isUserInCall(cmd.user_id) ||
+                this->mCallRegistry->isUserInCall(cmd.callee_id);
+  if (isCall) {
+    qWarning(appDispatcher) << QString("User %1 or %2 already in call")
+                                 .arg(cmd.user_id)
+                                 .arg(cmd.callee_id);
+    scr.status = OperationStatus::UserAlreadyInCall;
+    return std::vector<Response>{ scr };
+  }
+
   QUuid call_id = this->mCallRegistry->createRecord(cmd.user_id, cmd.callee_id);
   qInfo(appDispatcher) << QString("Call %1 created: %2 -> %3")
                             .arg(call_id.toString())
@@ -483,6 +513,10 @@ Dispatcher::handleAcceptCall(const AcceptCall& cmd)
                                  .arg(cmd.user_id)
                                  .arg(cmd.call_id.toString());
     acr.status = OperationStatus::NotCallParticipant;
+    return std::vector<Response>{ acr };
+  } else if (record->status != CallStatus::Ringing) {
+    qWarning(appDispatcher) << QString("Calling already accepted");
+    acr.status = OperationStatus::CallAlreadyProceeded;
     return std::vector<Response>{ acr };
   }
 
@@ -525,6 +559,11 @@ Dispatcher::handleRejectCall(const RejectCall& cmd)
                                  .arg(cmd.user_id)
                                  .arg(cmd.call_id.toString());
     rcr.status = OperationStatus::NotCallParticipant;
+    return std::vector<Response>{ rcr };
+  } else if (record->status != CallStatus::Ringing) {
+    qWarning(appDispatcher)
+      << QString("Call %1 already accepted").arg(cmd.call_id.toString());
+    rcr.status = OperationStatus::CallAlreadyProceeded;
     return std::vector<Response>{ rcr };
   }
 
@@ -607,6 +646,13 @@ Dispatcher::handleSdp(const Sdp& cmd)
     error.client_id = cmd.client_id;
     error.reason = "You are not a participant of this call";
     return std::vector<Response>{ error };
+  } else if (record->status != CallStatus::Active) {
+    qWarning(appDispatcher)
+      << QString("Call %1 not established").arg(cmd.client_id.toString());
+    Error error;
+    error.client_id = cmd.client_id;
+    error.reason = "Call not established";
+    return std::vector<Response>{ error };
   }
 
   unsigned int other_id =
@@ -650,6 +696,13 @@ Dispatcher::handleIceCandidate(const IceCandidate& cmd)
     Error error;
     error.client_id = cmd.client_id;
     error.reason = "You are not a participant of this call";
+    return std::vector<Response>{ error };
+  } else if (record->status != CallStatus::Active) {
+    qWarning(appDispatcher)
+      << QString("Call %1 not established").arg(cmd.client_id.toString());
+    Error error;
+    error.client_id = cmd.client_id;
+    error.reason = "Call not established";
     return std::vector<Response>{ error };
   }
 
@@ -698,10 +751,8 @@ Dispatcher::handleGetTurnCredentials(const GetTurnCredentials& cmd)
   QByteArray secret = mTurnSecret.toUtf8();
   QByteArray msg = username.toUtf8();
   QByteArray hmac =
-    QCryptographicHash::hash(secret + msg, QCryptographicHash::Sha1);
-  QByteArray hmacResult =
     QMessageAuthenticationCode::hash(msg, secret, QCryptographicHash::Sha1);
-  QString password = hmacResult.toHex();
+  QString password = hmac.toHex();
 
   response.username = username;
   response.password = password;
