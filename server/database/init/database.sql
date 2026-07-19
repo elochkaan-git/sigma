@@ -4,7 +4,8 @@ create table if not exists users (
   id serial primary key,
   login varchar(30) unique not null,
   passwd text not null,
-  last_seen timestamp default null
+  last_seen timestamp default null,
+  avatar text default null
 );
 
 create table if not exists msgs_queue (
