@@ -26,6 +26,8 @@ enum class OperationStatus
   NotCallParticipant = 10, /**< Пользователь не является участником данного
                              звонка (не caller и не callee) */
   CallWithYourself = 11, /**< Попытка позвонить самому себе */
+  UserAlreadyInCall = 12,
+  CallAlreadyProceeded = 13,
   InternalError = 255
 };
 
