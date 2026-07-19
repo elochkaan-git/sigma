@@ -138,7 +138,7 @@ RelationService::removeFriend(unsigned int user_id, unsigned int friend_id)
 std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getFriends(unsigned int user_id)
 {
-  return this->getUsers(user_id, "friend");
+  return this->getUsers(user_id, "friends");
 }
 
 std::pair<OperationStatus, std::optional<std::vector<User>>>
@@ -175,8 +175,9 @@ RelationService::getUsers(unsigned int user_id, QString user_status)
 
   if (status != OperationStatus::OK || !users_ids.has_value()) {
     qWarning(appService)
-      << QString("User %1 have no sent friend requests or have error %2")
+      << QString("User %1 have no '%2' or have error %3")
            .arg(user_id)
+           .arg(user_status)
            .arg((int)status);
     return { status, std::nullopt };
   }
