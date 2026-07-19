@@ -1,4 +1,5 @@
 #pragma once
+#include "call_registry.h"
 #include "command_types.h"
 #include "dispatcher.h"
 #include "registry.h"
@@ -102,6 +103,7 @@ public:
    */
   NetworkManager(Dispatcher* dispatcher,
                  OnlineUsersRegistry* registry,
+                 CallRegistry* call_registry,
                  const QString& iniPath);
   /**
    * @brief Сериализует Response в Json
@@ -154,6 +156,7 @@ public slots:
 private:
   Dispatcher* mDispatcher;
   OnlineUsersRegistry* mRegistry;
+  CallRegistry* mCallRegistry;
   QWebSocketServer* mServer;
   QHash<QUuid, QWebSocket*> mConnections;
   QHash<unsigned int, ConnectionState> mIDConstraints;
@@ -437,7 +440,5 @@ inline const QHash<QString, CommandSpec> kCommandSpecs = {
         cmd.client_id = client_id;
         cmd.user_id = user_id;
         return cmd;
-      }
-    }
-  },
+      } } }
 };
