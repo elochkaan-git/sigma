@@ -42,7 +42,7 @@ main(int argc, char* argv[])
     Dispatcher dispatcher({ &userServive, &msgService, &relService },
                           &registry,
                           &call_registry);
-    NetworkManager net_manager(&dispatcher, &registry, "config.ini");
+    NetworkManager net_manager(&dispatcher, &registry, &call_registry, "config.ini");
 
     return application.exec();
   } catch (const std::runtime_error& error) {
