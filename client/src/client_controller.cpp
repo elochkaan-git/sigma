@@ -1,4 +1,5 @@
-#include "client_controller.hpp"
+#include "client_controller.h"
+#include "transport.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -63,7 +64,13 @@ ClientController::ClientController(QObject *parent):
 
     pingTimer = new QTimer(this);
     connect(pingTimer, &QTimer::timeout, this, &ClientController::pingAllServers);
-    // pingTimer->start(2000); // Опрос раз в 2 секунды
+    pingTimer->start(10000); // Опрос раз в 2 секунды
+
+    // Transport layer creation
+    m_transport = new Transport(this);
+    connect(m_transport, &Transport::responseReady, 
+            this, &ClientController::handleTransportResponse);
+    
 }
 
 QVariantList ClientController::loadServersFromCsv(const QString &csvPath)
@@ -147,20 +154,49 @@ Q_INVOKABLE void ClientController::updateServer(int index, const QString &name, 
 
 Q_INVOKABLE void ClientController::setSelectedServer(const QVariant &server)
 {
+    m_transport->disconnectFromHost();
     selectedServer = server; 
     QString serverUrl = selectedServer.toMap()["serverUrl"].toString();
     qDebug() << "Selected server URL:" << serverUrl;
-    emit serverSelected(serverUrl);
+    m_transport->connectToHost(serverUrl);
+    pingTimer->stop();
+}
+
+Q_INVOKABLE void ClientController::disconnectFromServer(){
+    m_transport->disconnectFromHost();
+    qDebug() << "Disconected from:" << selectedServer.toMap().value("serverUrl").toString();
+    selectedServer = {};
+    pingTimer->start();
+    emit serverDisconected();
 }
 
 Q_INVOKABLE void ClientController::registerUser(const QString &login, const QString &password) {
-    qDebug() << "QML запросил регистрацию для:" << login;
-    emit registerRequest(login, password); // Перенаправляем запрос в Транспорт
+    m_transport->sendCommand(wire::RegisterUser{login, password});
 }
 
 Q_INVOKABLE void ClientController::loginUser(const QString &login, const QString &password) {
-    qDebug() << "QML запросил вход для:" << login;
-    emit loginRequest(login, password); // Перенаправляем запрос в Транспорт
+    m_transport->sendCommand(wire::LoginUser{login, password});
+}
+
+Q_INVOKABLE void ClientController::sendFriendRequest(unsigned int userId){
+    m_transport->sendCommand(wire::SendFriendRequest{userId});
+}
+
+Q_INVOKABLE void ClientController::getAllFriendsInfo()
+{
+    m_transport->sendCommand(wire::GetFriends{});
+    m_transport->sendCommand(wire::GetFriendRequests{});
+    m_transport->sendCommand(wire::GetSentFriendRequests{});
+}
+
+Q_INVOKABLE void ClientController::acceptFriendRequest(unsigned int userId)
+{
+    m_transport->sendCommand(wire::AcceptFriendRequest{userId});
+}
+
+Q_INVOKABLE void ClientController::rejectFriendRequest(unsigned int userId)
+{
+    m_transport->sendCommand(wire::RejectFriendRequest{userId});
 }
 
 void ClientController::updateCSV(){
@@ -190,12 +226,122 @@ void ClientController::updateCSV(){
 
 void ClientController::pingAllServers()
 {
-    qDebug() << "Пинг всех серверов...";
+    qDebug() << "Запуск параллельного пинга всех серверов...";
+
     for (const QVariant &serverVar : serversList) {
         const QVariantMap serverEntry = serverVar.toMap();
-        const QString url = serverEntry.value("serverUrl").toString();
-        emit pingServer(url);
+        QString url = serverEntry.value("serverUrl").toString();
+
+        // if (!url.startsWith("ws://") && !url.startsWith("wss://")) {
+        //     // Если нет, принудительно добавляем ws:// в начало
+        //     url = QString("ws://") + url;
+        // }
+        
+        // Создаем отдельный транспорт для этого конкретного сервера
+        Transport* pingerTransport = new Transport(this); 
+
+        connect(pingerTransport, &Transport::responseReady, this, [this, url, pingerTransport](const Response& response) {
+            
+            // Проверяем, что пришел именно ответ на GetServerStats
+            if (std::holds_alternative<wire::GetServerStatsResponse>(response)) {
+                auto stats = std::get<wire::GetServerStatsResponse>(response);
+
+                qInfo() << "Server stats: online=" << stats.online << ", total=" << stats.total;
+                // Обновляем статус сервера (вызываем твой существующий слот)
+                this->updateServerStatus(url, true, stats.total, stats.online);
+            }
+
+            // Важно: удаляем этот временный транспорт после получения ответа
+            pingerTransport->disconnectFromHost();
+            pingerTransport->deleteLater();
+        });
+
+        connect(pingerTransport, &Transport::connected, this, [pingerTransport]() {
+            pingerTransport->sendCommand(wire::GetServerStats{});
+        });
+
+        QTimer::singleShot(5000, pingerTransport, [pingerTransport, this, url]() {
+            if (pingerTransport) {
+                qDebug() << "Сервер" << url << "не ответил по таймауту.";
+                this->updateServerStatus(url, false, -1, -1);
+                pingerTransport->disconnectFromHost();
+                pingerTransport->deleteLater();
+            }
+        });
+        // 4. Запускаем процесс для конкретного URL
+        pingerTransport->connectToHost(url);
     }
+}
+
+
+void ClientController::handleTransportResponse(const Response &response)
+{
+    std::visit(overloaded{
+        // 1. Общие системные сообщения
+        [this](const wire::Error& r) { handleError(r); },
+
+        // 2. Модуль авторизации и профиля
+        [this](const wire::RegisterUserResponse& r)          { auth_handler_.handleRegister(r); },
+        [this](const wire::LoginUserResponse& r)             { auth_handler_.handleLogin(r); },
+
+        [this](const wire::GetFriendsResponse& r)            { auth_handler_.handleGetFriends(r); },
+        [this](const wire::GetFriendRequestsResponse& r)     { auth_handler_.handleGetFriendRequests(r); },
+        [this](const wire::GetSentFriendRequestsResponse& r) { auth_handler_.handleGetSentFriendRequests(r); },
+
+        [this](const wire::SendFriendRequestResponse& r)     { auth_handler_.handleSendFriendRequest(r); },
+        [this](const wire::AcceptFriendRequestResponse& r)   { auth_handler_.handleAcceptFriendRequest(r); },
+        [this](const wire::RejectFriendRequestResponse& r)   { auth_handler_.handleRejectFriendRequest(r); },
+        // Временная заглушка для ВСЕХ остальных типов
+        [](const auto& unhandled_response) {
+            // Сюда попадут LoginUserResponse, SendMessageResponse и т.д.
+            // Пока просто ничего не делаем или логируем
+        }
+        
+        
+        
+        
+        // [this](const wire::RemoveFriendResponse& r)          { auth_handler_.handleRemoveFriend(r); },
+
+        // 3. Модуль обмена сообщениями (Чаты)
+        // [this](const wire::SendMessageResponse& r) { chat_handler_.handleSendMessage(r); },
+        // [this](const wire::NewMessageResponse& r)  { chat_handler_.handleNewMessage(r); },
+
+        // // 4. Модуль звонков (VoIP / WebRTC)
+        // [this](const wire::StartCallResponse& r)   { call_handler_.handleStartCall(r); },
+        // [this](const wire::IncomingCallResponse& r){ call_handler_.handleIncomingCall(r); },
+        // [this](const wire::AcceptCallResponse& r)  { call_handler_.handleAcceptCall(r); },
+        // [this](const wire::CallAcceptedResponse& r){ call_handler_.handleCallAccepted(r); },
+        // [this](const wire::RejectCallResponse& r)  { call_handler_.handleRejectCall(r); },
+        // [this](const wire::CallRejectedResponse& r){ call_handler_.handleCallRejected(r); },
+        // [this](const wire::EndCallResponse& r)     { call_handler_.handleEndCall(r); },
+        // [this](const wire::CallEndedResponse& r)   { call_handler_.handleCallEnded(r); },
+        // [this](const wire::SdpResponse& r)         { call_handler_.handleSdp(r); },
+        // [this](const wire::IceCandidateResponse& r) { call_handler_.handleIceCandidate(r); },
+
+        // // 5. Системная статистика / Утилиты
+        // [this](const wire::GetServerStatsResponse& r)     { handleGetServerStats(r); },
+        // [this](const wire::GetTurnCredentialsResponse& r) { handleGetTurnCredentials(r); },
+    }, response);
+}
+
+void ClientController::updateFriendsInfo()
+{
+    m_transport->sendCommand(wire::GetFriends{});
+}
+
+void ClientController::updateIncomingFriendsRequests()
+{
+    m_transport->sendCommand(wire::GetFriendRequests{});
+}
+
+void ClientController::updateOutcomingFriendsRequests()
+{
+    m_transport->sendCommand(wire::GetSentFriendRequests{});
+}
+
+void ClientController::handleError(const wire::Error &error)
+{
+    qInfo() << "Error:" << error.reason;
 }
 
 void ClientController::updateServerStatus(const QString &url, bool isOnline, int usersCount, int onlineCount){
