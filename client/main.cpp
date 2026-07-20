@@ -1,7 +1,9 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include "client_controller.hpp" // Подключаем наш контроллер
+#include "client_controller.h" // Подключаем наш контроллер
+
+
 
 int main(int argc, char *argv[])
 {

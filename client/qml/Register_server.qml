@@ -112,19 +112,38 @@ Page {
                 item.implicitHeight = 32.5
                 item.clicked.connect(function() {
                     if(passwordInput.item.text !== confirmPasswordInput.item.text) {
-                        errorToast.text = "Пароли не совпадают!";
-                        errorToast.open();
+                        errorToast.show("Пароли не совпадают!");
                         return;
                     }
-                    clientController.registerUser(loginInput.text, passwordInput.text);
-                    registerPage.StackView.view.pop();
+                    if(passwordInput.item.text === "" || confirmPasswordInput.item.text === ""){
+                        errorToast.show("Логин или пароль не могут быть пустыми!");
+                        return;
+                    }
+                    clientController.registerUser(loginInput.item.text, passwordInput.item.text);
                 })
             }
-        } 
+        }
     }
 
     Toast {
         id: errorToast
+    }
+    Toast {
+        id: successToast
+        backgroundColor: style.colors.status_success_bg
+    }
+    Connections {
+        target: clientController.authHandler // Указываем на конкретный подконтроллер
+
+        // Имя функции формируется автоматически: on + ИмяСигнала с большой буквы
+        function onShowErrorToast(message) {
+            errorToast.show(message); // Вызываем функцию Toast в UI!
+        }
+        
+        function onRegisterSuccess() {
+            // Переключаем экран на главный, например
+            successToast.show("Now you can login!");
+        }
     }
 
 }

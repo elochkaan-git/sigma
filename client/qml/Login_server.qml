@@ -123,6 +123,7 @@ Page {
                     item.buttonStyle = "dark"
                     item.implicitHeight = 32.5
                     item.clicked.connect(function() {
+                        clientController.disconnectFromServer();
                         loginPage.StackView.view.pop();
                     })
                 }
@@ -136,25 +137,43 @@ Page {
                     item.implicitHeight = 32.5
                     item.clicked.connect(function() {
                         // Closing the login page and start main application logic in General_page.qml
-                        clientController.loginUser(loginInput.text, passwordInput.text);
-                        var comp = Qt.createComponent("qrc:/Main/qml/General_window.qml");
-                        if (comp.status === Component.Ready) {
-                            
-                            var newWindow = comp.createObject(null);
-                            if (newWindow) {
-                                // New window is created and shown
-                                mainWindow.close(); // Close the main window (Main.qml)
-                            } else {
-                                console.error("Could not create General_window.qml");
-                            }
-                        } else {
-                            console.error("Failed to load General_window.qml:", comp.errorString());
-                        }
+                        clientController.loginUser(loginInput.item.text, passwordInput.item.text);
+                        
                     })
                 }
             }
         }
         
     }
+
+    Toast {
+        id: errorToast
+    }
+    
+    Connections {
+        target: clientController.authHandler // Указываем на конкретный подконтроллер
+
+        // Имя функции формируется автоматически: on + ИмяСигнала с большой буквы
+        function onShowErrorToast(message) {
+            errorToast.show(message); // Вызываем функцию Toast в UI!
+        }
+        
+        function onLoginSuccess() {
+            var comp = Qt.createComponent("qrc:/Main/qml/General_window.qml");
+            if (comp.status === Component.Ready) {
+                
+                var newWindow = comp.createObject(null);
+                if (newWindow) {
+                    // New window is created and shown
+                    mainWindow.close(); // Close the main window (Main.qml)
+                } else {
+                    console.error("Could not create General_window.qml");
+                }
+            } else {
+                console.error("Failed to load General_window.qml:", comp.errorString());
+            }
+        }
+    }
+    
 
 }

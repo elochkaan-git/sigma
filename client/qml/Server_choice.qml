@@ -1,9 +1,9 @@
-import QtQuick
-import QtQuick.Controls
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQml 2.15
 
 Item {
     id: root
-    
     property var style: Style{} // Подключаем стиль из Style.qml
     property var colors: style.colors // Подключаем палитру из Style.qml
     property var textStyles: style.textStyles // Подключаем стили текста из Style.qml
@@ -115,7 +115,7 @@ Item {
                         serverUrl: modelData.serverUrl
                         isOnline: modelData.isOnline
                         onlineText: {
-                            if (modelData.isOnline !== false && modelData.onlineCount !== undefined) {
+                            if (modelData.isOnline !== false && modelData.onlineCount !== undefined && modelData.onlineCount !== -1) {
                                 return modelData.onlineCount + "/" + modelData.usersCount
                             }
                             return ""
