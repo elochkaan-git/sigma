@@ -126,128 +126,121 @@ QtObject {
     }
 
     property Component chatTabButton: Component {
-        Button {
-            id: control
-            implicitHeight: 48
-            leftPadding: 12
-            rightPadding: 12
-            topPadding: 8
-            bottomPadding: 8
-            checkable: true
+    Button {
+        id: control
+        implicitHeight: 48
+        leftPadding: 12
+        rightPadding: 12
+        topPadding: 8
+        bottomPadding: 8
+        autoExclusive: true
 
-            property string label: ""
-            property string avatarSource: "qrc:/Main/assets/person.png"
-            property bool isFriendsButton: false
-            property bool showRemoveButton: !isFriendsButton
-            property bool showAvatar: !isFriendsButton
-            signal removeRequested()
+        property bool isActive: false
 
-            Behavior on checked {
-                ColorAnimation { duration: 150 }
-            }
+        property string label: ""
+        property string avatarSource: "qrc:/Main/assets/person.png"
+        property bool isFriendsButton: false // Главный переключатель режима
+        
+        signal removeRequested()
 
-            contentItem: RowLayout {
-                spacing: 10
+        Behavior on isActive {
+            ColorAnimation { duration: 150 }
+        }
+
+        contentItem: RowLayout {
+            spacing: 10
+            
+            // Аватарка
+            Item {
+                id: avatarItem
+                // Прямая проверка: если это кнопка друзей, аватарку НЕ показываем
+                visible: !control.isFriendsButton
                 
-                //Avatar image with rounded corners
+                width: 24
+                height: 24
+                property int cornerRadius: 14
+
                 Item {
-                    id: avatarItem
-                    visible: control.showAvatar
-                    
-                    // 1. Фиксируем размеры компонента снаружи
-                    width: 24
-                    height: 24
-                    
-                    // Настройки, которые можно менять
-                    property int cornerRadius: 14 // Радиус закругления углов
-
-                    // Внутренний контейнер, который мы будем обрезать по маске
-                    Item {
-                        id: contentContainer
-                        anchors.fill: parent
-                        
-                        // Магия закругления: включаем слои и накладываем OpacityMask
-                        layer.enabled: true
-                        layer.effect: OpacityMask {
-                            // В качестве маски используем скрытый Rectangle с радиусом
-                            maskSource: Rectangle {
-                                width: avatarItem.width
-                                height: avatarItem.height
-                                radius: avatarItem.cornerRadius
-                            }
-                        }
-
-                        // --- 1. Основное изображение ---
-                        Image {
-                            id: mainImage
-                            anchors.fill: parent
-                            source: control.avatarSource
-                            // PreserveAspectCrop аккуратно заполняет фиксированный размер без искажения пропорций
-                            fillMode: Image.PreserveAspectCrop 
-                            asynchronous: true
-                        }
-
-                        // --- 2. Плейсхолдер ---
-                        Image {
-                            id: placeHolderImage
-                            anchors.fill: parent
-                            source: "qrc:/Main/assets/person.png"
-                            // PreserveAspectCrop аккуратно заполняет фиксированный размер без искажения пропорций
-                            fillMode: Image.PreserveAspectCrop 
-                            asynchronous: true
+                    id: contentContainer
+                    anchors.fill: parent
+                    layer.enabled: true
+                    layer.effect: OpacityMask {
+                        maskSource: Rectangle {
+                            width: avatarItem.width
+                            height: avatarItem.height
+                            radius: avatarItem.cornerRadius
                         }
                     }
+
+                    Image {
+                        id: mainImage
+                        anchors.fill: parent
+                        source: control.avatarSource
+                        fillMode: Image.PreserveAspectCrop 
+                        asynchronous: true
+                    }
+
+                    Image {
+                        id: placeHolderImage
+                        anchors.fill: parent
+                        source: "qrc:/Main/assets/person.png"
+                        fillMode: Image.PreserveAspectCrop 
+                        asynchronous: true
+                    }
+                }
+            }
+
+            Text {
+                text: control.label
+                font: root.textStyles.messageText
+                color: control.isActive ? root.colors.fg_on_accent : root.colors.fg_muted
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: control.isFriendsButton ? Text.AlignHCenter : Text.AlignLeft
+            }
+
+            // Кнопка удаления (крестик)
+            Item {
+                // Прямая проверка: показываем только если это НЕ кнопка друзей И на неё навели мышь
+                visible: !control.isFriendsButton && control.hovered
+                Layout.preferredWidth: visible ? 18 : 0
+                Layout.preferredHeight: 18
+                opacity: visible ? 1 : 0
+
+                Behavior on opacity { NumberAnimation { duration: 150 } }
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 9
+                    color: root.colors.bg_canvas_overlay
+                    border.color: root.colors.border_default
+                    border.width: 1
                 }
 
                 Text {
-                    text: control.label
-                    font: root.textStyles.messageText
-                    color: control.checked ? root.colors.fg_on_accent : root.colors.fg_muted
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment:  !control.showAvatar ? Text.AlignHCenter : Text.AligHLeft
+                    anchors.centerIn: parent
+                    text: "×"
+                    color: root.colors.fg_muted
+                    font: root.textStyles.system
                 }
 
-                Item {
-                    Layout.preferredWidth: control.showRemoveButton && control.hovered ? 18 : 0
-                    Layout.preferredHeight: 18
-                    visible: control.showRemoveButton && control.hovered
-                    opacity: visible ? 1 : 0
-
-                    Behavior on opacity { NumberAnimation { duration: 150 } }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 9
-                        color: root.colors.bg_canvas_overlay
-                        border.color: root.colors.border_default
-                        border.width: 1
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "×"
-                        color: root.colors.fg_muted
-                        font: root.textStyles.system
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: control.removeRequested()
-                    }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: control.removeRequested()
                 }
-            }
-
-            background: Rectangle {
-                radius: 8
-                color: control.checked ? root.colors.accent_bg :
-                       (control.hovered ? root.colors.bg_canvas_subtle : "transparent")
-                border.color: root.colors.border_default
-                border.width: control.checked ? 0 : 1
-
-                Behavior on color { ColorAnimation { duration: 150 } }
             }
         }
+
+        background: Rectangle {
+            radius: 8
+            color: control.isActive ? root.colors.accent_bg :
+                   (control.hovered ? root.colors.bg_canvas_subtle : "transparent")
+            border.color: root.colors.border_default
+            border.width: control.isActive ? 0 : 1
+
+            Behavior on color { ColorAnimation { duration: 150 } }
+        }
     }
+}
 }
