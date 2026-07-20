@@ -15,12 +15,6 @@ ApplicationWindow {
     property var colors: style.colors
     property var textStyles: style.textStyles
 
-    ListModel {
-        id: tabsModel
-        ListElement { title: "Аня"; showAvatar: true; showDelete: true; urlAvatar: "https://ui-avatars.com/api/?name=Аня"}
-        ListElement { title: "Максим"; showAvatar: true; showDelete: true}
-        ListElement { title: "Оля"; showAvatar: true; showDelete: true}
-    }
 
     // Свойство для хранения индекса текущего активного таба
     property int currentTabIndex: 0
@@ -52,94 +46,132 @@ ApplicationWindow {
             SplitView.minimumWidth: 200
             SplitView.maximumWidth: 400
 
-            ButtonGroup { id: tabButtonGroup }
-
-            ColumnLayout {
+            ScrollView {
+                id: sideMenuScroll
                 width: parent.width
-                spacing: 8
-                
-                // Loader {
-                //     sourceComponent: style.chatTabButton
-                //     Layout.fillWidth: true
-                //     Layout.margins: 12
-                //     Layout.bottomMargin: 0
-                //     onLoaded: {
-                //         item.label: "Друзья"
-                //         item.isFriendsButton: false
-                //         item.ButtonGroup.group: tabBattonGroup
-                //     }
-                    
-                //     // item.checked: true
-                    
-                // }
-                Text {
-                    text: "Личные сообщения"
-                    font: root.textStyles.system
-                    color: root.colors.fg_muted
-                    horizontalAlignment: Text.AlignHLeft
-                    Layout.fillWidth: true
-                }
-                Repeater {
-                    model: tabsModel
+                clip: true
+                anchors.top: parent.top
+                anchors.bottom: userIdText.top
+                anchors.bottomMargin: 8 // Отступ между скроллом и текстом
+                anchors.horizontalCenter: parent.horizontalCenter
 
-                    // Загружаем компонент кнопки из нашего файла стилей
-                    delegate: Loader {
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                ScrollBar.vertical.width: 8
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+                ColumnLayout {
+                    id: sideMenuColumn
+                    spacing: 8
+                    width: sideMenuScroll.availableWidth
+
+                    Loader {
                         sourceComponent: style.chatTabButton
                         Layout.fillWidth: true
                         Layout.margins: 12
                         Layout.bottomMargin: 0
+                        onLoaded: {
+                            item.label = "Друзья"
+                            item.isFriendsButton = true
+                            item.isActive = true
+                            
+                            item.isActive = Qt.binding(function() { return mainStack.currentIndex === 0 })
+                            item.onClicked.connect(function() {
+                                mainStack.currentIndex = 0
+                            })
+                        }
+                    }
 
-                        Binding { target: item; property: "label"; value: model.title }
-                        Binding { target: item; property: "showRemoveButton"; value: model.showDelete }
-                        Binding { target: item; property: "showAvatar"; value: model.showAvatar }
-                        Binding { target: item; property: "ButtonGroup.group"; value: tabButtonGroup }
-                        Binding { target: item; property: "checked"; value: index === root.currentTabIndex }
-                        Binding { target: item; property: "avatarSource"; value: model.urlAvatar || "qrc:/Main/assets/person.png" }
+                    Text {
+                        text: "Личные сообщения"
+                        font: root.textStyles.system
+                        color: root.colors.fg_muted
+                        horizontalAlignment: Text.AlignHLeft
+                        Layout.fillWidth: true
+                    }
 
-                        Connections {
-                            target: item
-                            function onCheckedChanged() {
-                                if (item.checked) {
-                                    root.currentTabIndex = index;
-                                }
-                            }
-                            function onRemoveRequested() {
-                                root.removeChat(index);
+                    Repeater {
+                        model: clientController.chatHandler.chatsList
+
+                        delegate: Loader {
+                            // Указываем Loader'у использовать ваш компонент стиля
+                            sourceComponent: style.chatTabButton
+                            
+                            Layout.fillWidth: true
+                            Layout.margins: 12
+                            Layout.bottomMargin: 0
+                            
+                            // Важно: через свойство 'item' мы настраиваем уже загруженную кнопку,
+                            // а доступ к данным модели (modelData) получаем напрямую.
+                            onLoaded: {
+                                item.label = modelData.userName
+                                
+                                // Если в вашей кнопке есть флаг checked, можно управлять им через индекс
+                                item.isActive = Qt.binding(function() {
+                                    return mainStack.currentIndex === 1 && chatScreen.currentUserId === modelData.userId
+                                })
+
+                                // Навешиваем обработчик клика на загруженную кнопку
+                                item.onClicked.connect(function() {
+                                    // 1. Задаем данные для экрана чата
+                                    chatScreen.currentUserName = modelData.userName
+                                    chatScreen.currentUserId = modelData.userId
+                                    
+                                    // 2. Даем команду контроллеру загрузить сообщения
+                                    clientController.chatHandler.loadChatWithUser(modelData.userId)
+                                    
+                                    // 3. Переключаем StackLayout на индекс 1 (Экран чата)
+                                    mainStack.currentIndex = 1
+                                })
                             }
                         }
                     }
-                }
 
-                // Text {
-                //     text: "Версия 1.0.0"
-                //     font: root.textStyles.system
-                //     color: root.colors.fg_muted
-                //     horizontalAlignment: Text.AlignHCenter
-                //     Layout.fillWidth: true
-                //     Layout.alignment: Qt.AlignBottom
-                // }
+                    
+                }
+            }
+
+            Text {
+                id: userIdText // Добавили id, чтобы ScrollView мог на него ссылаться
+                text: "Ваш id: " + clientController.authHandler.getUserId()
+                font: root.textStyles.system
+                color: root.colors.fg_muted
+                
+                // Позиционирование
+                anchors.bottom: parent.bottom // Прижимаем к самому низу панели
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: 12 // Красивые отступы от краев панели
+                
+                horizontalAlignment: Text.AlignHLeft
+                
+                // Так как элемент теперь позиционируется через anchors, а не Layout, 
+                // Layout.fillWidth больше не нужен.
             }
         }
-
+        /// ...
         // Правая панель (основная область, займет все оставшееся пространство)
         StackLayout {
             id: mainStack
             SplitView.fillWidth: true
-            currentIndex: root.currentTabIndex
-            
-            Rectangle {
-                color: "#e3f2fd"
-                Text { text: "Содержимое профиля"; anchors.centerIn: parent }
+            // Индекс будет: 0 — Друзья, 1 — Чат
+            currentIndex: 0 
+
+            // Индекс 0: Экран друзей
+            FriendsScreen {
+                id: friendsScreen
+                // Здесь ваша верстка списка друзей
             }
-            Rectangle {
-                color: "#e8f5e9"
-                Text { text: "Экран настроек"; anchors.centerIn: parent }
+
+            // Индекс 1: Экран личных сообщений (Чат)
+            ChatScreen {
+                id: chatScreen
+                // Свойства, которые будут меняться динамически
+                property string currentUserName: ""
+                property int currentUserId: -1
+                
+                // Внутри ChatScreen вы будете использовать эти свойства 
+                // для загрузки истории сообщений через ваш C++ или JS контроллер
             }
-            Rectangle {
-                color: "#fff3e0"
-                Text { text: "Панель уведомлений"; anchors.centerIn: parent }
-            }
-            // initialItem: blueWidget // Какой виджет показать при старте
         }
     }
 }
