@@ -34,8 +34,7 @@ public:
    */
   void setIceServers(const std::vector<rtc::IceServer>& servers);
 
-  void startCall(unsigned int calleeId);
-
+  void startCall(unsigned int calleeId, bool withVideo = false);
   void acceptCall();
   void rejectCall();
   void endCall();
