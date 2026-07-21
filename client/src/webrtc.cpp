@@ -1,7 +1,9 @@
 #include "webrtc.h"
 
 #include "command_types.h"
+#include "commands.h"
 #include "logging.h"
+#include "responses.h"
 
 #include <rtc/candidate.hpp>
 #include <rtc/description.hpp>
@@ -18,11 +20,11 @@
 #include <QMetaObject>
 
 namespace {
-// Payload types произвольные, но должны совпадать на обеих сторонах —
-// раз обе стороны это наш собственный клиент, а не браузер, фиксируем их
-// здесь как констранты одного источника правды.
-constexpr int kOpusPayloadType = 111;
-constexpr int kH264PayloadType = 96;
+  // Payload types произвольные, но должны совпадать на обеих сторонах —
+  // раз обе стороны это наш собственный клиент, а не браузер, фиксируем их
+  // здесь как констранты одного источника правды.
+  constexpr int kOpusPayloadType = 111;
+  constexpr int kH264PayloadType = 96;
 }
 
 static bool
@@ -31,7 +33,6 @@ registerMetaTypes()
   qRegisterMetaType<Command>("Command");
   return true;
 }
-
 static const bool metaTypesRegistered = registerMetaTypes();
 
 WebRtcWrapper::WebRtcWrapper(Transport* transport, QObject* parent)
@@ -47,26 +48,12 @@ WebRtcWrapper::WebRtcWrapper(Transport* transport, QObject* parent)
           &WebRtcWrapper::requestSendCommand,
           mTransport,
           &Transport::sendCommand);
-
-  // По умолчанию — публичный STUN, годится только для разработки.
-  // Перед реальными звонками нужно вызвать setIceServers() с TURN-кредами,
-  // полученными от сервера (see coturn discussion).
-  // mConfiguration.iceServers.emplace_back("stun:stun.l.google.com:19302");
-
-  // Отвечаем на offer вручную сами (см. handleRemoteSdp), а не полагаемся
-  // на автоматическое поведение библиотеки по умолчанию.
   mConfiguration.disableAutoNegotiation = true;
 }
 
 WebRtcWrapper::~WebRtcWrapper()
 {
   cleanupCall();
-}
-
-// FIXME: обрабатывать неверный порядок вызова методов
-void
-WebRtcWrapper::setVideoEnabled(bool enable) {
-  mVideoEnabled = enable;
 }
 
 void
@@ -80,12 +67,13 @@ WebRtcWrapper::setIceServers(const std::vector<rtc::IceServer>& servers)
 }
 
 void
-WebRtcWrapper::startCall(unsigned int calleeId)
+WebRtcWrapper::startCall(unsigned int calleeId, bool withVideo)
 {
   if (mState != CallState::Idle) {
     qWarning(appService) << "Unable to start call while another call is active";
     return;
   }
+  mVideoEnabled = withVideo;
 
   createPeerConnection();
 
@@ -94,9 +82,8 @@ WebRtcWrapper::startCall(unsigned int calleeId)
   wire::StartCall command;
   command.callee_id = calleeId;
   command.with_video = mVideoEnabled;
-  
 
-  qInfo(appService) << "Starting call to user" << calleeId << "Video?" << mVideoEnabled;
+  qInfo(appService) << "Starting call to user" << calleeId;
 
   emit requestSendCommand(command);
 }
@@ -122,11 +109,6 @@ WebRtcWrapper::acceptCall()
 void
 WebRtcWrapper::rejectCall()
 {
-  // Отклонить можно только пока звонок находится во входящем/звонящем
-  // состоянии — иначе можно случайно оборвать уже активный звонок,
-  // локально прибив PeerConnection, при этом сервер ответит
-  // NotCallParticipant и вторая сторона так и останется думать, что
-  // разговор продолжается.
   if (mState != CallState::Incoming) {
     qWarning(appService) << "No incoming call to reject";
     return;
@@ -164,9 +146,6 @@ WebRtcWrapper::handleStartCallResponse(const wire::StartCallResponse& response)
   if (response.status != OperationStatus::OK) {
     qWarning(appService)
       << "Failed to start call, status:" << static_cast<int>(response.status);
-
-    // Явно сообщаем Client о причине — просто сбросить состояние молча
-    // означает, что UI никогда не узнает, почему звонок не состоялся.
     emit callFailed(QString("start_call failed with status %1")
                       .arg(static_cast<int>(response.status)));
     cleanupCall();
@@ -183,10 +162,7 @@ WebRtcWrapper::handleIncomingCall(const wire::IncomingCallResponse& response)
 {
   if (mState != CallState::Idle) {
     qWarning(appService) << "Incoming call received while busy";
-    // TODO: сервер пока не знает, что мы заняты, и звонящий будет ждать
-    // бесконечно. До тех пор, пока на сервере не появится проверка "callee
-    // уже в звонке", стоит явно послать RejectCall с этим call_id здесь,
-    // чтобы вторая сторона не зависла в Ringing навсегда.
+    emit requestSendCommand(wire::RejectCall{ response.call_id });
     return;
   }
 
@@ -269,8 +245,6 @@ WebRtcWrapper::handleRemoteSdp(const wire::SdpResponse& response)
 
     mPeerConnection->setRemoteDescription(description);
 
-    // Если у нас ещё нет локального описания, создаём его сейчас.
-    // Библиотека автоматически создаст Answer, т.к. удалённое описание установлено.
     if (!mPeerConnection->localDescription()) {
       qInfo(appService) << "No local description yet, creating it now";
       mPeerConnection->setLocalDescription();
@@ -331,8 +305,34 @@ WebRtcWrapper::handleAcceptCallResponse(const wire::AcceptCallResponse& response
   mState = CallState::Connecting;
 
   qInfo(appService) << "Accept call confirmed. Waiting for remote SDP offer...";
-  // НЕ создаём локальное описание здесь – дожидаемся SDP от удалённой стороны.
 }
+
+void
+WebRtcWrapper::handleRejectCallResponse(const wire::RejectCallResponse& response)
+{
+  if (response.call_id != mCurrentCallId) {
+    qWarning(appService) << "RejectCallResponse for unknown call";
+    return;
+  }
+
+  if (response.status != OperationStatus::OK) {
+    qWarning(appService) << "Reject call failed, status:" << static_cast<int>(response.status);
+    emit callFailed(QString("Reject call failed with status %1")
+                      .arg(static_cast<int>(response.status)));
+    cleanupCall();
+    return;
+  }
+
+  if (!mPeerConnection) {
+    qCritical(appService) << "PeerConnection is not initialized";
+    return;
+  }
+
+  mState = CallState::Connecting;
+
+  qInfo(appService) << "Reject call confirmed";
+}
+
 
 void
 WebRtcWrapper::sendAudioFrame(const QByteArray& encodedFrame,
@@ -364,8 +364,6 @@ WebRtcWrapper::sendVideoFrame(const QByteArray& encodedFrame,
                                                          encodedFrame.size()));
   mVideoTrack->send(std::move(sample));
   mVideoRtpConfig->timestamp += durationSamples;
-  qInfo() << "sendVideoFrame: size =" << encodedFrame.size() 
-        << "track open =" << (mVideoTrack && mVideoTrack->isOpen());
 }
 
 void
@@ -374,11 +372,10 @@ WebRtcWrapper::createPeerConnection()
   if (mPeerConnection)
     return;
 
-  qInfo() << "Creating PeerConnection, video enabled:" << mVideoEnabled;
+  qInfo() << "Creating PeerConnection";
   mPeerConnection = std::make_shared<rtc::PeerConnection>(mConfiguration);
 
   attachAudioTrack(); // всегда добавляем аудио
-  qInfo() << "WITH VIDEO?" << mVideoEnabled;
   if (mVideoEnabled) {
     attachVideoTrack(); // видео только если нужно
   }
@@ -475,7 +472,13 @@ WebRtcWrapper::attachAudioTrack()
   audio.addOpusCodec(kOpusPayloadType);
   audio.addSSRC(ssrc, "audio-send");
 
+  qInfo() << "Attaching video track";
   mAudioTrack = mPeerConnection->addTrack(audio);
+  if (mAudioTrack) {
+    qInfo() << "Video track created successfully";
+  } else {
+    qCritical() << "Failed to create video track";
+  }
 
   mAudioRtpConfig = std::make_shared<rtc::RtpPacketizationConfig>(
     ssrc, "audio-send", kOpusPayloadType, rtc::OpusRtpPacketizer::DefaultClockRate);
@@ -506,9 +509,9 @@ WebRtcWrapper::attachVideoTrack()
   qInfo() << "Attaching video track";
   mVideoTrack = mPeerConnection->addTrack(video);
   if (mVideoTrack) {
-      qInfo() << "Video track created successfully";
+    qInfo() << "Video track created successfully";
   } else {
-      qCritical() << "Failed to create video track";
+    qCritical() << "Failed to create video track";
   }
 
   mVideoRtpConfig = std::make_shared<rtc::RtpPacketizationConfig>(
@@ -552,8 +555,8 @@ WebRtcWrapper::cleanupCall()
   mVideoRtpConfig.reset();
 
   mCurrentCallId = QUuid();
-
   mState = CallState::Idle;
+  mVideoEnabled = false;
 
   if (wasActive) {
     emit callClosed();

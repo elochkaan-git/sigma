@@ -204,7 +204,7 @@ RelationService::removeFriend(unsigned int user_id, unsigned int friend_id)
 std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getFriends(unsigned int user_id)
 {
-  return this->getUsers(user_id, "friends");
+  return this->getUsers(user_id, "friend");
 }
 
 std::pair<OperationStatus, std::optional<std::vector<User>>>
@@ -229,7 +229,7 @@ std::pair<OperationStatus, std::optional<std::vector<User>>>
 RelationService::getUsers(unsigned int user_id, QString user_status)
 {
   std::pair<OperationStatus, std::optional<std::vector<unsigned int>>> ids;
-  if (user_status == "friends") {
+  if (user_status == "friend") {
     ids = this->mRelRepo->getFriendsID(user_id);
   } else if (user_status == "received") {
     ids = this->mRelRepo->getFriendRequests(user_id);

@@ -12,9 +12,9 @@
 #include <vector>
 
 namespace rtc {
-class PeerConnection;
-class Track;
-class RtpPacketizationConfig;
+  class PeerConnection;
+  class Track;
+  class RtpPacketizationConfig;
 }
 
 class WebRtcWrapper : public QObject
@@ -34,8 +34,7 @@ public:
    */
   void setIceServers(const std::vector<rtc::IceServer>& servers);
 
-  void startCall(unsigned int calleeId);
-
+  void startCall(unsigned int calleeId, bool withVideo = false);
   void acceptCall();
   void rejectCall();
   void endCall();
@@ -45,6 +44,7 @@ public:
   void handleCallAccepted(const wire::CallAcceptedResponse& response);
   void handleCallRejected(const wire::CallRejectedResponse& response);
   void handleAcceptCallResponse(const wire::AcceptCallResponse& response);
+  void handleRejectCallResponse(const wire::RejectCallResponse& response);
 
   void handleRemoteSdp(const wire::SdpResponse& response);
   void handleRemoteIceCandidate(const wire::IceCandidateResponse& response);
@@ -66,7 +66,6 @@ public:
    * 30fps это 3000)
    */
   void sendVideoFrame(const QByteArray& encodedFrame, uint32_t durationSamples);
-  void setVideoEnabled(bool enable);
 
 signals:
   void requestSendCommand(const Command& command);

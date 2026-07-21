@@ -15,7 +15,7 @@ file(GLOB CLIENT_HEADERS CONFIGURE_DEPENDS
 #     "/home/savely/Downloads/libdatachannel/include"
 # )
 
-find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick Core Network WebSockets)
+find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick Core Network WebSockets Multimedia)
 qt_standard_project_setup(REQUIRES 6.8)
 
 include(FetchContent)
@@ -30,10 +30,11 @@ set(NO_EXAMPLES ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(libdatachannel)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GST REQUIRED
-  gstreamer-1.0
-  gstreamer-app-1.0
-  gstreamer-video-1.0
+pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
+  libavcodec
+  libavutil
+  libswscale
+  libswresample
 )
 
 set(ASSETS_FILES
@@ -72,7 +73,7 @@ qt_add_qml_module(SigmaMessenger
 target_include_directories(SigmaMessenger PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_SOURCE_DIR}/common/inc
-  ${GST_INCLUDE_DIRS}
+  ${FFMPEG_INCLUDE_DIRS}
 )
 
 target_link_libraries(SigmaMessenger PRIVATE 
@@ -82,8 +83,9 @@ target_link_libraries(SigmaMessenger PRIVATE
     Qt6::Core
     Qt6::Network
     Qt6::WebSockets
+    Qt6::Multimedia
     LibDataChannel::LibDataChannel
-    ${GST_LIBRARIES}
+    PkgConfig::FFMPEG
 )
 target_compile_options(SigmaMessenger PRIVATE
   $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra>

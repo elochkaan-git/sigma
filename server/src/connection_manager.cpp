@@ -24,26 +24,30 @@ QSqlDatabase&
 ConnectionManager::currentConnection()
 {
   if (!mConnections.hasLocalData()) {
-    QSqlDatabase newConnection = QSqlDatabase::addDatabase(
-      "QPSQL",
-      QString::fromStdString("thread" + std::to_string(mThreadCounter++)));
+    QString connName =
+      QString::fromStdString("thread" + std::to_string(mThreadCounter++));
+
+    QSqlDatabase newConnection = QSqlDatabase::addDatabase("QPSQL", connName);
     newConnection.setHostName(mDatabase.hostName);
     newConnection.setDatabaseName(mDatabase.databaseName);
     newConnection.setUserName(mDatabase.userName);
     newConnection.setPassword(mDatabase.password);
-    mConnections.setLocalData(newConnection);
+
+    auto* managed = new ManagedConnection{ newConnection, connName };
+    mConnections.setLocalData(managed);
   }
-  QSqlDatabase& connection = mConnections.localData();
+
+  QSqlDatabase& connection = mConnections.localData()->db;
   if (connection.isOpen()) {
     return connection;
-  } else {
-    bool status = connection.open();
-    if (!status) {
-      qCritical(appDatabase) << connection.lastError().text();
-      throw std::runtime_error("Can't connect to database");
-    }
-    return connection;
   }
+
+  bool status = connection.open();
+  if (!status) {
+    qCritical(appDatabase) << connection.lastError().text();
+    throw std::runtime_error("Can't connect to database");
+  }
+  return connection;
 }
 
 bool

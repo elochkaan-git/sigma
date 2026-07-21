@@ -49,6 +49,7 @@ Dispatcher::Dispatcher(Services services,
   , mCallRegistry(call_registry)
 {
   mThreadPool = std::make_unique<QThreadPool>();
+  mThreadPool->setMaxThreadCount(8);
   QSettings settings("config.ini", QSettings::IniFormat);
   settings.beginGroup("turn");
   mTurnSecret = settings.value("secret", "").toString();
