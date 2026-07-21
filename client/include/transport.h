@@ -103,17 +103,20 @@ parseUuid(const QJsonValue& v)
 {
   return QUuid::fromString(v.toString());
 }
- 
+
 /**
  * @brief Проверяет, что значение является объектом User
- * ({ "user_id": number, "login": string })
+ * ({ "user_id": number, "login": string, "avatar": string,
+ * "last_seen": string })
  */
 static const auto isUserObject = [](const QJsonValue& v) {
   if (!v.isObject())
     return false;
   const QJsonObject obj = v.toObject();
   return obj.contains("user_id") && obj["user_id"].isDouble() &&
-         obj.contains("login") && obj["login"].isString();
+         obj.contains("login") && obj["login"].isString() &&
+         obj.contains("avatar") && obj["avatar"].isString() &&
+         obj.contains("last_seen") && obj["last_seen"].isString();
 };
  
 /**
@@ -137,8 +140,15 @@ static inline User
 parseUser(const QJsonValue& v)
 {
   const QJsonObject obj = v.toObject();
+  QDateTime last_seen;
+  if (obj["last_seen"].isString()) {
+    last_seen =
+      QDateTime::fromString(obj["last_seen"].toString(), Qt::ISODate);
+  }
   return User{ static_cast<unsigned int>(obj["user_id"].toInt()),
-               obj["login"].toString() };
+               obj["login"].toString(),
+               obj["avatar"].toString(),
+               last_seen };
 }
  
 /**
@@ -344,21 +354,26 @@ inline const QHash<QString, ResponseSpec> kResponseSpecs = {
       } } },
 
   { "sdp",
-    { { { "call_id", isUuid }, { "sdp", isString } },
+    { { { "call_id", isUuid }, { "sdp", isString }, { "status", isNumber } },
       [](const QJsonObject& p) -> Response {
         wire::SdpResponse r;
         r.call_id = parseUuid(p["call_id"]);
         r.sdp = p["sdp"].toString();
+        r.status = OperationStatus{ p["status"].toInt() };
         return r;
       } } },
 
   { "ice_candidate",
-    { { { "call_id", isUuid }, { "candidate", isString }, { "mid", isString } },
+    { { { "call_id", isUuid },
+        { "candidate", isString },
+        { "mid", isString },
+        { "status", isNumber } },
       [](const QJsonObject& p) -> Response {
         wire::IceCandidateResponse r;
         r.call_id = parseUuid(p["call_id"]);
         r.candidate = p["candidate"].toString();
         r.mid = p["mid"].toString();
+        r.status = OperationStatus{ p["status"].toInt() };
         return r;
       } } },
   { "get_turn_credentials_response",
@@ -372,6 +387,23 @@ inline const QHash<QString, ResponseSpec> kResponseSpecs = {
         r.username = p["username"].toString();
         r.password = p["password"].toString();
         r.ttl = p["ttl"].toInt();
+        return r;
+      } } },
+
+  { "set_avatar_response",
+    { { { "status", isNumber } },
+      [](const QJsonObject& p) -> Response {
+        wire::SetAvatarResponse r;
+        r.status = OperationStatus{ p["status"].toInt() };
+        return r;
+      } } },
+
+  { "get_online_users_response",
+    { { { "status", isNumber }, { "users", isUserArray } },
+      [](const QJsonObject& p) -> Response {
+        wire::GetOnlineUsersResponse r;
+        r.status = OperationStatus{ p["status"].toInt() };
+        r.users = parseUserArray(p["users"]);
         return r;
       } } }
 };

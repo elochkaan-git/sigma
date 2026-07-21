@@ -32,7 +32,9 @@ using Response = std::variant<wire::Error,
                               wire::CallEndedResponse,
                               wire::SdpResponse,
                               wire::IceCandidateResponse,
-                              wire::GetTurnCredentialsResponse>;
+                              wire::GetTurnCredentialsResponse,
+                              wire::SetAvatarResponse,
+                              wire::GetOnlineUsersResponse>;
 /**
  * @brief сокращение для варианта команд
  */
@@ -54,7 +56,9 @@ using Command = std::variant<wire::Error,
                              wire::EndCall,
                              wire::Sdp,
                              wire::IceCandidate,
-                             wire::GetTurnCredentials>;
+                             wire::GetTurnCredentials,
+                             wire::SetAvatar,
+                             wire::GetOnlineUsers>;
 
 /**
  * @brief Возвращает тип команды
@@ -64,4 +68,3 @@ using Command = std::variant<wire::Error,
  */
 CommandType
 getTypeOfCommand(const Command& cmd);
-

@@ -159,6 +159,15 @@ Transport::serialize(const Command& cmd)
         QJsonObject payload;
         return wrap("get_turn_credentials", std::move(payload));
       },
+      [](const wire::SetAvatar& cmd) -> std::optional<QJsonObject> {
+        QJsonObject payload;
+        payload["avatar"] = cmd.avatar;
+        return wrap("set_avatar", std::move(payload));
+      },
+      [](const wire::GetOnlineUsers&) -> std::optional<QJsonObject> {
+        QJsonObject payload;
+        return wrap("get_online_users", std::move(payload));
+      },
       [](const auto& cmd) -> std::optional<QJsonObject> {
         // Ветка для всех остальных команд, которые не
         // должны обрабатываться. Например, клиент не должен посылать

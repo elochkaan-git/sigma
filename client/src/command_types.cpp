@@ -30,6 +30,8 @@ getTypeOfCommand(const Command& cmd)
       [](const wire::EndCall&) { return CommandType::END_CALL; },
       [](const wire::Sdp&) { return CommandType::SDP; },
       [](const wire::IceCandidate&) { return CommandType::ICE_CANDIDATE; },
-      [](const wire::GetTurnCredentials&) { return CommandType::GET_TURN_CREDENTIALS; } },
+      [](const wire::GetTurnCredentials&) { return CommandType::GET_TURN_CREDENTIALS; },
+      [](const wire::SetAvatar&) { return CommandType::SET_AVATAR; },
+      [](const wire::GetOnlineUsers&) { return CommandType::GET_ONLINE_USERS; } },
     cmd);
 }
