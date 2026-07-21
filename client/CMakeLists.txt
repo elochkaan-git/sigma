@@ -34,6 +34,7 @@ pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
   libavcodec
   libavutil
   libswscale
+  libswresample
 )
 
 set(ASSETS_FILES
@@ -72,6 +73,7 @@ qt_add_qml_module(SigmaMessenger
 target_include_directories(SigmaMessenger PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_SOURCE_DIR}/common/inc
+  ${FFMPEG_INCLUDE_DIRS}
 )
 
 target_link_libraries(SigmaMessenger PRIVATE 
