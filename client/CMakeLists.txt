@@ -15,7 +15,7 @@ file(GLOB CLIENT_HEADERS CONFIGURE_DEPENDS
 #     "/home/savely/Downloads/libdatachannel/include"
 # )
 
-find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick Core Network WebSockets Multimedia)
+find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick Core Network WebSockets Multimedia Sql)
 qt_standard_project_setup(REQUIRES 6.8)
 
 include(FetchContent)
