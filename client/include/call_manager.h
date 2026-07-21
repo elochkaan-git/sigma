@@ -26,7 +26,20 @@ public:
   explicit CallManager(Transport* transport, QObject* parent = nullptr);
   ~CallManager() override;
 
+  /**
+   * @brief Установка устройств пользователя. Если пусто,
+   * то будут использованы первые попавшиеся
+   * 
+   * @param devices 
+   */
   void setDevices(const MediaDevices& devices);
+  /**
+   * @brief Инициализация менеджера. Обязательно вызвать
+   * перед выполнением каких-либо действий!
+   * 
+   * @return true 
+   * @return false 
+   */
   bool initialize();
 
   // Действия пользователя
@@ -39,6 +52,7 @@ public:
   void handleStartCallResponse(const wire::StartCallResponse& r);
   void handleIncomingCall(const wire::IncomingCallResponse& r);
   void handleAcceptCallResponse(const wire::AcceptCallResponse& r);
+  void handleRejectCallResponse(const wire::RejectCallResponse& r);
   void handleCallAccepted(const wire::CallAcceptedResponse& r);
   void handleCallRejected(const wire::CallRejectedResponse& r);
   void handleCallEnded(const wire::CallEndedResponse& r);
@@ -46,13 +60,34 @@ public:
   void handleIceCandidate(const wire::IceCandidateResponse& r);
 
 signals:
-  // Сигналы состояния звонка
+  /**
+   * @brief Сигнал при установке соединения между клиентами
+   */
   void callEstablished();
+  /**
+   * @brief Сигнал при завершении звонка
+   */
   void callClosed();
+  /**
+   * @brief Сигнал при локальной ошибке WebRTC
+   * 
+   * @param reason причина ошибки
+   */
   void callFailed(const QString& reason);
 
-  // Декодированные медиа-данные для клиента
+  /**
+   * @brief Сигнал с декодированными аудио данными
+   * 
+   * @param pcmData непосредственно аудио
+   * @param sampleRate частота дискретизации
+   * @param channels количество каналов (1 - моно, 2 - стерео)
+   */
   void decodedAudioReady(const QByteArray& pcmData, int sampleRate, int channels);
+  /**
+   * @brief Сигнал с декодированным кадром видео
+   * 
+   * @param image кадр видео
+   */
   void decodedVideoReady(const QImage& image);
 
 private slots:

@@ -1,5 +1,6 @@
 #include "call_manager.h"
 #include "audio_capture_encoder.h"
+#include "responses.h"
 #include "video_capture_encoder.h"
 #include "webrtc.h"
 #include "audio_decoder.h"
@@ -117,6 +118,10 @@ void CallManager::handleIncomingCall(const wire::IncomingCallResponse& r)   {
 
 void CallManager::handleAcceptCallResponse(const wire::AcceptCallResponse& r) {
   mWebRtc->handleAcceptCallResponse(r);
+}
+
+void CallManager::handleRejectCallResponse(const wire::RejectCallResponse& r) {
+  mWebRtc->handleRejectCallResponse(r);
 }
 
 void CallManager::handleCallAccepted(const wire::CallAcceptedResponse& r)   {
