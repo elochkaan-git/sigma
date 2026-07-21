@@ -43,7 +43,22 @@ public:
   QSqlDatabase& currentConnection();
 
 private:
-  QThreadStorage<QSqlDatabase*> mConnections;
+  struct ManagedConnection
+  {
+    QSqlDatabase db;
+    QString connName;
+
+    ~ManagedConnection()
+    {
+      if (db.isOpen()) {
+        db.close();
+      }
+      db = QSqlDatabase(); // сбрасываем handle до removeDatabase
+      QSqlDatabase::removeDatabase(connName);
+    }
+  };
+
+  QThreadStorage<ManagedConnection*> mConnections;
   /// Счётчик для генерации уникальных имён соединений на поток.
   /// Атомарный, так как метод currentConnection() вызывается
   /// из разных воркер-потоков параллельно.

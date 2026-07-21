@@ -24,7 +24,8 @@ QSqlDatabase&
 ConnectionManager::currentConnection()
 {
   if (!mConnections.hasLocalData()) {
-    QString connName = QString::fromStdString("thread" + std::to_string(mThreadCounter++));
+    QString connName =
+      QString::fromStdString("thread" + std::to_string(mThreadCounter++));
 
     QSqlDatabase newConnection = QSqlDatabase::addDatabase("QPSQL", connName);
     newConnection.setHostName(mDatabase.hostName);
@@ -32,26 +33,15 @@ ConnectionManager::currentConnection()
     newConnection.setUserName(mDatabase.userName);
     newConnection.setPassword(mDatabase.password);
 
-    if (QThread* thread = QThread::currentThread()) {
-      QObject::connect(thread, &QThread::finished, thread, [connName]() {
-        {
-          QSqlDatabase db = QSqlDatabase::database(connName, false);
-          if (db.isOpen()) {
-            db.close();
-          }
-        }
-        QSqlDatabase::removeDatabase(connName);
-      });
-    }
-
-    mConnections.setLocalData(new QSqlDatabase(newConnection));
+    auto* managed = new ManagedConnection{ newConnection, connName };
+    mConnections.setLocalData(managed);
   }
-  
-  QSqlDatabase& connection = *mConnections.localData();
+
+  QSqlDatabase& connection = mConnections.localData()->db;
   if (connection.isOpen()) {
     return connection;
   }
-  
+
   bool status = connection.open();
   if (!status) {
     qCritical(appDatabase) << connection.lastError().text();
