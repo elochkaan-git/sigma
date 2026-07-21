@@ -1,6 +1,7 @@
 #include "webrtc.h"
 
 #include "command_types.h"
+#include "commands.h"
 #include "logging.h"
 
 #include <rtc/candidate.hpp>
@@ -183,10 +184,7 @@ WebRtcWrapper::handleIncomingCall(const wire::IncomingCallResponse& response)
 {
   if (mState != CallState::Idle) {
     qWarning(appService) << "Incoming call received while busy";
-    // TODO: сервер пока не знает, что мы заняты, и звонящий будет ждать
-    // бесконечно. До тех пор, пока на сервере не появится проверка "callee
-    // уже в звонке", стоит явно послать RejectCall с этим call_id здесь,
-    // чтобы вторая сторона не зависла в Ringing навсегда.
+    emit requestSendCommand(wire::RejectCall{ response.call_id });
     return;
   }
 

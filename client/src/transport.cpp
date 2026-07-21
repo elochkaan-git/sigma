@@ -238,7 +238,6 @@ Transport::sendCommand(const Command& cmd)
   qInfo(appNetwork) << "Sending command to server";
   if (mSocket->state() != QAbstractSocket::ConnectedState) {
     qWarning(appNetwork) << "Can't send command, because socket not connected yet";
-    //TODO: добавить в Error статус операции, а не только сообщение
     error_response.reason = "Socket not connected";
     emit this->responseReady(error_response);
   } else {
@@ -290,7 +289,6 @@ Transport::onDisconnected()
 {
   qInfo(appNetwork) << QString("Socket was closed. Reason: %1").arg(mSocket->closeReason());
   isConnected = false;
-  //TODO: добавить в Error статус операции, а не только сообщение
   if (mSocket->closeCode() != QWebSocketProtocol::CloseCodeNormal) {
     wire::Error error_response{ mSocket->closeReason() };
     emit this->responseReady(error_response);
@@ -300,7 +298,6 @@ Transport::onDisconnected()
 void
 Transport::onErrorOccured(QAbstractSocket::SocketError)
 {
-  //TODO: добавить отправку конкретных, а не обобщенных ошибок
   qWarning(appNetwork) << mSocket->errorString();
   if (!isConnected) {
     wire::Error error_response{ mSocket->errorString() };

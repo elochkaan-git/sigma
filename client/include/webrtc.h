@@ -12,9 +12,9 @@
 #include <vector>
 
 namespace rtc {
-class PeerConnection;
-class Track;
-class RtpPacketizationConfig;
+  class PeerConnection;
+  class Track;
+  class RtpPacketizationConfig;
 }
 
 class WebRtcWrapper : public QObject
