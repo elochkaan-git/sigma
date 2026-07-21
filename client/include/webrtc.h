@@ -65,7 +65,6 @@ public:
    * 30fps это 3000)
    */
   void sendVideoFrame(const QByteArray& encodedFrame, uint32_t durationSamples);
-  void setVideoEnabled(bool enable);
 
 signals:
   void requestSendCommand(const Command& command);
