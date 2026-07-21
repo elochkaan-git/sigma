@@ -1,7 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
-import Qt5Compat.GraphicalEffects 1.0
+import QtQuick.Effects
 
 QtObject {
     id: root
@@ -153,9 +153,7 @@ QtObject {
             // Аватарка
             Item {
                 id: avatarItem
-                // Прямая проверка: если это кнопка друзей, аватарку НЕ показываем
                 visible: !control.isFriendsButton
-                
                 width: 24
                 height: 24
                 property int cornerRadius: 14
@@ -163,14 +161,6 @@ QtObject {
                 Item {
                     id: contentContainer
                     anchors.fill: parent
-                    layer.enabled: true
-                    layer.effect: OpacityMask {
-                        maskSource: Rectangle {
-                            width: avatarItem.width
-                            height: avatarItem.height
-                            radius: avatarItem.cornerRadius
-                        }
-                    }
 
                     Image {
                         id: mainImage
@@ -178,14 +168,23 @@ QtObject {
                         source: control.avatarSource
                         fillMode: Image.PreserveAspectCrop 
                         asynchronous: true
+                        visible: false // Скрываем, так как выводить будет MultiEffect
                     }
 
-                    Image {
-                        id: placeHolderImage
-                        anchors.fill: parent
-                        source: "qrc:/Main/assets/person.png"
-                        fillMode: Image.PreserveAspectCrop 
-                        asynchronous: true
+                    // Нативный эффект Qt 6 для скругления
+                    MultiEffect {
+                        anchors.fill: mainImage
+                        source: mainImage
+                        maskEnabled: true
+                        maskThresholdMin: 0.5
+                        // Используем скругление напрямую
+                        maskSource: ShaderEffectSource {
+                            sourceItem: Rectangle {
+                                width: avatarItem.width
+                                height: avatarItem.height
+                                radius: avatarItem.cornerRadius
+                            }
+                        }
                     }
                 }
             }
