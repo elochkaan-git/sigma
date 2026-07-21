@@ -291,6 +291,8 @@ void ClientController::handleTransportResponse(const Response &response)
         [this](const wire::SendFriendRequestResponse& r)     { auth_handler_.handleSendFriendRequest(r); },
         [this](const wire::AcceptFriendRequestResponse& r)   { auth_handler_.handleAcceptFriendRequest(r); },
         [this](const wire::RejectFriendRequestResponse& r)   { auth_handler_.handleRejectFriendRequest(r); },
+        [this](const wire::RemoveFriendResponse& r)          { auth_handler_.handleRemoveFriend(r); },
+        [this](const wire::GetOnlineUsersResponse& r)        { auth_handler_.handleGetOnlineUsers(r);},
         // Временная заглушка для ВСЕХ остальных типов
         [](const auto& unhandled_response) {
             // Сюда попадут LoginUserResponse, SendMessageResponse и т.д.
@@ -300,7 +302,7 @@ void ClientController::handleTransportResponse(const Response &response)
         
         
         
-        // [this](const wire::RemoveFriendResponse& r)          { auth_handler_.handleRemoveFriend(r); },
+        
 
         // 3. Модуль обмена сообщениями (Чаты)
         // [this](const wire::SendMessageResponse& r) { chat_handler_.handleSendMessage(r); },
@@ -337,6 +339,16 @@ void ClientController::updateIncomingFriendsRequests()
 void ClientController::updateOutcomingFriendsRequests()
 {
     m_transport->sendCommand(wire::GetSentFriendRequests{});
+}
+
+Q_INVOKABLE void ClientController::deleteFriend(unsigned int userId)
+{
+    m_transport->sendCommand(wire::RemoveFriend{userId});
+}
+
+Q_INVOKABLE void ClientController::updateOnlineUsers()
+{
+    m_transport->sendCommand(wire::GetOnlineUsers{});
 }
 
 void ClientController::handleError(const wire::Error &error)

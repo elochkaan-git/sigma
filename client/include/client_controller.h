@@ -42,6 +42,8 @@ public:
     Q_INVOKABLE void updateFriendsInfo();
     Q_INVOKABLE void updateIncomingFriendsRequests();
     Q_INVOKABLE void updateOutcomingFriendsRequests();
+    Q_INVOKABLE void deleteFriend(unsigned int userId);
+    Q_INVOKABLE void updateOnlineUsers();
 
 signals:
     void serversStatusChanged(); // Сигнал для уведомления об изменении статуса серверов

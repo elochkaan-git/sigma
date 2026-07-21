@@ -3,7 +3,6 @@
 
 void AuthHandler::handleRegister(const wire::RegisterUserResponse &r)
 {
-    qDebug() << "Handling register!";
     if (r.status == OperationStatus::OK) {
         qDebug() << "Success!";
         emit registerSuccess();
@@ -66,23 +65,35 @@ void AuthHandler::handleRejectFriendRequest(const wire::RejectFriendRequestRespo
     }
 }
 
+void AuthHandler::handleRemoveFriend(const wire::RemoveFriendResponse &r)
+{
+    if(r.status == OperationStatus::OK){
+        emit friendDelete();
+    } else if(r.status == OperationStatus::UserNotInFriends){
+        emit showErrorToast("Пользователь не является вашим другом!");
+    } else {
+        emit showErrorToast("Произошла не предвиденная ошибка при удалении друга!");
+    }
+}
+
 QVariantList AuthHandler::convertUserList(const std::optional<std::vector<User>>& userVector)
 {
     QVariantList result;
-    if (!userVector.has_value()) {
-        qDebug() << "No friends for user";
+    
+    // Проверяем и наличие optional, и не пуст ли сам вектор внутри
+    if (!userVector.has_value() || userVector->empty()) {
         return result;
     }
 
     for (const auto& user : userVector.value()) {
         QVariantMap userMap;
-        userMap["userId"] = user.user_id;
-        userMap["login"] = user.login;
-        userMap["avatar"] = user.avatar;
-        userMap["lastSeen"] = user.last_seen;
-        qDebug() << "Friend with id/login:" << user.user_id << " / " << user.login;
+        userMap["userId"] = user.user_id; 
+        userMap["login"] = user.login; 
+        userMap["avatar"] = user.avatar; 
+        userMap["lastSeen"] = user.last_seen; 
         result.append(userMap);
     }
+    
     return result;
 }
 
@@ -90,6 +101,7 @@ void AuthHandler::handleGetFriends(const wire::GetFriendsResponse& r)
 {
     qDebug() << "Friends get handler!";
     if (r.status == OperationStatus::OK) {
+        qDebug() << "There some friends!";
         m_friends = convertUserList(r.friends);
         emit friendsChanged();
     } else {
@@ -99,7 +111,6 @@ void AuthHandler::handleGetFriends(const wire::GetFriendsResponse& r)
 
 void AuthHandler::handleGetFriendRequests(const wire::GetFriendRequestsResponse& r)
 {   
-    qDebug() << "Friends request get handler!";
     if (r.status == OperationStatus::OK) {
         m_incomingRequests = convertUserList(r.requests);
         emit incomingRequestsChanged();
@@ -116,5 +127,15 @@ void AuthHandler::handleGetSentFriendRequests(const wire::GetSentFriendRequestsR
         emit outgoingRequestsChanged();
     } else {
         emit showErrorToast("Не удалось загрузить исходящие запросы");
+    }
+}
+
+void AuthHandler::handleGetOnlineUsers(const wire::GetOnlineUsersResponse &r)
+{
+    if (r.status == OperationStatus::OK) {
+        m_onlineUsers = convertUserList(r.users);
+        emit onlineUsersChanged();
+    } else {
+        emit showErrorToast("Не удалось загрузить список онлайна!");
     }
 }

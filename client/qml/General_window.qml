@@ -153,8 +153,8 @@ ApplicationWindow {
         StackLayout {
             id: mainStack
             SplitView.fillWidth: true
-            // Индекс будет: 0 — Друзья, 1 — Чат
-            currentIndex: 0 
+            // Индекс будет: 0 — Друзья, 1 — Чат, 2 - заглушка
+            currentIndex: 2 
 
             // Индекс 0: Экран друзей
             FriendsScreen {
@@ -171,6 +171,27 @@ ApplicationWindow {
                 
                 // Внутри ChatScreen вы будете использовать эти свойства 
                 // для загрузки истории сообщений через ваш C++ или JS контроллер
+            }
+
+            Rectangle {
+                id: placeholderScreen
+                color: root.colors.bg_canvas_overlay
+
+                Text {
+                    anchors.centerIn: parent
+                    anchors.margins: 20
+                    
+                    text: "Выберите окно в левом меню!"
+                    
+                    // Оформление текста (подстройте под свой дизайн)
+                    font.pixelSize: 18
+                    font.weight: Font.Medium
+                    color: "#888888" // Нейтральный серый цвет для заглушки
+                    
+                    // Автоматический перенос текста, если окно станет очень узким
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: Text.AlignHCenter
+                }
             }
         }
     }

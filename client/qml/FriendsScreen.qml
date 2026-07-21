@@ -58,6 +58,15 @@ Rectangle {
                     item.onClicked.connect(function() { mainStack.currentIndex = 3 })
                 }
             }
+            Loader {
+                sourceComponent: style.chatTabButton
+                onLoaded: {
+                    item.label = "Все кто онлайн"
+                    item.isFriendsButton = true
+                    item.isActive = Qt.binding(function() { return mainStack.currentIndex === 4 })
+                    item.onClicked.connect(function() { mainStack.currentIndex = 4; clientController.updateOnlineUsers(); })
+                }
+            }
         }
 
         // ================= ОСНОВНОЙ КОНТЕНТ (ЭКРАНЫ) =================
@@ -65,7 +74,7 @@ Rectangle {
             id: mainStack
             Layout.fillWidth: true
             Layout.fillHeight: true
-            currentIndex: 0 // По умолчанию открыт первый экран
+            currentIndex: 5 // По умолчанию открыт первый экран
 
             // --- ЭКРАН 1: Список всех друзей ---
             ScrollView {
@@ -86,23 +95,27 @@ Rectangle {
                         color: "#888888"
                     }
                     delegate: Rectangle {
-                        Layout.fillWidth: true
-                        height: 40
+                        width: parent.width
+                        height: 60
                         color: "white"
                         radius: 8
                         border.color: friendsRoot.colors.border_default
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.margins: 15
+                            spacing: 8
+                            // anchors.margins: 15
                             
                             // Аватарка (опционально, так как сервер присылает base64)
                             Image {
-                                width: 24
-                                height: 24
+                                Layout.leftMargin: 8
+                                Layout.preferredWidth: 32
+                                Layout.preferredHeight: 32
+                                sourceSize.width: 32
+                                sourceSize.height: 32
+                                clip: true
                                 fillMode: Image.PreserveAspectCrop 
-                                source: modelData.avatar ? "data:image/png;base64," + modelData.avatar : "qrc:/icons/default_avatar.png"
-                                visible: modelData.avatar !== ""
+                                source: modelData.avatar ? "data:image/png;base64," + modelData.avatar : "qrc:/Main/assets/person.png"
                             }
 
                             Text {
@@ -120,6 +133,7 @@ Rectangle {
                             
                             Button {
                                 text: "Удалить"
+                                Layout.rightMargin: 8
                                 contentItem: Text {
                                     text: parent.text
                                     color: "red"
@@ -128,9 +142,7 @@ Rectangle {
                                 }
                                 
                                 onClicked: {
-                                    // Вызываем команду удаления (вам понадобится метод в C++ бэкенде, 
-                                    // который отправит wire::RemoveFriend на сервер)
-                                    // backend.sendRemoveFriendRequest(modelData.userId)
+                                    clientController.deleteFriend(modelData.userId);
                                 }
                             }
                         }
@@ -159,7 +171,7 @@ Rectangle {
                     delegate: Rectangle {
                             width: parent.width
                             height: 60
-                            color: "grey"
+                            color: "white"
                             radius: 8
                             border.color: "#e0e0e0"
 
@@ -170,10 +182,10 @@ Rectangle {
 
                                 // Аватарка пользователя
                                 Image {
-                                    Layout.preferredWidth: 24
-                                    Layout.preferredHeight: 24
-                                    sourceSize.width: 24
-                                    sourceSize.height: 24
+                                    Layout.preferredWidth: 32
+                                    Layout.preferredHeight: 32
+                                    sourceSize.width: 32
+                                    sourceSize.height: 32
                                     clip: true
                                     fillMode: Image.PreserveAspectCrop 
                                     source: modelData.avatar ? "data:image/png;base64," + modelData.avatar : "qrc:/Main/assets/person.png"
@@ -239,7 +251,7 @@ Rectangle {
                     delegate: Rectangle {
                         // Внутри ListView мы управляем шириной через width, а не Layout!
                         width: parent.width 
-                        height: 40
+                        height: 60
                         color: "white"
                         radius: 8
                         border.color: "#e0e0e0"
@@ -251,10 +263,10 @@ Rectangle {
                             spacing: 10
 
                             Image {
-                                Layout.preferredWidth: 24
-                                Layout.preferredHeight: 24
-                                sourceSize.width: 24
-                                sourceSize.height: 24
+                                Layout.preferredWidth: 32
+                                Layout.preferredHeight: 32
+                                sourceSize.width: 32
+                                sourceSize.height: 32
                                 clip: true
                                 fillMode: Image.PreserveAspectCrop 
                                 source: modelData.avatar ? "data:image/png;base64," + modelData.avatar : "qrc:/Main/assets/person.png"
@@ -279,7 +291,7 @@ Rectangle {
                 }
             }
             
-            // --- ЭКРАН 3: Добавление по ID ---
+            // --- ЭКРАН 4: Добавление по ID ---
             Item {
                 // Обертка-контейнер, чтобы элементы не растягивались на весь экран
                 ColumnLayout {
@@ -319,6 +331,95 @@ Rectangle {
                     }
                 }
             }
+
+            // ---- ЭКРАН 5: Список онлайна
+            Item {
+                // Контейнер под список и заглушку
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                ListView {
+                    id: onlineUsersView
+                    anchors.fill: parent
+                    spacing: 8
+                    clip: true
+
+                    // Привязываем модель
+                    model: clientController.authHandler.onlineUsers
+
+                    delegate: Rectangle {
+                        // Чтобы элемент не вылезал за границы списка с учетом скроллбара
+                        width: onlineUsersView.width 
+                        height: 60
+                        color: "white"
+                        radius: 8
+                        border.color: "#e0e0e0"
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 15
+                            anchors.rightMargin: 15
+                            spacing: 10
+
+                            Image {
+                                Layout.preferredWidth: 32
+                                Layout.preferredHeight: 32
+                                sourceSize.width: 32
+                                sourceSize.height: 32
+                                clip: true
+                                fillMode: Image.PreserveAspectCrop 
+                                // modelData работает корректно, когда в QVariantList лежат QVariantMap
+                                source: modelData.avatar && modelData.avatar !== "" ? "data:image/png;base64," + modelData.avatar : "qrc:/Main/assets/person.png"
+                            }
+
+                            Text {
+                                text: "Пользователь: " + (modelData.login ?? "")
+                                Layout.fillWidth: true 
+                                font.pixelSize: 14
+                                elide: Text.ElideRight 
+                            }
+
+                            Text {
+                                text: "ID: " + (modelData.userId ?? "")
+                                color: "#888888"
+                                font.pixelSize: 12
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight 
+                            }
+                        }
+                    }
+                }
+
+                // Текст-заглушка вынесен поверх ListView
+                Text {
+                    anchors.centerIn: parent
+                    text: "Нет активных пользователей"
+                    visible: onlineUsersView.count === 0
+                    color: "#888888"
+                    font.pixelSize: 14
+                }
+            }
+            
+            // ---- ЭКРАН 6: заглушка
+            Rectangle {
+                id: placeholderScreen
+                color: root.colors.bg_canvas_default
+
+                Text {
+                    anchors.centerIn: parent
+                    anchors.margins: 20
+                    
+                    text: "Выберите меню сверху!"
+                    
+                    // Оформление текста (подстройте под свой дизайн)
+                    font.pixelSize: 18
+                    font.weight: Font.Medium
+                    color: "#888888" // Нейтральный серый цвет для заглушки
+                    
+                    // Автоматический перенос текста, если окно станет очень узким
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: Text.AlignHCenter
+                }
+            }
         }
     }
 
@@ -338,15 +439,16 @@ Rectangle {
         }
         
         function onSendFriendRequestSuccess() {
-            // Переключаем экран на главный, например
             successToast.show("Запрос в друзья доставлен!");
         }
         function onAcceptFriend() {
-            // Переключаем экран на главный, например
             successToast.show("Вы приняли заявку в друзья!");
-        }function onRejectFriend() {
-            // Переключаем экран на главный, например
+        }
+        function onRejectFriend() {
             successToast.show("Вы отказали человеку в заявке в друзья");
+        }
+        function onFriendDelete() {
+            successToast.show("Вы успешно удалили пользователя из друзей!");
         }
     }
 }

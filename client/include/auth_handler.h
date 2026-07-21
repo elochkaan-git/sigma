@@ -15,25 +15,31 @@ class AuthHandler : public QObject {
     Q_PROPERTY(QVariantList friends READ friends NOTIFY friendsChanged)
     Q_PROPERTY(QVariantList incomingRequests READ incomingRequests NOTIFY incomingRequestsChanged)
     Q_PROPERTY(QVariantList outgoingRequests READ outgoingRequests NOTIFY outgoingRequestsChanged)
+    Q_PROPERTY(QVariantList onlineUsers READ onlineUsers NOTIFY onlineUsersChanged)
 
 public:
     explicit AuthHandler(QObject *parent = nullptr) : QObject(parent) {}
+
+    
     void handleRegister(const wire::RegisterUserResponse& r);
     void handleLogin(const wire::LoginUserResponse& r);
 
     void handleGetFriends(const wire::GetFriendsResponse& r);
     void handleGetFriendRequests(const wire::GetFriendRequestsResponse& r);
     void handleGetSentFriendRequests(const wire::GetSentFriendRequestsResponse& r);
+    void handleGetOnlineUsers(const wire::GetOnlineUsersResponse& r);
 
     void handleSendFriendRequest(const wire::SendFriendRequestResponse& r);
     void handleAcceptFriendRequest(const wire::AcceptFriendRequestResponse& r);
     void handleRejectFriendRequest(const wire::RejectFriendRequestResponse& r);
     void handleRemoveFriend(const wire::RemoveFriendResponse& r);
+    
 
     Q_INVOKABLE unsigned int getUserId() { return m_userId; }
     QVariantList friends() const { return m_friends; }
     QVariantList incomingRequests() const { return m_incomingRequests; }
     QVariantList outgoingRequests() const { return m_outgoingRequests; }
+    QVariantList onlineUsers() const { return m_onlineUsers; }
 
 signals:
     void registerSuccess();
@@ -42,10 +48,13 @@ signals:
     void loginSuccess();
     void acceptFriend();
     void rejectFriend();
+    void friendDelete();
 
     void friendsChanged();
     void incomingRequestsChanged();
     void outgoingRequestsChanged();
+    void onlineUsersChanged();
+    
 
 private:
     QVariantList convertUserList(const std::optional<std::vector<User>>& userVector);
@@ -55,4 +64,5 @@ private:
     QVariantList m_friends;
     QVariantList m_incomingRequests;
     QVariantList m_outgoingRequests;
+    QVariantList m_onlineUsers;
 };
