@@ -550,7 +550,7 @@ RelationRepository::removeFriend(unsigned int user_id, unsigned int friend_id)
 std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
 RelationRepository::getFriendsID(unsigned int user_id)
 {
-  return getUsers(user_id, "friends");
+  return getUsers(user_id, "friend");
 }
 
 std::pair<OperationStatus, std::optional<std::vector<unsigned int>>>
