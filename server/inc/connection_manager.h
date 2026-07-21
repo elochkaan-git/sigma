@@ -43,7 +43,7 @@ public:
   QSqlDatabase& currentConnection();
 
 private:
-  QThreadStorage<QSqlDatabase> mConnections;
+  QThreadStorage<QSqlDatabase*> mConnections;
   /// Счётчик для генерации уникальных имён соединений на поток.
   /// Атомарный, так как метод currentConnection() вызывается
   /// из разных воркер-потоков параллельно.
