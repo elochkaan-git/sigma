@@ -1,11 +1,10 @@
 #pragma once
-
-#include <QByteArray>
 #include <QObject>
+#include <QByteArray>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
-#include <libavutil/avutil.h>
+#include <libswresample/swresample.h>
 }
 
 class AudioDecoder : public QObject
@@ -15,7 +14,7 @@ public:
   explicit AudioDecoder(QObject* parent = nullptr);
   ~AudioDecoder() override;
 
-  bool init(int sampleRate = 48000, int channels = 1);
+  bool init(int sampleRate, int channels);
   void decode(const QByteArray& encodedFrame);
 
 signals:
@@ -23,6 +22,7 @@ signals:
 
 private:
   AVCodecContext* mCodecCtx = nullptr;
+  SwrContext*     mSwrCtx = nullptr;
   AVFrame*        mFrame = nullptr;
   AVPacket*       mPacket = nullptr;
   int             mSampleRate = 48000;
