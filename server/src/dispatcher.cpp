@@ -309,7 +309,7 @@ Dispatcher::handleMessage(const SendMessage& cmd)
                               .arg(cmd.user_id)
                               .arg(cmd.receiver_id);
     NewMessageResponse nmr;
-    nmr.client_id = cmd.client_id;
+    nmr.client_id = receiver_id.value();
     nmr.sender_id = cmd.user_id;
     nmr.content = cmd.content;
     return std::vector<Response>{ smr, nmr };
