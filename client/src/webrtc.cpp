@@ -3,6 +3,7 @@
 #include "command_types.h"
 #include "commands.h"
 #include "logging.h"
+#include "responses.h"
 
 #include <rtc/candidate.hpp>
 #include <rtc/description.hpp>
@@ -305,6 +306,33 @@ WebRtcWrapper::handleAcceptCallResponse(const wire::AcceptCallResponse& response
 
   qInfo(appService) << "Accept call confirmed. Waiting for remote SDP offer...";
 }
+
+void
+WebRtcWrapper::handleRejectCallResponse(const wire::RejectCallResponse& response)
+{
+  if (response.call_id != mCurrentCallId) {
+    qWarning(appService) << "RejectCallResponse for unknown call";
+    return;
+  }
+
+  if (response.status != OperationStatus::OK) {
+    qWarning(appService) << "Reject call failed, status:" << static_cast<int>(response.status);
+    emit callFailed(QString("Reject call failed with status %1")
+                      .arg(static_cast<int>(response.status)));
+    cleanupCall();
+    return;
+  }
+
+  if (!mPeerConnection) {
+    qCritical(appService) << "PeerConnection is not initialized";
+    return;
+  }
+
+  mState = CallState::Connecting;
+
+  qInfo(appService) << "Reject call confirmed";
+}
+
 
 void
 WebRtcWrapper::sendAudioFrame(const QByteArray& encodedFrame,

@@ -190,8 +190,8 @@ void VideoCaptureEncoder::encodeAndSend(const QImage& image)
 
   while (avcodec_receive_packet(mCodecCtx, mPacket) == 0) {
     QByteArray encoded(reinterpret_cast<const char*>(mPacket->data), mPacket->size);
-    uint32_t durationMs = static_cast<uint32_t>(1000 / mFps);
-    encodedVideoFrameDone(encoded, durationMs);
+    uint32_t durationSamples = static_cast<uint32_t>(90000 / mFps);
+    encodedVideoFrameDone(encoded, durationSamples);
     av_packet_unref(mPacket);
   }
 }

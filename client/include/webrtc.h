@@ -44,6 +44,7 @@ public:
   void handleCallAccepted(const wire::CallAcceptedResponse& response);
   void handleCallRejected(const wire::CallRejectedResponse& response);
   void handleAcceptCallResponse(const wire::AcceptCallResponse& response);
+  void handleRejectCallResponse(const wire::RejectCallResponse& response);
 
   void handleRemoteSdp(const wire::SdpResponse& response);
   void handleRemoteIceCandidate(const wire::IceCandidateResponse& response);
