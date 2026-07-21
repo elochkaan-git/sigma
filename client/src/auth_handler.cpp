@@ -20,7 +20,7 @@ void AuthHandler::handleLogin(const wire::LoginUserResponse &r)
     if (r.status == OperationStatus::OK) {
         m_loggedIn = true;
         m_userId = r.user_id;
-        emit loginSuccess();
+        emit loginSuccess(m_userId);
     } else {
         if(r.status == OperationStatus::UserNotExist){
             emit showErrorToast("User with this login doesnt exist!");

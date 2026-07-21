@@ -45,7 +45,7 @@ signals:
     void registerSuccess();
     void sendFriendRequestSuccess();
     void showErrorToast(const QString &message);
-    void loginSuccess();
+    void loginSuccess(unsigned int login);
     void acceptFriend();
     void rejectFriend();
     void friendDelete();

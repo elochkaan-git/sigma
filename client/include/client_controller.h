@@ -6,7 +6,7 @@
 #include <QTimer>
 #include "transport.h"
 #include "auth_handler.h"
-#include "call_handler.h"
+#include "call_manager.h"
 #include "chat_handler.h"
 
 class ClientController : public QObject
@@ -16,7 +16,7 @@ class ClientController : public QObject
     Q_PROPERTY(QVariantList serversList READ getServersList NOTIFY serversStatusChanged)
     Q_PROPERTY(AuthHandler* authHandler READ authHandler CONSTANT)
     Q_PROPERTY(ChatHandler* chatHandler READ chatHandler CONSTANT)
-    Q_PROPERTY(CallHandler* callHandler READ callHandler CONSTANT)
+    Q_PROPERTY(CallManager* callManager READ callManager CONSTANT)
 
 public:
     explicit ClientController(QObject *parent = nullptr);
@@ -25,7 +25,7 @@ public:
     const QVariantList& getServersList() const { return serversList; } // Геттер для списка серверов
     AuthHandler* authHandler() { return &auth_handler_; }
     ChatHandler* chatHandler() { return &chat_handler_; }
-    CallHandler* callHandler() { return &call_handler_; }
+    CallManager* callManager() { return &call_manager_; }
 
     Q_INVOKABLE QVariantList loadServersFromCsv(const QString &csvPath = QString());
     Q_INVOKABLE void addServer(const QString &name, const QString &url);
@@ -44,6 +44,7 @@ public:
     Q_INVOKABLE void updateOutcomingFriendsRequests();
     Q_INVOKABLE void deleteFriend(unsigned int userId);
     Q_INVOKABLE void updateOnlineUsers();
+    Q_INVOKABLE 
 
 signals:
     void serversStatusChanged(); // Сигнал для уведомления об изменении статуса серверов
@@ -56,20 +57,19 @@ private slots:
     void pingAllServers();
     void handleTransportResponse(const Response& response);
     
-    
-
-
 public slots:
     void updateServerStatus(const QString &url, bool isOnline, int usersCount, int onlineCount);
     void showErrorMessage(const QString &message) {
         qWarning() << "Error:" << message;
     }
+    void onLoginSuccess(unsigned int userId);
+    void sendMessagetoUser(unsigned int userId, const QString& message);
     
     
 private:
     QString pathToServersCsv;
     QVariantList serversList; 
-    bool m_isConnected;
+    
     QVariant selectedServer; // Свойство для хранения выбранного сервера
     QString connectedToURL;
 
@@ -78,7 +78,8 @@ private:
 
     AuthHandler auth_handler_;
     ChatHandler chat_handler_;
-    CallHandler call_handler_;
+    CallManager call_manager_;
+    bool m_isConnected;
 
     void handleError(const wire::Error& error);
 

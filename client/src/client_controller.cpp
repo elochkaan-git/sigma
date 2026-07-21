@@ -55,22 +55,32 @@ QString resolveServersCsvPath(const QString &requestedPath)
 }
 } // namespace
 
-ClientController::ClientController(QObject *parent):
-    QObject(parent),
-    m_isConnected(false)
+ClientController::ClientController(QObject *parent)
+    : QObject(parent)
+    , m_transport(new Transport(this))
+    , call_manager_(m_transport, this)
+    , m_isConnected(false)
 {
     // updateCSV вызывается только при добавлении/удалении/редактировании
     connect(this, &ClientController::serversListChanged, this, &ClientController::updateCSV);
 
     pingTimer = new QTimer(this);
     connect(pingTimer, &QTimer::timeout, this, &ClientController::pingAllServers);
-    pingTimer->start(10000); // Опрос раз в 2 секунды
+    pingTimer->start(5000); // Опрос раз в 5 секунд
 
     // Transport layer creation
-    m_transport = new Transport(this);
+    // m_transport = new Transport(this);
     connect(m_transport, &Transport::responseReady, 
             this, &ClientController::handleTransportResponse);
     
+    connect(&chat_handler_, &ChatHandler::sendMessageRequested, 
+            this, &ClientController::sendMessagetoUser);
+    
+    connect(&auth_handler_, &AuthHandler::loginSuccess,
+            this, &ClientController::onLoginSuccess);
+
+    connect(&auth_handler_, &AuthHandler::friendsChanged, 
+            &chat_handler_, &ChatHandler::updateChatsList);
 }
 
 QVariantList ClientController::loadServersFromCsv(const QString &csvPath)
@@ -293,20 +303,17 @@ void ClientController::handleTransportResponse(const Response &response)
         [this](const wire::RejectFriendRequestResponse& r)   { auth_handler_.handleRejectFriendRequest(r); },
         [this](const wire::RemoveFriendResponse& r)          { auth_handler_.handleRemoveFriend(r); },
         [this](const wire::GetOnlineUsersResponse& r)        { auth_handler_.handleGetOnlineUsers(r);},
+        
+        // 3. Модуль обмена сообщениями (Чаты)
+        [this](const wire::SendMessageResponse& r) { chat_handler_.handleSendMessage(r); },
+        [this](const wire::NewMessageResponse& r)  { chat_handler_.handleNewMessage(r); },
+
         // Временная заглушка для ВСЕХ остальных типов
         [](const auto& unhandled_response) {
             // Сюда попадут LoginUserResponse, SendMessageResponse и т.д.
             // Пока просто ничего не делаем или логируем
         }
         
-        
-        
-        
-        
-
-        // 3. Модуль обмена сообщениями (Чаты)
-        // [this](const wire::SendMessageResponse& r) { chat_handler_.handleSendMessage(r); },
-        // [this](const wire::NewMessageResponse& r)  { chat_handler_.handleNewMessage(r); },
 
         // // 4. Модуль звонков (VoIP / WebRTC)
         // [this](const wire::StartCallResponse& r)   { call_handler_.handleStartCall(r); },
@@ -324,6 +331,13 @@ void ClientController::handleTransportResponse(const Response &response)
         // [this](const wire::GetServerStatsResponse& r)     { handleGetServerStats(r); },
         // [this](const wire::GetTurnCredentialsResponse& r) { handleGetTurnCredentials(r); },
     }, response);
+}
+
+void ClientController::onLoginSuccess(unsigned int userId)
+{
+    qDebug() << "Login succeeded!";
+    chat_handler_.initDatabaseForUser(userId, connectedToURL);
+    this->getAllFriendsInfo();
 }
 
 void ClientController::updateFriendsInfo()
@@ -349,6 +363,12 @@ Q_INVOKABLE void ClientController::deleteFriend(unsigned int userId)
 Q_INVOKABLE void ClientController::updateOnlineUsers()
 {
     m_transport->sendCommand(wire::GetOnlineUsers{});
+}
+
+void ClientController::sendMessagetoUser(unsigned int userId, const QString &message)
+{
+    qDebug() << "Sending message to " << userId << ": " << message;
+    m_transport->sendCommand(wire::SendMessage{userId, message});
 }
 
 void ClientController::handleError(const wire::Error &error)

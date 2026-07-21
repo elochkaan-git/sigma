@@ -33,6 +33,16 @@ ApplicationWindow {
         }
     }
 
+    function getUserName(userId) {
+        var friends = clientController.authHandler.friends;
+        for (var i = 0; i < friends.length; i++) {
+            if (Number(friends[i].userId) === Number(userId)) {
+                return friends[i].login
+            }
+        }
+        return "Пользователь #" + userId; // Запасной вариант, если собеседник не в друзьях
+    }
+
     SplitView {
         anchors.fill: parent
         orientation: Qt.Horizontal
@@ -99,11 +109,15 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.margins: 12
                             Layout.bottomMargin: 0
+
+                            
                             
                             // Важно: через свойство 'item' мы настраиваем уже загруженную кнопку,
                             // а доступ к данным модели (modelData) получаем напрямую.
                             onLoaded: {
-                                item.label = modelData.userName
+                                item.label = Qt.binding(function() {
+                                    return root.getUserName(modelData.userId)
+                                })
                                 
                                 // Если в вашей кнопке есть флаг checked, можно управлять им через индекс
                                 item.isActive = Qt.binding(function() {
@@ -113,7 +127,7 @@ ApplicationWindow {
                                 // Навешиваем обработчик клика на загруженную кнопку
                                 item.onClicked.connect(function() {
                                     // 1. Задаем данные для экрана чата
-                                    chatScreen.currentUserName = modelData.userName
+                                    chatScreen.currentUserName = root.getUserName(modelData.userId)
                                     chatScreen.currentUserId = modelData.userId
                                     
                                     // 2. Даем команду контроллеру загрузить сообщения
@@ -122,11 +136,18 @@ ApplicationWindow {
                                     // 3. Переключаем StackLayout на индекс 1 (Экран чата)
                                     mainStack.currentIndex = 1
                                 })
+                                item.removeRequested.connect(function() {
+                                    console.log("Удаление истории для пользователя ", modelData.userId)
+                                    clientController.chatHandler.deleteChatHistory(modelData.userId)
+
+                                    // Если удаленный чат был открыт прямо сейчас — переключаем на заглушку
+                                    if (chatScreen.currentUserId === modelData.userId) {
+                                        mainStack.currentIndex = 2 // Возврат к заглушке "Выберите окно"
+                                    }
+                                })
                             }
                         }
                     }
-
-                    
                 }
             }
 
@@ -136,16 +157,12 @@ ApplicationWindow {
                 font: root.textStyles.system
                 color: root.colors.fg_muted
                 
-                // Позиционирование
-                anchors.bottom: parent.bottom // Прижимаем к самому низу панели
+                anchors.bottom: parent.bottom 
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.margins: 12 // Красивые отступы от краев панели
+                anchors.margins: 12
                 
                 horizontalAlignment: Text.AlignHLeft
-                
-                // Так как элемент теперь позиционируется через anchors, а не Layout, 
-                // Layout.fillWidth больше не нужен.
             }
         }
         /// ...
@@ -160,17 +177,22 @@ ApplicationWindow {
             FriendsScreen {
                 id: friendsScreen
                 // Здесь ваша верстка списка друзей
+                onOpenChatRequested: function(userId, userName) {
+                    // 1. Задаем данные для экрана чата
+                    chatScreen.currentUserName = userName
+                    chatScreen.currentUserId = userId
+
+                    // 2. Загружаем сообщения через контроллер
+                    clientController.chatHandler.loadChatWithUser(userId)
+
+                    // 3. Переключаем интерфейс на чат
+                    mainStack.currentIndex = 1
+                }
             }
 
             // Индекс 1: Экран личных сообщений (Чат)
             ChatScreen {
                 id: chatScreen
-                // Свойства, которые будут меняться динамически
-                property string currentUserName: ""
-                property int currentUserId: -1
-                
-                // Внутри ChatScreen вы будете использовать эти свойства 
-                // для загрузки истории сообщений через ваш C++ или JS контроллер
             }
 
             Rectangle {

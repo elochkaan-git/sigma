@@ -5,6 +5,8 @@ import QtQuick.Layouts
 Rectangle {
     id: friendsRoot
 
+    signal openChatRequested(int userId, string userName)
+
     property var style: Style {}
     property var colors: style.colors
     property var textStyles: style.textStyles
@@ -127,7 +129,7 @@ Rectangle {
                             Button {
                                 text: "Написать"
                                 onClicked: {
-                                    console.log("Открываем чат с пользователем ID:", modelData.userId)
+                                    friendsRoot.openChatRequested(modelData.userId, modelData.login)
                                 }
                             }
                             
@@ -143,6 +145,7 @@ Rectangle {
                                 
                                 onClicked: {
                                     clientController.deleteFriend(modelData.userId);
+                                    clientController.updateFriendsInfo();
                                 }
                             }
                         }
@@ -206,8 +209,9 @@ Rectangle {
                                         verticalAlignment: Text.AlignVCenter
                                     }
                                     onClicked: {
-                                        // Вызываем метод бэкенда для принятия заявки[cite: 2]
                                         clientController.acceptFriendRequest(modelData.userId);
+                                        clientController.updateIncomingFriendsRequests();
+                                        clientController.updateFriendsInfo();
                                     }
                                 }
 
@@ -220,8 +224,8 @@ Rectangle {
                                         verticalAlignment: Text.AlignVCenter
                                     }
                                     onClicked: {
-                                        // Вызываем метод бэкенда для отклонения заявки[cite: 2]
                                         clientController.rejectFriendRequest(modelData.userId);
+                                        clientController.updateIncomingFriendsRequests();
                                     }
                                 }
                             }
