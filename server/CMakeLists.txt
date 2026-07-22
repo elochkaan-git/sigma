@@ -44,6 +44,11 @@ target_compile_options(${SERVER_NAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4>
 )
 
+install(TARGETS SigmaMessenger
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
 if (UNIX AND NOT APPLE)
   set_target_properties(${SERVER_NAME} PROPERTIES
     INSTALL_RPATH "$ORIGIN"

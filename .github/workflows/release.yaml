@@ -7,12 +7,12 @@ on:
 
 env:
   VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-  VCPKG_TRIPLET: x64-windows-release
+  VCPKG_TRIPLET: ${{ matrix.os == 'windows-latest' && 'x64-windows-release' || 'x64-linux-release' }}
 
 jobs:
   build:
     strategy:
-      max-parallel: 1
+      max-parallel: 2
       matrix:
         os: [ubuntu-latest, windows-latest]
 
@@ -34,22 +34,7 @@ jobs:
           cache: true
 
       # ------------------------------------------------------------------
-      # Linux: системные зависимости, нужные ещё на этапе конфигурации
-      # клиента (FFmpeg — через pkg-config, OpenSSL — нужен libdatachannel)
-      # ------------------------------------------------------------------
-      - name: Install build dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            pkg-config \
-            libavcodec-dev libavutil-dev libswscale-dev libswresample-dev \
-            libssl-dev \
-            ninja-build
-
-      # ------------------------------------------------------------------
-      # Windows: те же зависимости через vcpkg (FFmpeg и OpenSSL не ставятся
-      # системно на раннерах и через apt их не получить)
+      # Настройка vcpkg и установка зависимостей для обеих платформ
       # ------------------------------------------------------------------
       - name: Setup vcpkg (Windows)
         if: matrix.os == 'windows-latest'
@@ -58,30 +43,41 @@ jobs:
           git clone https://github.com/microsoft/vcpkg.git "$env:VCPKG_ROOT"
           & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat"
 
-      - name: Cache vcpkg packages (Windows)
-        if: matrix.os == 'windows-latest'
+      - name: Setup vcpkg (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git $VCPKG_ROOT
+          $VCPKG_ROOT/bootstrap-vcpkg.sh
+
+      - name: Cache vcpkg packages
         uses: actions/cache@v4
         with:
           path: |
             ${{ env.VCPKG_ROOT }}/installed
             ${{ env.VCPKG_ROOT }}/buildtrees
-            ~/AppData/Local/vcpkg/archives
-          key: vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v1
+            ${{ runner.os == 'windows-latest' && '~/AppData/Local/vcpkg/archives' || '~/.cache/vcpkg/archives' }}
+          key: vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v2
 
-      - name: Install FFmpeg / OpenSSL / pkgconf via vcpkg (Windows)
+      - name: Install FFmpeg / OpenSSL / pkgconf via vcpkg
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: |
+          ${{ matrix.os == 'windows-latest' && format('& "{0}\vcpkg.exe" install "ffmpeg[core,avcodec,avformat,swscale,swresample]:{1}" "openssl:{1}" "pkgconf:{1}"', env.VCPKG_ROOT, env.VCPKG_TRIPLET) || format('$VCPKG_ROOT/vcpkg install "ffmpeg[core,avcodec,avformat,swscale,swresample]:{0}" "openssl:{0}" "pkgconf:{0}"', env.VCPKG_TRIPLET) }}
+        env:
+          VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
+          VCPKG_TRIPLET: ${{ env.VCPKG_TRIPLET }}
+
+      - name: Add pkgconf to PATH (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          & "$env:VCPKG_ROOT\vcpkg.exe" install `
-            "ffmpeg[core,avcodec,avformat,swscale,swresample]:$env:VCPKG_TRIPLET" `
-            "openssl:$env:VCPKG_TRIPLET" `
-            "pkgconf:$env:VCPKG_TRIPLET"
+          "$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\tools\pkgconf" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          "PKG_CONFIG_PATH=$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\lib\pkgconfig" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-          # Прокидываем pkgconf и PKG_CONFIG_PATH в последующие шаги job'а
-          "$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\tools\pkgconf" |
-            Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
-          "PKG_CONFIG_PATH=$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\lib\pkgconfig" |
-            Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Add pkgconf to PATH (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "$VCPKG_ROOT/installed/$VCPKG_TRIPLET/tools/pkgconf" >> $GITHUB_PATH
+          echo "PKG_CONFIG_PATH=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/pkgconfig" >> $GITHUB_ENV
 
       - name: Setup MSVC environment (Windows)
         if: matrix.os == 'windows-latest'
@@ -90,12 +86,11 @@ jobs:
           arch: x64
 
       # ------------------------------------------------------------------
-      # Сборка клиента (конфигурируется из корня — заодно собирает и server,
-      # так было устроено в исходном CMakeLists — это не менялось)
+      # Сборка клиента (с передачей toolchain vcpkg для обеих платформ)
       # ------------------------------------------------------------------
       - name: Configure Client (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_SERVER=ON 
+        run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_SERVER=ON -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=$VCPKG_TRIPLET
 
       - name: Configure Client (Windows)
         if: matrix.os == 'windows-latest'
@@ -108,15 +103,15 @@ jobs:
         run: cmake --install build_client --prefix "${{ github.workspace }}/install_client" --config Release
 
       # ------------------------------------------------------------------
-      # Сборка сервера
+      # Сборка сервера (также с toolchain vcpkg)
       # ------------------------------------------------------------------
       - name: Configure Server (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run:  cmake -B build_server -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_CLIENT=ON
+        run: cmake -B build_server -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_CLIENT=ON -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=$VCPKG_TRIPLET
 
       - name: Configure Server (Windows)
         if: matrix.os == 'windows-latest'
-        run: cmake -B build_server -S . -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DNO_CLIENT=ON
+        run: cmake -B build_server -S . -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DNO_CLIENT=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=$env:VCPKG_TRIPLET
 
       - name: Build Server
         run: cmake --build build_server --config Release
@@ -125,24 +120,57 @@ jobs:
         run: cmake --install build_server --prefix "${{ github.workspace }}/install_server" --config Release
 
       # ------------------------------------------------------------------
-      # Сборка в единый дистрибутив
+      # Развёртывание зависимостей для самодостаточного пакета
       # ------------------------------------------------------------------
-      - name: Prepare distribution
-        shell: bash
+      - name: Deploy Qt (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          mkdir -p dist/bin
-          cp -r install_client/bin/* dist/bin/
-          cp -r install_client/* dist/
-          if [ -f install_server/server ]; then
-            cp install_server/server dist/bin/
-          fi
-          if [ -f install_server/server.exe ]; then
-            cp install_server/server.exe dist/bin/
-          fi
-          cp -r install_server/* dist/
-          cp -P /usr/lib/x86_64-linux-gnu/libavcodec.so.60 install_client/bin/
+          windeployqt "$env:github_workspace\install_client\bin\SigmaMessenger.exe" --no-quick-import --no-system-d3d-compiler
+          windeployqt "$env:github_workspace\install_server\server.exe" --no-quick-import --no-system-d3d-compiler
 
-      # Архивация
+      - name: Copy vcpkg DLLs (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Copy-Item "$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\bin\*.dll" -Destination "$env:github_workspace\install_client\bin\" -Force
+          Copy-Item "$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\bin\*.dll" -Destination "$env:github_workspace\install_server\" -Force -ErrorAction SilentlyContinue
+
+      - name: Bundle dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir -p dist/bin dist/plugins
+
+          cp install_client/bin/SigmaMessenger dist/bin/
+          [ -f install_server/server ] && cp install_server/server dist/bin/
+
+          ldd dist/bin/SigmaMessenger | grep "=> /" | awk '{print $3}' | while read lib; do
+            case "$lib" in
+              /lib/*|/usr/lib/*|/lib64/*|/usr/lib64/*) ;;
+              *) cp -d "$lib" dist/bin/ ;;
+            esac
+          done
+
+          QT_PLUGIN_DIR=$(qmake -query QT_INSTALL_PLUGINS)
+          cp -r $QT_PLUGIN_DIR/platforms dist/plugins/
+          cp -r $QT_PLUGIN_DIR/imageformats dist/plugins/
+          cp -r $QT_PLUGIN_DIR/mediaservice dist/plugins/  # если используется мультимедиа
+
+      # ------------------------------------------------------------------
+      # Подготовка финального архива
+      # ------------------------------------------------------------------
+      - name: Prepare distribution (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          mkdir dist
+          Copy-Item -Recurse install_client\bin dist\bin
+          Copy-Item install_server\server.exe dist\bin\ -ErrorAction SilentlyContinue
+          Copy-Item install_client\* dist\ -Recurse -ErrorAction SilentlyContinue
+
+      # ------------------------------------------------------------------
+      # Архивация и загрузка релиза
+      # ------------------------------------------------------------------
       - name: Archive (Windows)
         if: matrix.os == 'windows-latest'
         run: |
@@ -155,7 +183,6 @@ jobs:
           TAG=$(git describe --abbrev=0 --tags)
           tar -czf SigmaMessenger-${TAG}-${{ matrix.os }}.tar.gz -C dist .
 
-      # Выгрузка
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -96,6 +96,12 @@ target_compile_options(SigmaMessenger PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4>
   ${GST_CFLAGS_OTHER}
 )
+if (UNIX AND NOT APPLE)
+    set_target_properties(SigmaMessenger PROPERTIES
+        INSTALL_RPATH "$ORIGIN"
+        BUILD_WITH_INSTALL_RPATH TRUE
+    )
+endif()
 
 install(TARGETS SigmaMessenger
     BUNDLE DESTINATION .
