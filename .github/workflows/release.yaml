@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+env:
+  VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+  VCPKG_TRIPLET: x64-windows
+
 jobs:
   build:
     strategy:
@@ -25,22 +29,62 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.*'
-          modules: 'qtwebsockets qtsql qtmultimedia'
+          modules: 'qtwebsockets qtmultimedia'
           arch: ${{ matrix.os == 'windows-latest' && 'win64_msvc2022_64' || '' }}
           cache: true
 
-      # Системные зависимости (Linux)
-      - name: Installing dependencies (Linux)
+      # ------------------------------------------------------------------
+      # Linux: системные зависимости, нужные ещё на этапе конфигурации
+      # клиента (FFmpeg — через pkg-config, OpenSSL — нужен libdatachannel)
+      # ------------------------------------------------------------------
+      - name: Install build dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libavcodec-dev libavutil-dev libswscale-dev libswresample-dev \
+            libssl-dev \
+            ninja-build
           wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
           chmod a+x linuxdeployqt-continuous-x86_64.AppImage
           sudo mv linuxdeployqt-continuous-x86_64.AppImage /usr/local/bin/linuxdeployqt
 
-      # Сборка клиента
-      - name: Configure Client (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+      # ------------------------------------------------------------------
+      # Windows: те же зависимости через vcpkg (FFmpeg и OpenSSL не ставятся
+      # системно на раннерах и через apt их не получить)
+      # ------------------------------------------------------------------
+      - name: Setup vcpkg (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$env:VCPKG_ROOT"
+          & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat"
+
+      - name: Cache vcpkg packages (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.VCPKG_ROOT }}/installed
+            ${{ env.VCPKG_ROOT }}/buildtrees
+            ~/AppData/Local/vcpkg/archives
+          key: vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v1
+
+      - name: Install FFmpeg / OpenSSL / pkgconf via vcpkg (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_ROOT\vcpkg.exe" install `
+            "ffmpeg[core,avcodec,avformat,swscale,swresample]:$env:VCPKG_TRIPLET" `
+            "openssl:$env:VCPKG_TRIPLET" `
+            "pkgconf:$env:VCPKG_TRIPLET"
+
+          # Прокидываем pkgconf и PKG_CONFIG_PATH в последующие шаги job'а
+          "$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\tools\pkgconf" |
+            Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          "PKG_CONFIG_PATH=$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\lib\pkgconfig" |
+            Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Setup MSVC environment (Windows)
         if: matrix.os == 'windows-latest'
@@ -48,9 +92,17 @@ jobs:
         with:
           arch: x64
 
+      # ------------------------------------------------------------------
+      # Сборка клиента (конфигурируется из корня — заодно собирает и server,
+      # так было устроено в исходном CMakeLists — это не менялось)
+      # ------------------------------------------------------------------
+      - name: Configure Client (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+
       - name: Configure Client (Windows)
         if: matrix.os == 'windows-latest'
-        run: cmake -B build_client -S . -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build_client -S . -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=$env:VCPKG_TRIPLET
 
       - name: Build Client
         run: cmake --build build_client --config Release
@@ -58,20 +110,39 @@ jobs:
       - name: Install Client
         run: cmake --install build_client --prefix install_client --config Release
 
-      # Развёртывание Qt для клиента (Windows)
-      - name: Deploy Client (Windows)
+      # Развёртывание Qt-библиотек для клиента (Windows)
+      - name: Deploy Qt libs (Windows)
         if: matrix.os == 'windows-latest'
         shell: cmd
         run: |
-          windeployqt --release install_client/bin/SigmaMessenger.exe
+          windeployqt --release install_client\bin\SigmaMessenger.exe
 
-      # Развёртывание Qt для клиента (Linux)
+      # windeployqt трогает только Qt — довешиваем сторонние DLL (FFmpeg,
+      # OpenSSL), иначе итоговый пакет не будет самодостаточным
+      - name: Bundle third-party DLLs (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $bin = "$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\bin"
+          Copy-Item "$bin\avcodec-*.dll"    install_client\bin\ -ErrorAction SilentlyContinue
+          Copy-Item "$bin\avutil-*.dll"     install_client\bin\ -ErrorAction SilentlyContinue
+          Copy-Item "$bin\avformat-*.dll"   install_client\bin\ -ErrorAction SilentlyContinue
+          Copy-Item "$bin\swscale-*.dll"    install_client\bin\ -ErrorAction SilentlyContinue
+          Copy-Item "$bin\swresample-*.dll" install_client\bin\ -ErrorAction SilentlyContinue
+          Copy-Item "$bin\libssl-3*.dll"    install_client\bin\ -ErrorAction SilentlyContinue
+          Copy-Item "$bin\libcrypto-3*.dll" install_client\bin\ -ErrorAction SilentlyContinue
+
+      # Развёртывание для клиента (Linux) — подхватывает и Qt, и все не-Qt
+      # библиотеки (FFmpeg, OpenSSL, libsodium/libdatachannel, если это .so),
+      # поэтому пакет тоже становится самодостаточным
       - name: Deploy Client (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           linuxdeployqt install_client/bin/SigmaMessenger -bundle-non-qt-libs
 
+      # ------------------------------------------------------------------
       # Сборка сервера
+      # ------------------------------------------------------------------
       - name: Configure Server (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: cmake -B build_server -S server -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
@@ -86,15 +157,21 @@ jobs:
       - name: Install Server
         run: cmake --install build_server --prefix install_server --config Release
 
-      # Сборка в пакет
+      # ------------------------------------------------------------------
+      # Сборка в единый дистрибутив
+      # ------------------------------------------------------------------
       - name: Prepare distribution
         shell: bash
         run: |
           mkdir -p dist/bin
           cp -r install_client/bin/* dist/bin/
           cp -r install_client/* dist/
-          cp install_server/server dist/bin/
-          cp install_server/server.exe dist/bin/
+          if [ -f install_server/server ]; then
+            cp install_server/server dist/bin/
+          fi
+          if [ -f install_server/server.exe ]; then
+            cp install_server/server.exe dist/bin/
+          fi
           cp -r install_server/* dist/
 
       # Архивация
