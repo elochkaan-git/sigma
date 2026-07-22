@@ -38,7 +38,7 @@ jobs:
       # клиента (FFmpeg — через pkg-config, OpenSSL — нужен libdatachannel)
       # ------------------------------------------------------------------
       - name: Install build dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -97,7 +97,7 @@ jobs:
       # так было устроено в исходном CMakeLists — это не менялось)
       # ------------------------------------------------------------------
       - name: Configure Client (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
 
       - name: Configure Client (Windows)
@@ -136,7 +136,7 @@ jobs:
       # библиотеки (FFmpeg, OpenSSL, libsodium/libdatachannel, если это .so),
       # поэтому пакет тоже становится самодостаточным
       - name: Deploy Client (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           linuxdeployqt install_client/bin/SigmaMessenger -bundle-non-qt-libs
 
@@ -144,7 +144,7 @@ jobs:
       # Сборка сервера
       # ------------------------------------------------------------------
       - name: Configure Server (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: cmake -B build_server -S server -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
 
       - name: Configure Server (Windows)
@@ -166,7 +166,7 @@ jobs:
 
       # Развёртывание для сервера (Linux)
       - name: Deploy Server (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           linuxdeployqt install_server/server -bundle-non-qt-libs
 
@@ -193,14 +193,14 @@ jobs:
         run: 7z a SigmaMessenger-windows.zip ./dist/*
 
       - name: Archive (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: tar -czf SigmaMessenger-linux.tar.gz -C dist .
 
       # Выгрузка
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ext: ${{ matrix.os == 'ubuntu-latest' && '.tar.gz' || '.zip' }}
+          ext: ${{ matrix.os == 'ubuntu-22.04' && '.tar.gz' || '.zip' }}
         shell: bash
         run: |
           TAG=$(git describe --abbrev=0 --tags)
