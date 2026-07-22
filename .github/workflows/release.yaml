@@ -147,8 +147,9 @@ jobs:
         shell: pwsh
         run: |
           windeployqt "$env:github_workspace\install_client\bin\SigmaMessenger.exe" `
-            --qmldir "$env:github_workspace\client\qml" `
-            --no-system-d3d-compiler
+          --qmldir "$env:github_workspace\client\qml" `
+          --dir "$env:github_workspace\install_client" `
+          --no-system-d3d-compiler
           windeployqt "$env:github_workspace\install_server\bin\server.exe" `
             --no-quick-import --no-system-d3d-compiler
 
@@ -161,23 +162,14 @@ jobs:
           Copy-Item "$vcpkgBin\*.dll" -Destination "$env:github_workspace\install_server\bin\" -Force -ErrorAction SilentlyContinue
 
       - name: Bundle dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          set +e
-          mkdir -p dist/bin dist/plugins
-          cp install_client/bin/. dist/bin/
-          [ -f install_server/bin/server ] && cp install_server/bin/server dist/bin/
-          ldd dist/bin/SigmaMessenger | grep "=> /" | awk '{print $3}' | while read lib; do
-            case "$lib" in
-              /lib/*|/usr/lib/*|/lib64/*|/usr/lib64/*) ;;
-              *) cp -df "$lib" dist/bin/ 2>/dev/null || true ;;
-            esac
-          done
-          QT_PLUGIN_DIR=$(qmake -query QT_INSTALL_PLUGINS)
-          [ -d "$QT_PLUGIN_DIR/platforms" ] && cp -r $QT_PLUGIN_DIR/platforms dist/plugins/ || true
-          [ -d "$QT_PLUGIN_DIR/imageformats" ] && cp -r $QT_PLUGIN_DIR/imageformats dist/plugins/ || true
-          [ -d "$QT_PLUGIN_DIR/mediaservice" ] && cp -r $QT_PLUGIN_DIR/mediaservice dist/plugins/ || true
-          set -e 
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        mkdir -p dist
+        cp -r install_client/* dist/
+        cp -fr install_server/* dist/   # если install_server существует
+        # Проверка (опционально)
+        ldd dist/bin/SigmaMessenger || true
+        [ -f dist/bin/server ] && ldd dist/bin/server || true 
 
       # ------------------------------------------------------------------
       # Подготовка финального архива
@@ -187,8 +179,7 @@ jobs:
         shell: pwsh
         run: |
           mkdir dist
-          Copy-Item -Recurse install_client\bin dist\bin
-          Copy-Item install_server\bin\* dist\bin\ -Recurse -ErrorAction SilentlyContinue
+          Copy-Item -Recurse install_client\* dist\
 
       # ------------------------------------------------------------------
       # Архивация и загрузка релиза
