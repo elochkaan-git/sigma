@@ -95,11 +95,11 @@ jobs:
       # ------------------------------------------------------------------
       - name: Configure Client (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_SERVER=ON
 
       - name: Configure Client (Windows)
         if: matrix.os == 'windows-latest'
-        run: cmake -B build_client -S . -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=$env:VCPKG_TRIPLET
+        run: cmake -B build_client -S . -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DNO_SERVER=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=$env:VCPKG_TRIPLET
 
       - name: Build Client
         run: cmake --build build_client --config Release
@@ -144,11 +144,11 @@ jobs:
       # Архивация
       - name: Archive (Windows)
         if: matrix.os == 'windows-latest'
-        run: 7z a SigmaMessenger-windows.zip ./dist/*
+        run: 7z a SigmaMessenger-${TAG}-${{ matrix.os }}.zip ./dist/*
 
       - name: Archive (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: tar -czf SigmaMessenger-linux.tar.gz -C dist .
+        run: tar -czf SigmaMessenger-${TAG}-${{ matrix.os }}.tar.gz -C dist .
 
       # Выгрузка
       - name: Upload Release Asset
@@ -159,7 +159,7 @@ jobs:
         run: |
           TAG=$(git describe --abbrev=0 --tags)
           ARTIFACT="SigmaMessenger-${TAG}-${{ matrix.os }}${ext}"
-          mv SigmaMessenger-${{ matrix.os }}${ext} "${ARTIFACT}"
+          mv "SigmaMessenger-${TAG}-${{ matrix.os }}${ext}" "${ARTIFACT}"
           if gh release view "${TAG}" > /dev/null 2>&1; then
             gh release upload "${TAG}" "${ARTIFACT}" --clobber
           else
