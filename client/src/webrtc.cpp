@@ -247,14 +247,8 @@ WebRtcWrapper::handleRemoteSdp(const wire::SdpResponse& response)
 
     if (!mPeerConnection->localDescription()) {
       qInfo(appService) << "No local description yet, creating it now";
-      if (isOffer) {
-        // Мы получили Offer, значит мы должны ответить Answer
-        mPeerConnection->setLocalDescription(rtc::Description::Type::Answer);
-      } else {
-        qWarning() << "Received Answer but no local description; this is abnormal";
-        emit callFailed("Received Answer but no local description");
-        cleanupCall();
-      }
+      // Мы получили Offer, значит мы должны ответить Answer
+      mPeerConnection->setLocalDescription(rtc::Description::Type::Answer);
     }
   } catch (const std::exception& e) {
     qCritical(appService) << "Failed to process SDP:" << e.what();
