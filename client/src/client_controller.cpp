@@ -10,6 +10,7 @@
 #include <QDebug>
 #include <QImage>
 #include <QBuffer>
+#include <QtMultimedia>
 
 namespace {
 QString resolveServersCsvPath(const QString &requestedPath)
@@ -84,6 +85,13 @@ ClientController::ClientController(QObject *parent)
 
     connect(&auth_handler_, &AuthHandler::friendsChanged, 
             &chat_handler_, &ChatHandler::updateChatsList);
+    
+    call_manager_.setDevices({
+        QMediaDevices::defaultAudioInput(),
+        QMediaDevices::defaultVideoInput()
+    });
+    //TODO: make code check
+    call_manager_.initialize();
 }
 
 void ClientController::setAvatarProvider(AvatarImageProvider *avatarProvider)
@@ -316,26 +324,24 @@ void ClientController::handleTransportResponse(const Response &response)
         
         // 3. Модуль обмена сообщениями (Чаты)
         [this](const wire::SendMessageResponse& r) { chat_handler_.handleSendMessage(r); },
-        [this](const wire::NewMessageResponse& r)  { chat_handler_.handleNewMessage(r); },
+        [this](const wire::NewMessageResponse& r)  { chat_handler_.handleNewMessage(r); },        
+
+        // // 4. Модуль звонков (VoIP / WebRTC)
+        [this](const wire::StartCallResponse& r)   { call_manager_.handleStartCallResponse(r); },
+        [this](const wire::IncomingCallResponse& r){ call_manager_.handleIncomingCall(r); },
+        [this](const wire::AcceptCallResponse& r)  { call_manager_.handleAcceptCallResponse(r); },
+        [this](const wire::CallAcceptedResponse& r){ call_manager_.handleCallAccepted(r); },
+        [this](const wire::RejectCallResponse& r)  { call_manager_.handleRejectCallResponse(r); },
+        [this](const wire::CallRejectedResponse& r){ call_manager_.handleCallRejected(r); },
+        // [this](const wire::EndCallResponse& r)     { call_manager_.handleEndCall(r); },
+        [this](const wire::CallEndedResponse& r)   { call_manager_.handleCallEnded(r); },
+        [this](const wire::SdpResponse& r)         { call_manager_.handleSdp(r); },
+        [this](const wire::IceCandidateResponse& r) { call_manager_.handleIceCandidate(r); },
 
         // Временная заглушка для ВСЕХ остальных типов
         [](const auto& unhandled_response) {
-            // Сюда попадут LoginUserResponse, SendMessageResponse и т.д.
-            // Пока просто ничего не делаем или логируем
+        //    qDebug() << "Unhandled response type index:" << unhandled_response.status;
         }
-        
-
-        // // 4. Модуль звонков (VoIP / WebRTC)
-        // [this](const wire::StartCallResponse& r)   { call_handler_.handleStartCall(r); },
-        // [this](const wire::IncomingCallResponse& r){ call_handler_.handleIncomingCall(r); },
-        // [this](const wire::AcceptCallResponse& r)  { call_handler_.handleAcceptCall(r); },
-        // [this](const wire::CallAcceptedResponse& r){ call_handler_.handleCallAccepted(r); },
-        // [this](const wire::RejectCallResponse& r)  { call_handler_.handleRejectCall(r); },
-        // [this](const wire::CallRejectedResponse& r){ call_handler_.handleCallRejected(r); },
-        // [this](const wire::EndCallResponse& r)     { call_handler_.handleEndCall(r); },
-        // [this](const wire::CallEndedResponse& r)   { call_handler_.handleCallEnded(r); },
-        // [this](const wire::SdpResponse& r)         { call_handler_.handleSdp(r); },
-        // [this](const wire::IceCandidateResponse& r) { call_handler_.handleIceCandidate(r); },
 
         // // 5. Системная статистика / Утилиты
         // [this](const wire::GetServerStatsResponse& r)     { handleGetServerStats(r); },
@@ -406,6 +412,26 @@ Q_INVOKABLE void ClientController::setAvatarRequest(const QString &avatarFilePat
 
     // Отправляем сжатый и валидный PNG
     m_transport->sendCommand(wire::SetAvatar{base64Image});
+}
+
+Q_INVOKABLE void ClientController::startCallRequest(unsigned int userId, bool withVideo)
+{
+    qDebug() << "Requesting call to user:" << userId << "with video:" << withVideo;
+    call_manager_.startCall(userId, withVideo);
+}
+
+Q_INVOKABLE void ClientController::acceptCallRequest(){
+    call_manager_.acceptCall();
+}
+
+Q_INVOKABLE void ClientController::rejectCallRequest()
+{
+    call_manager_.rejectCall();
+}
+
+Q_INVOKABLE void ClientController::endCallRequest()
+{
+    call_manager_.endCall();
 }
 
 void ClientController::sendMessagetoUser(unsigned int userId, const QString &message)

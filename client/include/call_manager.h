@@ -22,9 +22,24 @@ struct MediaDevices {
 class CallManager : public QObject
 {
   Q_OBJECT
+  // QML_ELEMENT
+  // QML_UNCREATABLE("CallManager is read-only")
+  Q_PROPERTY(CallState callState READ callState NOTIFY callStateChanged)
+  Q_PROPERTY(bool isVideoEnabled READ isVideoEnabled NOTIFY videoEnabledChanged)
 public:
+  enum class CallState {
+    Idle,         // Нет активного вызова
+    Incoming,     // Входящий звонок (Принять / Отклонить)
+    Outgoing,     // Исходящий звонок (Ожидание ответа / Отмена)
+    Connected     // Разговор начат (Аудио / Видео окно)
+  };
+  Q_ENUM(CallState)
+
   explicit CallManager(Transport* transport, QObject* parent = nullptr);
   ~CallManager() override;
+
+  CallState callState() const { return mCallState; }
+  bool isVideoEnabled() const { return mVideoEnabled; }
 
   /**
    * @brief Установка устройств пользователя. Если пусто,
@@ -60,6 +75,8 @@ public:
   void handleIceCandidate(const wire::IceCandidateResponse& r);
 
 signals:
+  void callStateChanged(CallState newState);
+  void videoEnabledChanged(bool enabled);
   /**
    * @brief Сигнал при установке соединения между клиентами
    */
@@ -90,6 +107,8 @@ signals:
    */
   void decodedVideoReady(const QImage& image);
 
+  void showErrorToast(const QString &message);
+
 private slots:
   void onCallEstablished();
   void onCallClosed();
@@ -100,6 +119,7 @@ private slots:
   void onVideoFrameReceived(const QByteArray& encodedFrame);
 
 private:
+  void setCallState(CallState state);
   void startCapturing();
   void stopCapturing();
   void initDecoders(int audioSampleRate = 48000, int videoWidth = 640, int videoHeight = 480);
@@ -107,6 +127,8 @@ private:
   Transport* mTransport = nullptr;
   MediaDevices mDevices;
   bool mInitialized = false;
+
+  CallState mCallState = CallState::Idle;
 
   std::unique_ptr<WebRtcWrapper> mWebRtc;
   std::unique_ptr<AudioCaptureEncoder> mAudioCapture;

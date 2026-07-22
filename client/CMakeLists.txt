@@ -68,6 +68,8 @@ qt_add_qml_module(SigmaMessenger
         qml/Toast.qml
         qml/ChatScreen.qml
         qml/FriendsScreen.qml
+        qml/CallWindow.qml
+        qml/IconButton.qml
     RESOURCES ${ASSETS_FILES}
 
 )

@@ -18,7 +18,6 @@ Rectangle {
     // Слушатель изменений: срабатывает каждый раз, когда меняется собеседник
     onCurrentUserIdChanged: {
         if (currentUserId !== -1) {
-            console.log("Загружаем историю чата для пользователя ID:", currentUserId)
             Qt.callLater(function() {
                 chatListView.scrollToBottom()
             })
@@ -68,6 +67,7 @@ Rectangle {
                 anchors.fill: parent
                 spacing: 8
                 // anchors.margins: 15
+                Layout.rightMargin: 10
                 
                 // Аватарка (опционально, так как сервер присылает base64)
                 Image {
@@ -97,8 +97,31 @@ Rectangle {
                 }
                 
                 // Calls icons here
+                IconButton{
+                    iconSource: "qrc:/Main/assets/mic.png"
+                    Layout.alignment: Qt.AlignRight
+
+                    onClicked: {
+                        console.log("Audio phone requested!")
+                        clientController.startCallRequest(chatRoot.currentUserId, false)
+                    }
+                }
+
+                IconButton{
+                    iconSource: "qrc:/Main/assets/video-camera.png"
+                    Layout.alignment: Qt.AlignRight
+                    Layout.rightMargin: 15
+
+                    onClicked: {
+                        console.log("Video phone requested!")
+                        clientController.startCallRequest(chatRoot.currentUserId, true)
+                    }
+                }
             }
+
+            
         }
+
         ListView {
             id: chatListView
             Layout.fillWidth: true
@@ -221,7 +244,6 @@ Rectangle {
             }
         }
 
-
         // 3. Панель ввода сообщения
         Rectangle {
             Layout.fillWidth: true
@@ -291,6 +313,14 @@ Rectangle {
     }
     Connections {
         target: clientController.chatHandler // Указываем на конкретный подконтроллер
+
+        // Имя функции формируется автоматически: on + ИмяСигнала с большой буквы
+        function onShowErrorToast(message) {
+            errorToast.show(message); // Вызываем функцию Toast в UI!
+        }
+    }
+    Connections {
+        target: clientController.callManager // Указываем на конкретный подконтроллер
 
         // Имя функции формируется автоматически: on + ИмяСигнала с большой буквы
         function onShowErrorToast(message) {

@@ -84,11 +84,14 @@ bool CallManager::initialize()
 
 void CallManager::startCall(unsigned int calleeId, bool withVideo)
 {
+  qDebug() << "CallManager::startCall called for calleeId:" << calleeId;
   if (!mInitialized && !initialize()) {
     qWarning() << "CallManager не инициализирован";
     return;
   }
   mVideoEnabled = withVideo;
+  emit videoEnabledChanged(mVideoEnabled);
+
   mWebRtc->startCall(calleeId, withVideo);
 }
 
@@ -109,11 +112,26 @@ void CallManager::endCall()
 
 // --- Обработчики ответов от сервера ---
 void CallManager::handleStartCallResponse(const wire::StartCallResponse& r) {
+  qDebug() << "We are in callManager handleStartCall!";
   mWebRtc->handleStartCallResponse(r);
+  if(r.status == OperationStatus::OK){
+    setCallState(CallState::Outgoing);
+  } else if(r.status == OperationStatus::UserOffline) {
+    emit showErrorToast("Вы не можете позвонить человеку в оффлайн!");
+  } else if(r.status == OperationStatus::CallWithYourself){
+    emit showErrorToast("Вы не можете позвонить самому себе!");
+  } else if(r.status == OperationStatus::UserAlreadyInCall){
+    emit showErrorToast("Пользователь уже в звонке!");
+  } else if(r.status == OperationStatus::CallAlreadyProceeded) {
+    emit showErrorToast("Вы уже в звонке!");
+  } else {
+    emit showErrorToast("Неизвестная ошибка при попытке позвонить");
+  }
 }
 
 void CallManager::handleIncomingCall(const wire::IncomingCallResponse& r)   {
   mWebRtc->handleIncomingCall(r);
+  setCallState(CallState::Incoming);
 }
 
 void CallManager::handleAcceptCallResponse(const wire::AcceptCallResponse& r) {
@@ -150,6 +168,8 @@ void CallManager::onCallEstablished()
   qDebug() << "Call established, initializing decoders and starting capture";
   initDecoders(48000, 640, 480);
   startCapturing();
+
+  setCallState(CallState::Connected);
   emit callEstablished();
 }
 
@@ -157,6 +177,8 @@ void CallManager::onCallClosed()
 {
   qDebug() << "Call closed, stopping capture";
   stopCapturing();
+
+  setCallState(CallState::Idle);
   emit callClosed();
 }
 
@@ -164,6 +186,8 @@ void CallManager::onCallFailed(const QString& reason)
 {
   qDebug() << "Call failed:" << reason;
   stopCapturing();
+
+  setCallState(CallState::Idle);
   emit callFailed(reason);
 }
 
@@ -186,6 +210,14 @@ void CallManager::initDecoders(int audioSampleRate, int videoWidth, int videoHei
   }
   if (!mVideoDecoder->init(videoWidth, videoHeight)) {
     qWarning() << "Не удалось инициализировать видеодекодер";
+  }
+}
+
+void CallManager::setCallState(CallState state)
+{
+  if (mCallState != state) {
+    mCallState = state;
+    emit callStateChanged(mCallState);
   }
 }
 

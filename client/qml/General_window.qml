@@ -175,7 +175,6 @@ ApplicationWindow {
                             Connections {
                                 target: clientController.authHandler
                                 function onFriendsChanged() {
-                                    console.log("[QML Signal] authHandler.friendsChanged сработал! Перезапрашиваем аватарки...")
                                     
                                     // Пробегаем по всем элементам Repeater и заставляем Image перечитать провайдер
                                     for (var i = 0; i < sideMenuColumn.children.length; i++) {
@@ -392,14 +391,19 @@ ApplicationWindow {
     Connections {
         target: clientController.authHandler
         function onFriendsChanged() {
-            console.log("[QML Signal] authHandler.friendsChanged сработал! Новая длина:", clientController.authHandler.friends.length)
         }
     }
 
     Connections {
         target: clientController.chatHandler
         function onChatsListChanged() {
-            console.log("[QML Signal] chatHandler.chatsListChanged сработал! Чатов в списке:", clientController.chatHandler.chatsList.length)
         }
+    }
+
+    CallWindow {
+        id: callWindow
+        // Автоматически подтягивает данные активного собеседника из чата
+        callerName: chatScreen.currentUserName 
+        callerId: chatScreen.currentUserId
     }
 }

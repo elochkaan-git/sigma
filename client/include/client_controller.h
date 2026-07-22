@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QVariantList>
 #include <QTimer>
+#include <QUuid>
 #include "transport.h"
 #include "auth_handler.h"
 #include "call_manager.h"
@@ -14,6 +15,7 @@ class ClientController : public QObject
 {
     Q_OBJECT
     // Свойство для отслеживания статуса подключения
+    
     Q_PROPERTY(QVariantList serversList READ getServersList NOTIFY serversStatusChanged)
     Q_PROPERTY(AuthHandler* authHandler READ authHandler CONSTANT)
     Q_PROPERTY(ChatHandler* chatHandler READ chatHandler CONSTANT)
@@ -47,6 +49,11 @@ public:
     Q_INVOKABLE void deleteFriend(unsigned int userId);
     Q_INVOKABLE void updateOnlineUsers();
     Q_INVOKABLE void setAvatarRequest(const QString& avatarFilePath);
+    Q_INVOKABLE void startCallRequest(unsigned int userId, bool withVideo);
+    Q_INVOKABLE void acceptCallRequest();
+    Q_INVOKABLE void rejectCallRequest();
+    Q_INVOKABLE void endCallRequest();
+
 
 signals:
     void serversStatusChanged(); // Сигнал для уведомления об изменении статуса серверов

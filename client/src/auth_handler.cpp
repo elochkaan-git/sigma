@@ -114,9 +114,7 @@ QVariantList AuthHandler::convertUserList(const std::optional<std::vector<User>>
 
 void AuthHandler::handleGetFriends(const wire::GetFriendsResponse& r)
 {
-    qDebug() << "Friends get handler!";
     if (r.status == OperationStatus::OK) {
-        qDebug() << "There some friends!";
         m_friends = convertUserList(r.friends);
         emit friendsChanged();
     } else {
