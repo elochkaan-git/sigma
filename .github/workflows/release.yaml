@@ -190,6 +190,7 @@ jobs:
       # ------------------------------------------------------------------
       - name: Archive (Windows)
         if: matrix.os == 'windows-latest'
+        shell: bash
         run: |
           TAG=$(git describe --abbrev=0 --tags)
           7z a SigmaMessenger-${TAG}-${{ matrix.os }}.zip ./dist/*
