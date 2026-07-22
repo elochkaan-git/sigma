@@ -10,6 +10,9 @@
 #include "call_manager.h"
 #include "chat_handler.h"
 #include "avatar_image_provider.h"
+#include "video_image_provider.h"
+#include <QAudioSink>
+#include <QBuffer>
 
 class ClientController : public QObject
 {
@@ -30,6 +33,8 @@ public:
     ChatHandler* chatHandler() { return &chat_handler_; }
     CallManager* callManager() { return &call_manager_; }
     void setAvatarProvider(AvatarImageProvider* avatarProvider);
+    VideoImageProvider* remoteVideoProvider();
+    VideoImageProvider* localVideoProvider();
 
     Q_INVOKABLE QVariantList loadServersFromCsv(const QString &csvPath = QString());
     Q_INVOKABLE void addServer(const QString &name, const QString &url);
@@ -94,6 +99,10 @@ private:
     CallManager call_manager_;
     bool m_isConnected;
 
-    void handleError(const wire::Error& error);
+    VideoImageProvider* m_remoteVideoProvider = nullptr;
+    VideoImageProvider* m_localVideoProvider = nullptr;
+    QAudioSink* m_audioSink = nullptr;
+    QBuffer* m_audioBuffer = nullptr;
 
+    void handleError(const wire::Error& error);
 };

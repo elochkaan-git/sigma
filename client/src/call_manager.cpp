@@ -45,7 +45,9 @@ CallManager::CallManager(Transport* transport, QObject* parent)
   connect(mAudioDecoder.get(), &AudioDecoder::decodedAudioReady,
           this, &CallManager::decodedAudioReady);
   connect(mVideoDecoder.get(), &VideoDecoder::decodedVideoReady,
-          this, &CallManager::decodedVideoReady);
+          this, &CallManager::remoteVideoFrameReady);
+  connect(mVideoCapture.get(), &VideoCaptureEncoder::rawVideoFrame,
+        this, &CallManager::localVideoFrameReady);
 }
 
 CallManager::~CallManager()

@@ -19,6 +19,10 @@ int main(int argc, char *argv[])
 
     engine.addImageProvider(QLatin1String("avatars"), avatarProvider);
     clientController.setAvatarProvider(avatarProvider);
+    VideoImageProvider *remoteProv = clientController.remoteVideoProvider();
+    VideoImageProvider *localProv  = clientController.localVideoProvider();
+    engine.addImageProvider("remoteVideo", remoteProv);
+    engine.addImageProvider("localVideo", localProv);
 
 
     // 2. Внедряем его в корневой контекст QML под именем "clientController"

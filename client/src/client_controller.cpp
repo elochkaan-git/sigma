@@ -92,6 +92,55 @@ ClientController::ClientController(QObject *parent)
     });
     //TODO: make code check
     call_manager_.initialize();
+    m_remoteVideoProvider = new VideoImageProvider(this);
+    m_localVideoProvider = new VideoImageProvider(this);
+
+    connect(&call_manager_, &CallManager::remoteVideoFrameReady,
+            this, [this](const QImage& img) {
+                m_remoteVideoProvider->updateFrame(img);
+            });
+    connect(&call_manager_, &CallManager::localVideoFrameReady,
+            this, [this](const QImage& img) {
+                m_localVideoProvider->updateFrame(img);
+            });
+
+    QAudioFormat format;
+    format.setSampleRate(48000);
+    format.setChannelCount(1);
+    format.setSampleFormat(QAudioFormat::Int16);
+    
+    m_audioBuffer = new QBuffer(this);
+    m_audioBuffer->open(QIODevice::ReadWrite);
+    
+    m_audioSink = new QAudioSink(format, this);
+    m_audioSink->start(m_audioBuffer);
+
+    connect(&call_manager_, &CallManager::decodedAudioReady,
+            this, [this](const QByteArray& pcmData, int, int) {
+        if (!m_audioSink || m_audioSink->state() == QAudio::StoppedState) {
+            return;
+        }
+        
+        // Пишем данные в буфер — QAudioSink сам прочитает их и воспроизведёт
+        m_audioBuffer->write(pcmData);
+        
+        // Если буфер переполнился — можно сбросить или подождать
+        if (m_audioBuffer->size() > m_audioSink->bufferSize() * 2) {
+            // можно сделать seek(0) и перезаписать, но лучше использовать кольцевой буфер
+        }
+    });
+    connect(&call_manager_, &CallManager::callClosed, this, [this]() {
+        if (m_audioSink) {
+            m_audioSink->stop();
+            m_audioSink->reset();
+        }
+    });
+    connect(&call_manager_, &CallManager::callFailed, this, [this](const QString&) {
+        if (m_audioSink) {
+            m_audioSink->stop();
+            m_audioSink->reset();
+        }
+    });
 }
 
 void ClientController::setAvatarProvider(AvatarImageProvider *avatarProvider)
@@ -99,6 +148,17 @@ void ClientController::setAvatarProvider(AvatarImageProvider *avatarProvider)
     m_avatarProvider = avatarProvider;
     auth_handler_.setAvatarProvider(avatarProvider);
 }
+
+VideoImageProvider* ClientController::remoteVideoProvider()
+{
+    return this->m_remoteVideoProvider;
+}
+
+VideoImageProvider* ClientController::localVideoProvider()
+{
+    return this->m_localVideoProvider;
+}
+
 
 QVariantList ClientController::loadServersFromCsv(const QString &csvPath)
 {
@@ -339,7 +399,7 @@ void ClientController::handleTransportResponse(const Response &response)
         [this](const wire::IceCandidateResponse& r) { call_manager_.handleIceCandidate(r); },
 
         // Временная заглушка для ВСЕХ остальных типов
-        [](const auto& unhandled_response) {
+        [](const auto&) {
         //    qDebug() << "Unhandled response type index:" << unhandled_response.status;
         }
 

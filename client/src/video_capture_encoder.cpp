@@ -159,6 +159,7 @@ void VideoCaptureEncoder::onVideoFrameChanged(const QVideoFrame& frame)
   }
   image = image.convertToFormat(QImage::Format_RGB32);
 
+  emit rawVideoFrame(image);
   encodeAndSend(image);
   ++mFrameIndex;
 }

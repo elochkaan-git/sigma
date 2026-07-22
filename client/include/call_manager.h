@@ -105,7 +105,8 @@ signals:
    * 
    * @param image кадр видео
    */
-  void decodedVideoReady(const QImage& image);
+  void remoteVideoFrameReady(const QImage& image);
+  void localVideoFrameReady(const QImage &frame);
 
   void showErrorToast(const QString &message);
 

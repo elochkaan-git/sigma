@@ -17,6 +17,7 @@ class VideoCaptureEncoder : public QObject
   Q_OBJECT
 signals:
   void encodedVideoFrameDone(const QByteArray& encodedFrame, uint32_t durationSamples);
+  void rawVideoFrame(const QImage &frame);
 
 public:
   explicit VideoCaptureEncoder(QObject* parent = nullptr);

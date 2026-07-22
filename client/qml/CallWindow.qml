@@ -193,6 +193,7 @@ Window {
                     id: remoteVideo
                     anchors.fill: parent
                     fillMode: Image.PreserveAspectCrop
+                    source: "image://remoteVideo/"  // провайдер всегда вернёт последний кадр
                 }
 
                 // Маленький превью со своей камеры в углу
@@ -212,6 +213,7 @@ Window {
                         id: localVideo
                         anchors.fill: parent
                         fillMode: Image.PreserveAspectCrop
+                        source: "image://localVideo/"
                     }
                 }
             }
