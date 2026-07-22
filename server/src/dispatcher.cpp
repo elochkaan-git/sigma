@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <qlogging.h>
+#include <quuid.h>
 #include <type_traits>
 #include <vector>
 
@@ -488,6 +489,7 @@ Dispatcher::handleStartCall(const StartCall& cmd)
 {
   StartCallResponse scr;
   scr.client_id = cmd.client_id;
+  scr.call_id = QUuid::createUuid();
 
   if (cmd.callee_id == cmd.user_id) {
     qWarning(appDispatcher)
