@@ -134,6 +134,8 @@ void CallManager::handleStartCallResponse(const wire::StartCallResponse& r) {
 void CallManager::handleIncomingCall(const wire::IncomingCallResponse& r)   {
   mWebRtc->handleIncomingCall(r);
   setCallState(CallState::Incoming);
+  mVideoEnabled = r.with_video;
+  emit videoEnabledChanged(mVideoEnabled);
 }
 
 void CallManager::handleAcceptCallResponse(const wire::AcceptCallResponse& r) {
