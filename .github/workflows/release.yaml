@@ -112,11 +112,11 @@ jobs:
       # ------------------------------------------------------------------
       - name: Configure Server (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: cmake -B build_server -S server -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+        run:  cmake -B build_server -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_CLIENT=ON
 
       - name: Configure Server (Windows)
         if: matrix.os == 'windows-latest'
-        run: cmake -B build_server -S server -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build_server -S . -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DNO_CLIENT=ON
 
       - name: Build Server
         run: cmake --build build_server --config Release
