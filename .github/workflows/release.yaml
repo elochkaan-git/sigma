@@ -29,42 +29,95 @@ jobs:
           arch: ${{ matrix.os == 'windows-latest' && 'win64_msvc2022_64' || '' }}
           cache: true
 
-      # Just for example
-      # - name: Installing dependencies (Linux)
-      #   if: matrix.os == 'ubuntu-latest'
-      #   run:
-      #     sudo apt-get update -y;
-      #     sudo apt-get install -y libxrandr-dev libxcursor-dev libxi-dev libudev-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libfreetype6-dev libboost-all-dev
-
-      # It's commented because we don't have CMakeLists.txt
-      - name: Configure Cmake (Linux)
+      # Системные зависимости (Linux)
+      - name: Installing dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: cmake -B build -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+        run: |
+          wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+          chmod a+x linuxdeployqt-continuous-x86_64.AppImage
+          sudo mv linuxdeployqt-continuous-x86_64.AppImage /usr/local/bin/linuxdeployqt
 
-      - name: Setup MSVC environment
+      # Сборка клиента
+      - name: Configure Client (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Setup MSVC environment (Windows)
         if: matrix.os == 'windows-latest'
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
-      - name: Configure Cmake (Windows)
+      - name: Configure Client (Windows)
         if: matrix.os == 'windows-latest'
-        run: cmake -B build -S . -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build_client -S . -G "Ninja" -DCMAKE_BUILD_TYPE=Release
 
-      # Only building, no packaging
-      - name: Build project and package
-        run: cmake --build build --config Release
-          
-      # - name: Upload Release Asset
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     ext: ${{
-      #       matrix.os == 'ubuntu-latest' && '.tar.gz' ||
-      #       matrix.os == 'windows-latest' && '.zip'}}
-      #   shell: bash
-      #   run: |
-      #     TAG=$(git describe --abbrev=0 --tags)
-      #     if gh release view "${TAG}" > /dev/null 2>&1; 
-      #     then gh release upload "${TAG}" bin/labyrinth${ext};
-      #     else gh release create "${TAG}" bin/labyrinth${ext};
-      #     fi
+      - name: Build Client
+        run: cmake --build build_client --config Release
+
+      - name: Install Client
+        run: cmake --install build_client --prefix install_client --config Release
+
+      # Развёртывание Qt для клиента (Windows)
+      - name: Deploy Client (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: cmd
+        run: |
+          windeployqt --release install_client/bin/SigmaMessenger.exe
+
+      # Развёртывание Qt для клиента (Linux)
+      - name: Deploy Client (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          linuxdeployqt install_client/bin/SigmaMessenger -bundle-non-qt-libs
+
+      # Сборка сервера
+      - name: Configure Server (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: cmake -B build_server -S server -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure Server (Windows)
+        if: matrix.os == 'windows-latest'
+        run: cmake -B build_server -S server -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Server
+        run: cmake --build build_server --config Release
+
+      - name: Install Server
+        run: cmake --install build_server --prefix install_server --config Release
+
+      # Сборка в пакет
+      - name: Prepare distribution
+        shell: bash
+        run: |
+          mkdir -p dist/bin
+          cp -r install_client/bin/* dist/bin/
+          cp -r install_client/* dist/
+          cp install_server/server dist/bin/
+          cp install_server/server.exe dist/bin/
+          cp -r install_server/* dist/
+
+      # Архивация
+      - name: Archive (Windows)
+        if: matrix.os == 'windows-latest'
+        run: 7z a SigmaMessenger-windows.zip ./dist/*
+
+      - name: Archive (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: tar -czf SigmaMessenger-linux.tar.gz -C dist .
+
+      # Выгрузка
+      - name: Upload Release Asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ext: ${{ matrix.os == 'ubuntu-latest' && '.tar.gz' || '.zip' }}
+        shell: bash
+        run: |
+          TAG=$(git describe --abbrev=0 --tags)
+          ARTIFACT="SigmaMessenger-${TAG}-${{ matrix.os }}${ext}"
+          mv SigmaMessenger-${{ matrix.os }}${ext} "${ARTIFACT}"
+          if gh release view "${TAG}" > /dev/null 2>&1; then
+            gh release upload "${TAG}" "${ARTIFACT}" --clobber
+          else
+            gh release create "${TAG}" "${ARTIFACT}" --title "${TAG}" --notes "Automated release"
+          fi
