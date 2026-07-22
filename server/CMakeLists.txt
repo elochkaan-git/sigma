@@ -44,7 +44,7 @@ target_compile_options(${SERVER_NAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4>
 )
 
-install(TARGETS SigmaMessenger
+install(TARGETS ${SERVER_NAME}
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
