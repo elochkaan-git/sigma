@@ -27,6 +27,7 @@ FetchContent_Declare(
 set(NO_WEBSOCKET ON CACHE BOOL "" FORCE)
 set(NO_TESTS ON CACHE BOOL "" FORCE)
 set(NO_EXAMPLES ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(libdatachannel)
 
 find_package(PkgConfig REQUIRED)

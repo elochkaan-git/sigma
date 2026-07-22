@@ -7,7 +7,7 @@ on:
 
 env:
   VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-  VCPKG_TRIPLET: x64-windows
+  VCPKG_TRIPLET: x64-windows-release
 
 jobs:
   build:
@@ -95,7 +95,7 @@ jobs:
       # ------------------------------------------------------------------
       - name: Configure Client (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_SERVER=ON
+        run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_SERVER=ON 
 
       - name: Configure Client (Windows)
         if: matrix.os == 'windows-latest'
@@ -140,6 +140,7 @@ jobs:
             cp install_server/server.exe dist/bin/
           fi
           cp -r install_server/* dist/
+          cp -P /usr/lib/x86_64-linux-gnu/libavcodec.so.60 install_client/bin/
 
       # Архивация
       - name: Archive (Windows)
