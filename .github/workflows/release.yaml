@@ -14,7 +14,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        os: [ubuntu-22.04, windows-latest]
+        os: [ubuntu-latest, windows-latest]
 
     runs-on: ${{ matrix.os }}
     permissions: write-all
@@ -38,7 +38,7 @@ jobs:
       # клиента (FFmpeg — через pkg-config, OpenSSL — нужен libdatachannel)
       # ------------------------------------------------------------------
       - name: Install build dependencies (Linux)
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -46,9 +46,6 @@ jobs:
             libavcodec-dev libavutil-dev libswscale-dev libswresample-dev \
             libssl-dev \
             ninja-build
-          wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
-          chmod a+x linuxdeployqt-continuous-x86_64.AppImage
-          sudo mv linuxdeployqt-continuous-x86_64.AppImage /usr/local/bin/linuxdeployqt
 
       # ------------------------------------------------------------------
       # Windows: те же зависимости через vcpkg (FFmpeg и OpenSSL не ставятся
@@ -97,7 +94,7 @@ jobs:
       # так было устроено в исходном CMakeLists — это не менялось)
       # ------------------------------------------------------------------
       - name: Configure Client (Linux)
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-latest'
         run: cmake -B build_client -S . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
 
       - name: Configure Client (Windows)
@@ -110,41 +107,11 @@ jobs:
       - name: Install Client
         run: cmake --install build_client --prefix install_client --config Release
 
-      # Развёртывание Qt-библиотек для клиента (Windows)
-      - name: Deploy Qt libs (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: cmd
-        run: |
-          windeployqt --release install_client\bin\SigmaMessenger.exe
-
-      # windeployqt трогает только Qt — довешиваем сторонние DLL (FFmpeg,
-      # OpenSSL), иначе итоговый пакет не будет самодостаточным
-      - name: Bundle third-party DLLs (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $bin = "$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\bin"
-          Copy-Item "$bin\avcodec-*.dll"    install_client\bin\ -ErrorAction SilentlyContinue
-          Copy-Item "$bin\avutil-*.dll"     install_client\bin\ -ErrorAction SilentlyContinue
-          Copy-Item "$bin\avformat-*.dll"   install_client\bin\ -ErrorAction SilentlyContinue
-          Copy-Item "$bin\swscale-*.dll"    install_client\bin\ -ErrorAction SilentlyContinue
-          Copy-Item "$bin\swresample-*.dll" install_client\bin\ -ErrorAction SilentlyContinue
-          Copy-Item "$bin\libssl-3*.dll"    install_client\bin\ -ErrorAction SilentlyContinue
-          Copy-Item "$bin\libcrypto-3*.dll" install_client\bin\ -ErrorAction SilentlyContinue
-
-      # Развёртывание для клиента (Linux) — подхватывает и Qt, и все не-Qt
-      # библиотеки (FFmpeg, OpenSSL, libsodium/libdatachannel, если это .so),
-      # поэтому пакет тоже становится самодостаточным
-      - name: Deploy Client (Linux)
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          linuxdeployqt install_client/bin/SigmaMessenger -bundle-non-qt-libs
-
       # ------------------------------------------------------------------
       # Сборка сервера
       # ------------------------------------------------------------------
       - name: Configure Server (Linux)
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-latest'
         run: cmake -B build_server -S server -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
 
       - name: Configure Server (Windows)
@@ -156,19 +123,6 @@ jobs:
 
       - name: Install Server
         run: cmake --install build_server --prefix install_server --config Release
-
-      # Развёртывание Qt-библиотек для сервера (Windows)
-      - name: Deploy Server (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: cmd
-        run: |
-          windeployqt --release install_server\server.exe
-
-      # Развёртывание для сервера (Linux)
-      - name: Deploy Server (Linux)
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          linuxdeployqt install_server/server -bundle-non-qt-libs
 
       # ------------------------------------------------------------------
       # Сборка в единый дистрибутив
@@ -193,14 +147,14 @@ jobs:
         run: 7z a SigmaMessenger-windows.zip ./dist/*
 
       - name: Archive (Linux)
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-latest'
         run: tar -czf SigmaMessenger-linux.tar.gz -C dist .
 
       # Выгрузка
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ext: ${{ matrix.os == 'ubuntu-22.04' && '.tar.gz' || '.zip' }}
+          ext: ${{ matrix.os == 'ubuntu-latest' && '.tar.gz' || '.zip' }}
         shell: bash
         run: |
           TAG=$(git describe --abbrev=0 --tags)

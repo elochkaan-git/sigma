@@ -59,5 +59,12 @@ install(TARGETS ${SERVER_NAME}
   RUNTIME DESTINATION .
   LIBRARY DESTINATION .
 )
+
+qt_generate_deploy_app_script(
+  TARGET ${SERVER_NAME}
+  OUTPUT_SCRIPT deploy_script
+  NO_UNSUPPORTED_PLATFORM_ERROR
+)
+install(SCRIPT ${deploy_script})
 #                             #
 ###############################
