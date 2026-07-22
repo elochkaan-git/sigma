@@ -46,58 +46,56 @@ bool AudioDecoder::init(int sampleRate, int channels)
     return false;
   }
 
+  // Устанавливаем параметры для декодера (запрос)
   mCodecCtx->sample_rate = sampleRate;
   if (channels == 1) {
     mCodecCtx->ch_layout = AV_CHANNEL_LAYOUT_MONO;
   } else {
     mCodecCtx->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
   }
+  mCodecCtx->sample_fmt = AV_SAMPLE_FMT_S16; // запрос, но декодер может вернуть fltp
 
-  mCodecCtx->sample_fmt = AV_SAMPLE_FMT_S16;
   if (avcodec_open2(mCodecCtx, codec, nullptr) < 0) {
     qWarning() << "Failed to open Opus decoder";
     avcodec_free_context(&mCodecCtx);
     return false;
   }
 
+  // Узнаём реальный формат и количество каналов
   AVSampleFormat actualFmt = mCodecCtx->sample_fmt;
   int actualChannels = mCodecCtx->ch_layout.nb_channels;
   qDebug() << "Decoder actual format:" << av_get_sample_fmt_name(actualFmt)
            << "channels:" << actualChannels;
 
-  if (actualFmt != AV_SAMPLE_FMT_S16 || actualChannels != channels) {
-    qDebug() << "Creating swr context to convert to S16, channels:" << channels;
-
-    AVChannelLayout inLayout = mCodecCtx->ch_layout;
-
-    AVChannelLayout outLayout;
-    if (channels == 1) {
-      mCodecCtx->ch_layout = AV_CHANNEL_LAYOUT_MONO;
-    } else {
-      mCodecCtx->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
-    }
-
-    mSwrCtx = swr_alloc();
-    if (!mSwrCtx) {
-      qWarning() << "swr_alloc failed";
-      return false;
-    }
-
-    av_opt_set_chlayout(mSwrCtx, "in_chlayout", &inLayout, 0);
-    av_opt_set_chlayout(mSwrCtx, "out_chlayout", &outLayout, 0);
-    av_opt_set_int(mSwrCtx, "in_sample_rate", mCodecCtx->sample_rate, 0);
-    av_opt_set_int(mSwrCtx, "out_sample_rate", sampleRate, 0);
-    av_opt_set_sample_fmt(mSwrCtx, "in_sample_fmt", actualFmt, 0);
-    av_opt_set_sample_fmt(mSwrCtx, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
-
-    if (swr_init(mSwrCtx) < 0) {
-      qWarning() << "swr_init failed";
-      swr_free(&mSwrCtx);
-      mSwrCtx = nullptr;
-      return false;
-    }
-    qDebug() << "swr initialized successfully";
+  // Всегда создаём swr для приведения к S16 и нужному числу каналов
+  AVChannelLayout inLayout = mCodecCtx->ch_layout;
+  AVChannelLayout outLayout;
+  if (mChannels == 1) {
+      outLayout = AV_CHANNEL_LAYOUT_MONO;
+  } else {
+      outLayout = AV_CHANNEL_LAYOUT_STEREO;
   }
+
+  mSwrCtx = swr_alloc();
+  if (!mSwrCtx) {
+    qWarning() << "swr_alloc failed";
+    return false;
+  }
+
+  av_opt_set_chlayout(mSwrCtx, "in_chlayout", &inLayout, 0);
+  av_opt_set_chlayout(mSwrCtx, "out_chlayout", &outLayout, 0);
+  av_opt_set_int(mSwrCtx, "in_sample_rate", mCodecCtx->sample_rate, 0);
+  av_opt_set_int(mSwrCtx, "out_sample_rate", mSampleRate, 0);
+  av_opt_set_sample_fmt(mSwrCtx, "in_sample_fmt", actualFmt, 0);
+  av_opt_set_sample_fmt(mSwrCtx, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+
+  if (swr_init(mSwrCtx) < 0) {
+    qWarning() << "swr_init failed";
+    swr_free(&mSwrCtx);
+    mSwrCtx = nullptr;
+    return false;
+  }
+  qDebug() << "swr initialized successfully";
 
   mFrame = av_frame_alloc();
   mPacket = av_packet_alloc();
@@ -145,12 +143,8 @@ void AudioDecoder::decode(const QByteArray& encodedFrame)
       }
       av_free(outBuffer[0]);
     } else {
-      // Без конвертации (предполагаем S16 упакованный)
-      int dataSize = av_samples_get_buffer_size(nullptr,
-                                                mFrame->ch_layout.nb_channels,
-                                                mFrame->nb_samples,
-                                                AV_SAMPLE_FMT_S16, 1);
-      pcm = QByteArray(reinterpret_cast<const char*>(mFrame->data[0]), dataSize);
+      // Не должно происходить, т.к. swr всегда создаётся, но на всякий случай
+      qWarning() << "No swr context, but format mismatch?";
     }
 
     if (!pcm.isEmpty()) {
