@@ -95,59 +95,36 @@ ClientController::ClientController(QObject *parent)
     call_manager_.initialize();
     m_remoteVideoProvider = new VideoImageProvider(this);
     m_localVideoProvider = new VideoImageProvider(this);
+    m_audioOutput = new AudioOutput(this);
+    if (!m_audioOutput->init(48000, 1)) {
+        qWarning() << "Failed to init audio output";
+    }
 
     connect(&call_manager_, &CallManager::remoteVideoFrameReady,
             this, [this](const QImage& img) {
                 qDebug() << "remoteVideoFrameReady, image size:" << img.size();
                 m_remoteVideoProvider->updateFrame(img);
+                ++m_remoteVideoVersion;
+                emit remoteVideoVersionChanged();
             });
+
     connect(&call_manager_, &CallManager::localVideoFrameReady,
             this, [this](const QImage& img) {
                 qDebug() << "localVideoFrameReady, image size:" << img.size();
                 m_localVideoProvider->updateFrame(img);
+                ++m_localVideoVersion;
+                emit localVideoVersionChanged();
             });
 
-    QAudioFormat format;
-    format.setSampleRate(48000);
-    format.setChannelCount(1);
-    format.setSampleFormat(QAudioFormat::Int16);
-    
-    m_audioBuffer = new QBuffer(this);
-    m_audioBuffer->open(QIODevice::ReadWrite);
-    
-    m_audioSink = new QAudioSink(format, this);
-    m_audioSink->start(m_audioBuffer);
-
     connect(&call_manager_, &CallManager::decodedAudioReady,
-            this, [this](const QByteArray& pcmData, int, int) {
-        qDebug() << "decodedAudioReady, PCM size:" << pcmData.size();
-        if (!m_audioSink) { qWarning() << "audio sink null"; return; }
-        if (m_audioSink->state() == QAudio::StoppedState) {
-            qDebug() << "Starting audio sink";
-            m_audioSink->start(m_audioBuffer);
-        }
-        qDebug() << "Audio sink state:" << m_audioSink->state();
-        
-        // Пишем данные в буфер — QAudioSink сам прочитает их и воспроизведёт
-        m_audioBuffer->write(pcmData);
-        
-        // Если буфер переполнился — можно сбросить или подождать
-        if (m_audioBuffer->size() > m_audioSink->bufferSize() * 2) {
-            // можно сделать seek(0) и перезаписать, но лучше использовать кольцевой буфер
-        }
-    });
-    connect(&call_manager_, &CallManager::callClosed, this, [this]() {
-        if (m_audioSink) {
-            m_audioSink->stop();
-            m_audioSink->reset();
-        }
-    });
-    connect(&call_manager_, &CallManager::callFailed, this, [this](const QString&) {
-        if (m_audioSink) {
-            m_audioSink->stop();
-            m_audioSink->reset();
-        }
-    });
+            this, [this](const QByteArray& pcmData, int sampleRate, int channels) {
+                qDebug() << "decodedAudioReady, PCM size:" << pcmData.size()
+                        << "sampleRate:" << sampleRate << "channels:" << channels;
+                m_audioOutput->writePCM(pcmData);
+            });
+
+    connect(&call_manager_, &CallManager::callClosed, m_audioOutput, &AudioOutput::reset);
+    connect(&call_manager_, &CallManager::callFailed, m_audioOutput, &AudioOutput::reset);
 }
 
 void ClientController::setAvatarProvider(AvatarImageProvider *avatarProvider)

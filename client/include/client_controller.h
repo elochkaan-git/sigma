@@ -5,6 +5,7 @@
 #include <QVariantList>
 #include <QTimer>
 #include <QUuid>
+#include "audio_output.h"
 #include "transport.h"
 #include "auth_handler.h"
 #include "call_manager.h"
@@ -23,6 +24,8 @@ class ClientController : public QObject
     Q_PROPERTY(AuthHandler* authHandler READ authHandler CONSTANT)
     Q_PROPERTY(ChatHandler* chatHandler READ chatHandler CONSTANT)
     Q_PROPERTY(CallManager* callManager READ callManager CONSTANT)
+    Q_PROPERTY(int remoteVideoVersion READ remoteVideoVersion NOTIFY remoteVideoVersionChanged)
+    Q_PROPERTY(int localVideoVersion READ localVideoVersion NOTIFY localVideoVersionChanged)
 
 public:
     explicit ClientController(QObject *parent = nullptr);
@@ -35,6 +38,8 @@ public:
     void setAvatarProvider(AvatarImageProvider* avatarProvider);
     VideoImageProvider* remoteVideoProvider();
     VideoImageProvider* localVideoProvider();
+    int remoteVideoVersion() const { return m_remoteVideoVersion; }
+    int localVideoVersion() const { return m_localVideoVersion; }
 
     Q_INVOKABLE QVariantList loadServersFromCsv(const QString &csvPath = QString());
     Q_INVOKABLE void addServer(const QString &name, const QString &url);
@@ -66,6 +71,8 @@ signals:
     void serverSelected(const QString &url);
     void serverDisconected();
     void loadFromCSVEnded();
+    void remoteVideoVersionChanged();
+    void localVideoVersionChanged();
 
 private slots:
     void updateCSV();
@@ -101,8 +108,9 @@ private:
 
     VideoImageProvider* m_remoteVideoProvider = nullptr;
     VideoImageProvider* m_localVideoProvider = nullptr;
-    QAudioSink* m_audioSink = nullptr;
-    QBuffer* m_audioBuffer = nullptr;
+    AudioOutput* m_audioOutput = nullptr;
+    int m_remoteVideoVersion = 0;
+    int m_localVideoVersion = 0;
 
     void handleError(const wire::Error& error);
 };

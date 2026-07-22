@@ -13,6 +13,7 @@ public:
     {}
 
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override {
+        qDebug() << "VideoImageProvider::requestImage called with id:" << id;
         QMutexLocker locker(&m_mutex);
         if (size) *size = m_image.size();
         if (!m_image.isNull() && requestedSize.isValid()) {

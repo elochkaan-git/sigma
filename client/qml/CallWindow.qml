@@ -194,7 +194,8 @@ Window {
                     id: remoteVideo
                     anchors.fill: parent
                     fillMode: Image.PreserveAspectCrop
-                    source: "image://remoteVideo/"
+                    cache: false  // отключаем кеширование на всякий случай
+                    source: "image://remoteVideo/?" + clientController.remoteVideoVersion
                 }
 
                 // Локальное превью
@@ -212,9 +213,11 @@ Window {
 
                     Image {
                         id: localVideo
-                        anchors.fill: parent
-                        fillMode: Image.PreserveAspectCrop
-                        source: "image://localVideo/"
+                        width: 100
+                        height: 140
+                        // ...
+                        cache: false
+                        source: "image://localVideo/?" + clientController.localVideoVersion
                     }
                 }
             }

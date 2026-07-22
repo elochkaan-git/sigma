@@ -242,6 +242,7 @@ WebRtcWrapper::handleRemoteSdp(const wire::SdpResponse& response)
     rtc::Description description(response.sdp.toStdString());
     bool isOffer = description.type() == rtc::Description::Type::Offer;
     qInfo() << "Received remote SDP:" << (isOffer ? "Offer" : "Answer");
+    qInfo() << "Remote SDP:\n" << response.sdp;
 
     mPeerConnection->setRemoteDescription(description);
 
@@ -379,6 +380,7 @@ WebRtcWrapper::createPeerConnection()
   qInfo() << "Creating PeerConnection";
   mPeerConnection = std::make_shared<rtc::PeerConnection>(mConfiguration);
 
+  qInfo() << "Creating PeerConnection, video enabled:" << mVideoEnabled;
   attachAudioTrack(); // всегда добавляем аудио
   if (mVideoEnabled) {
     attachVideoTrack(); // видео только если нужно
@@ -393,6 +395,7 @@ WebRtcWrapper::createPeerConnection()
     QString typeStr = (description.type() == rtc::Description::Type::Offer) ? "Offer" : "Answer";
     qInfo(appService) << "Generated local SDP of type:" << typeStr;
     QString sdp = QString::fromStdString(std::string(description));
+    qInfo() << "Local SDP:\n" << sdp;
     QMetaObject::invokeMethod(
       this,
       [this, sdp]() {
