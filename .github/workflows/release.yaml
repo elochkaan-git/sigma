@@ -74,7 +74,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
-          sudo apt-get install nasm
+          sudo apt-get install nasm linux-libc-dev
           $VCPKG_ROOT/vcpkg install "ffmpeg[core,avcodec,avformat,swscale,swresample]:$VCPKG_TRIPLET" "openssl:$VCPKG_TRIPLET" "pkgconf:$VCPKG_TRIPLET"
         env:
           VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
@@ -163,9 +163,9 @@ jobs:
             esac
           done
           QT_PLUGIN_DIR=$(qmake -query QT_INSTALL_PLUGINS)
-          cp -r $QT_PLUGIN_DIR/platforms dist/plugins/
-          cp -r $QT_PLUGIN_DIR/imageformats dist/plugins/
-          cp -r $QT_PLUGIN_DIR/mediaservice dist/plugins/
+          [ -d "$QT_PLUGIN_DIR/platforms" ] && cp -r $QT_PLUGIN_DIR/platforms dist/plugins/
+          [ -d "$QT_PLUGIN_DIR/imageformats" ] && cp -r $QT_PLUGIN_DIR/imageformats dist/plugins/
+          [ -d "$QT_PLUGIN_DIR/mediaservice" ] && cp -r $QT_PLUGIN_DIR/mediaservice dist/plugins/
 
       # ------------------------------------------------------------------
       # Подготовка финального архива
