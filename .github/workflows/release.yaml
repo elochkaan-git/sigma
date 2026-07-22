@@ -74,6 +74,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
+          sudo apt-get install nasm
           $VCPKG_ROOT/vcpkg install "ffmpeg[core,avcodec,avformat,swscale,swresample]:$VCPKG_TRIPLET" "openssl:$VCPKG_TRIPLET" "pkgconf:$VCPKG_TRIPLET"
         env:
           VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
