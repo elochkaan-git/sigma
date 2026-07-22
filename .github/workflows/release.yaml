@@ -54,11 +54,9 @@ jobs:
         with:
           path: |
             ${{ env.VCPKG_ROOT }}/installed
-            ${{ env.VCPKG_ROOT }}/buildtrees
             ${{ matrix.os == 'windows-latest' && '~/AppData/Local/vcpkg/archives' || '~/.cache/vcpkg/archives' }}
-          key: vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v2
+          key: vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v3
           restore-keys: |
-            vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v2
             vcpkg-${{ runner.os }}-
 
       # ------------------------------------------------------------------
@@ -120,7 +118,9 @@ jobs:
         run: cmake --build build_client --config Release
 
       - name: Install Client
-        run: cmake --install build_client --prefix "${{ github.workspace }}/install_client" --config Release
+        run: |
+          cmake --install build_client --prefix "${{ github.workspace }}/install_client" --config Release
+          ls -R "${{ github.workspace }}/install_client/bin"
 
       # ------------------------------------------------------------------
       # Сборка сервера
@@ -146,7 +146,6 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          windeployqt "$env:github_workspace\install_client\bin\SigmaMessenger.exe" --no-system-d3d-compiler
           windeployqt "$env:github_workspace\install_server\bin\server.exe" --no-quick-import --no-system-d3d-compiler
 
       - name: Copy vcpkg DLLs (Windows)
@@ -162,7 +161,7 @@ jobs:
         run: |
           set +e
           mkdir -p dist/bin dist/plugins
-          cp install_client/bin/SigmaMessenger dist/bin/
+          cp install_client/bin/. dist/bin/
           [ -f install_server/bin/server ] && cp install_server/bin/server dist/bin/
           ldd dist/bin/SigmaMessenger | grep "=> /" | awk '{print $3}' | while read lib; do
             case "$lib" in
