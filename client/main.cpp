@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include "client_controller.h" // Подключаем наш контроллер
+#include "avatar_image_provider.h"
 
 
 
@@ -14,6 +15,11 @@ int main(int argc, char *argv[])
     ClientController clientController;
 
     QQmlApplicationEngine engine;
+    AvatarImageProvider* avatarProvider = new AvatarImageProvider();
+
+    engine.addImageProvider(QLatin1String("avatars"), avatarProvider);
+    clientController.setAvatarProvider(avatarProvider);
+
 
     // 2. Внедряем его в корневой контекст QML под именем "clientController"
     engine.rootContext()->setContextProperty("clientController", &clientController);

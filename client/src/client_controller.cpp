@@ -8,6 +8,8 @@
 #include <QStringList>
 #include <QTimer>
 #include <QDebug>
+#include <QImage>
+#include <QBuffer>
 
 namespace {
 QString resolveServersCsvPath(const QString &requestedPath)
@@ -63,6 +65,7 @@ ClientController::ClientController(QObject *parent)
 {
     // updateCSV вызывается только при добавлении/удалении/редактировании
     connect(this, &ClientController::serversListChanged, this, &ClientController::updateCSV);
+    connect(this, &ClientController::loadFromCSVEnded, this, &ClientController::onLoadFromCSVEnded);
 
     pingTimer = new QTimer(this);
     connect(pingTimer, &QTimer::timeout, this, &ClientController::pingAllServers);
@@ -81,6 +84,12 @@ ClientController::ClientController(QObject *parent)
 
     connect(&auth_handler_, &AuthHandler::friendsChanged, 
             &chat_handler_, &ChatHandler::updateChatsList);
+}
+
+void ClientController::setAvatarProvider(AvatarImageProvider *avatarProvider)
+{
+    m_avatarProvider = avatarProvider;
+    auth_handler_.setAvatarProvider(avatarProvider);
 }
 
 QVariantList ClientController::loadServersFromCsv(const QString &csvPath)
@@ -121,6 +130,7 @@ QVariantList ClientController::loadServersFromCsv(const QString &csvPath)
 
     serversList = servers; // Сохраняем список серверов в свойство класса
     emit serversStatusChanged(); // Уведомляем QML, что список серверов обновился
+    emit loadFromCSVEnded();
 
     return servers;
 }
@@ -283,7 +293,6 @@ void ClientController::pingAllServers()
     }
 }
 
-
 void ClientController::handleTransportResponse(const Response &response)
 {
     std::visit(overloaded{
@@ -303,6 +312,7 @@ void ClientController::handleTransportResponse(const Response &response)
         [this](const wire::RejectFriendRequestResponse& r)   { auth_handler_.handleRejectFriendRequest(r); },
         [this](const wire::RemoveFriendResponse& r)          { auth_handler_.handleRemoveFriend(r); },
         [this](const wire::GetOnlineUsersResponse& r)        { auth_handler_.handleGetOnlineUsers(r);},
+        [this](const wire::SetAvatarResponse& r)             { auth_handler_.handleSetAvatar(r);},
         
         // 3. Модуль обмена сообщениями (Чаты)
         [this](const wire::SendMessageResponse& r) { chat_handler_.handleSendMessage(r); },
@@ -331,6 +341,11 @@ void ClientController::handleTransportResponse(const Response &response)
         // [this](const wire::GetServerStatsResponse& r)     { handleGetServerStats(r); },
         // [this](const wire::GetTurnCredentialsResponse& r) { handleGetTurnCredentials(r); },
     }, response);
+}
+
+void ClientController::onLoadFromCSVEnded()
+{
+    pingAllServers();
 }
 
 void ClientController::onLoginSuccess(unsigned int userId)
@@ -363,6 +378,34 @@ Q_INVOKABLE void ClientController::deleteFriend(unsigned int userId)
 Q_INVOKABLE void ClientController::updateOnlineUsers()
 {
     m_transport->sendCommand(wire::GetOnlineUsers{});
+}
+
+Q_INVOKABLE void ClientController::setAvatarRequest(const QString &avatarFilePath)
+{
+    QUrl url(avatarFilePath);
+    QString localPath = url.isLocalFile() ? url.toLocalFile() : avatarFilePath;
+
+    // 1. Загружаем изображение через QImage
+    QImage img(localPath);
+    if (img.isNull()) {
+        qWarning() << "Не удалось загрузить или распознать изображение:" << localPath;
+        return;
+    }
+
+    // 2. Уменьшаем размер аватарки (например, макс. 256x256), сохраняя пропорции
+    QImage scaledImg = img.scaled(256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+    // 3. Сохраняем в байтовый массив как PNG
+    QByteArray ba;
+    QBuffer buffer(&ba);
+    buffer.open(QIODevice::WriteOnly);
+    scaledImg.save(&buffer, "PNG");
+
+    // 4. Кодируем в Base64 без символов переноса строк
+    QString base64Image = QString::fromLatin1(ba.toBase64());
+
+    // Отправляем сжатый и валидный PNG
+    m_transport->sendCommand(wire::SetAvatar{base64Image});
 }
 
 void ClientController::sendMessagetoUser(unsigned int userId, const QString &message)

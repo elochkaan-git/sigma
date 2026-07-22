@@ -6,6 +6,7 @@
 #include "commands.h"
 #include "responses.h"
 #include "structures.h"
+#include "avatar_image_provider.h"
 
 class AuthHandler : public QObject {
     Q_OBJECT
@@ -16,9 +17,14 @@ class AuthHandler : public QObject {
     Q_PROPERTY(QVariantList incomingRequests READ incomingRequests NOTIFY incomingRequestsChanged)
     Q_PROPERTY(QVariantList outgoingRequests READ outgoingRequests NOTIFY outgoingRequestsChanged)
     Q_PROPERTY(QVariantList onlineUsers READ onlineUsers NOTIFY onlineUsersChanged)
+    Q_PROPERTY(QString userAvatar READ userAvatar NOTIFY userAvatarChanged)
 
 public:
     explicit AuthHandler(QObject *parent = nullptr) : QObject(parent) {}
+
+    void setAvatarProvider(AvatarImageProvider* avatarProvider){
+        m_avatarProvider = avatarProvider;
+    }
 
     
     void handleRegister(const wire::RegisterUserResponse& r);
@@ -33,6 +39,7 @@ public:
     void handleAcceptFriendRequest(const wire::AcceptFriendRequestResponse& r);
     void handleRejectFriendRequest(const wire::RejectFriendRequestResponse& r);
     void handleRemoveFriend(const wire::RemoveFriendResponse& r);
+    void handleSetAvatar(const wire::SetAvatarResponse& r);
     
 
     Q_INVOKABLE unsigned int getUserId() { return m_userId; }
@@ -40,6 +47,7 @@ public:
     QVariantList incomingRequests() const { return m_incomingRequests; }
     QVariantList outgoingRequests() const { return m_outgoingRequests; }
     QVariantList onlineUsers() const { return m_onlineUsers; }
+    QString userAvatar() const { return m_userAvatar; }
 
 signals:
     void registerSuccess();
@@ -49,11 +57,13 @@ signals:
     void acceptFriend();
     void rejectFriend();
     void friendDelete();
+    void setAvatarSuccess();
 
     void friendsChanged();
     void incomingRequestsChanged();
     void outgoingRequestsChanged();
     void onlineUsersChanged();
+    void userAvatarChanged();
     
 
 private:
@@ -61,8 +71,10 @@ private:
 
     bool m_loggedIn = false;
     unsigned int m_userId;
+    QString m_userAvatar;
     QVariantList m_friends;
     QVariantList m_incomingRequests;
     QVariantList m_outgoingRequests;
     QVariantList m_onlineUsers;
+    AvatarImageProvider* m_avatarProvider = nullptr;
 };

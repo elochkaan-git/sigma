@@ -126,120 +126,100 @@ QtObject {
     }
 
     property Component chatTabButton: Component {
-    Button {
-        id: control
-        implicitHeight: 48
-        leftPadding: 12
-        rightPadding: 12
-        topPadding: 8
-        bottomPadding: 8
-        autoExclusive: true
+        Button {
+            id: control
+            implicitHeight: 48
+            leftPadding: 12
+            rightPadding: 12
+            topPadding: 8
+            bottomPadding: 8
+            autoExclusive: true
 
-        property bool isActive: false
+            property bool isActive: false
 
-        property string label: ""
-        property string avatarSource: "qrc:/Main/assets/person.png"
-        property bool isFriendsButton: false // Главный переключатель режима
-        
-        signal removeRequested()
-
-        Behavior on isActive {
-            ColorAnimation { duration: 150 }
-        }
-
-        contentItem: RowLayout {
-            spacing: 10
+            property string label: ""
+            onLabelChanged: control.text = label
+            property string avatarSource: "qrc:/Main/assets/person.png"
+            property bool isFriendsButton: false // Главный переключатель режима
             
-            // Аватарка
-            Item {
-                id: avatarItem
-                visible: !control.isFriendsButton
-                width: 24
-                height: 24
-                property int cornerRadius: 14
+            signal removeRequested()
 
-                Item {
-                    id: contentContainer
-                    anchors.fill: parent
-
-                    Image {
-                        id: mainImage
-                        anchors.fill: parent
-                        source: control.avatarSource
-                        fillMode: Image.PreserveAspectCrop 
-                        asynchronous: true
-                        visible: false // Скрываем, так как выводить будет MultiEffect
-                    }
-
-                    // Нативный эффект Qt 6 для скругления
-                    MultiEffect {
-                        anchors.fill: mainImage
-                        source: mainImage
-                        maskEnabled: true
-                        maskThresholdMin: 0.5
-                        // Используем скругление напрямую
-                        maskSource: ShaderEffectSource {
-                            sourceItem: Rectangle {
-                                width: avatarItem.width
-                                height: avatarItem.height
-                                radius: avatarItem.cornerRadius
-                            }
-                        }
-                    }
-                }
+            Behavior on isActive {
+                ColorAnimation { duration: 150 }
             }
 
-            Text {
-                text: control.label
-                font: root.textStyles.messageText
-                color: control.isActive ? root.colors.fg_on_accent : root.colors.fg_muted
-                elide: Text.ElideRight
-                Layout.fillWidth: true
-                verticalAlignment: Text.AlignVCenter
-                horizontalAlignment: control.isFriendsButton ? Text.AlignHCenter : Text.AlignLeft
-            }
+            contentItem: RowLayout {
+                spacing: 10
+                
+                // Аватарка
+                Image {
+                    Layout.leftMargin: 8
+                    Layout.preferredWidth: 28
+                    Layout.preferredHeight: 28
+                    sourceSize.width: 28
+                    sourceSize.height: 28
+                    clip: true
+                    fillMode: Image.PreserveAspectCrop 
+                    visible: !control.isFriendsButton
 
-            // Кнопка удаления (крестик)
-            Item {
-                // Прямая проверка: показываем только если это НЕ кнопка друзей И на неё навели мышь
-                visible: !control.isFriendsButton && control.hovered
-                Layout.preferredWidth: visible ? 18 : 0
-                Layout.preferredHeight: 18
-                opacity: visible ? 1 : 0
+                    // Важно: отключение кэша заставляет QML запрашивать провайдер каждый раз
+                    cache: false
+                    asynchronous: true 
 
-                Behavior on opacity { NumberAnimation { duration: 150 } }
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 9
-                    color: root.colors.bg_canvas_overlay
-                    border.color: root.colors.border_default
-                    border.width: 1
+                    source: control.avatarSource
                 }
 
                 Text {
-                    anchors.centerIn: parent
-                    text: "×"
-                    color: root.colors.fg_muted
-                    font: root.textStyles.system
+                    text: control.label !== "" ? control.label : control.text
+                    font: root.textStyles.messageText
+                    color: control.isActive ? root.colors.fg_on_accent : root.colors.fg_muted
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: control.isFriendsButton ? Text.AlignHCenter : Text.AlignLeft
                 }
 
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: control.removeRequested()
+                // Кнопка удаления (крестик)
+                Item {
+                    // Прямая проверка: показываем только если это НЕ кнопка друзей И на неё навели мышь
+                    visible: !control.isFriendsButton && control.hovered
+                    Layout.preferredWidth: visible ? 18 : 0
+                    Layout.preferredHeight: 18
+                    opacity: visible ? 1 : 0
+
+                    Behavior on opacity { NumberAnimation { duration: 150 } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 9
+                        color: root.colors.bg_canvas_overlay
+                        border.color: root.colors.border_default
+                        border.width: 1
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "×"
+                        color: root.colors.fg_muted
+                        font: root.textStyles.system
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: control.removeRequested()
+                    }
                 }
             }
-        }
 
-        background: Rectangle {
-            radius: 8
-            color: control.isActive ? root.colors.accent_bg :
-                   (control.hovered ? root.colors.bg_canvas_subtle : "transparent")
-            border.color: root.colors.border_default
-            border.width: control.isActive ? 0 : 1
+            background: Rectangle {
+                radius: 8
+                color: control.isActive ? root.colors.accent_bg :
+                    (control.hovered ? root.colors.bg_canvas_subtle : "transparent")
+                border.color: root.colors.border_default
+                border.width: control.isActive ? 0 : 1
 
-            Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: 150 } }
+            }
         }
     }
-}
 }

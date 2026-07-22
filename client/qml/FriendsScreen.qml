@@ -19,57 +19,64 @@ Rectangle {
         spacing: 15
 
         // ================= НАВИГАЦИЯ (ВКЛАДКИ) =================
-        RowLayout {
+        ScrollView{
             height: 60
-            Layout.fillWidth: true
-            spacing: 10
+            Layout.fillWidth:true
+            ScrollBar.vertical.policy: ScrollBar.AlwaysOff
 
-            Loader {
-                sourceComponent: style.chatTabButton
-                onLoaded: {
-                    item.label = "Все"
-                    item.isFriendsButton = true
-                    item.isActive = Qt.binding(function() { return mainStack.currentIndex === 0 })
-                    item.onClicked.connect(function() { mainStack.currentIndex = 0; clientController.updateFriendsInfo() })
+            RowLayout {
+                height: parent.avaibleHeight
+                Layout.fillWidth: true
+                spacing: 10
+
+                Loader {
+                    sourceComponent: style.chatTabButton
+                    onLoaded: {
+                        item.label = "Все"
+                        item.isFriendsButton = true
+                        item.isActive = Qt.binding(function() { return mainStack.currentIndex === 0 })
+                        item.onClicked.connect(function() { mainStack.currentIndex = 0; clientController.updateFriendsInfo() })
+                    }
                 }
-            }
-            Loader {
-                sourceComponent: style.chatTabButton
-                onLoaded: {
-                    item.label = "Входящие запросы"
-                    item.isFriendsButton = true
-                    item.isActive = Qt.binding(function() { return mainStack.currentIndex === 1 })
-                    item.onClicked.connect(function() { mainStack.currentIndex = 1; ; clientController.updateIncomingFriendsRequests() })
+                Loader {
+                    sourceComponent: style.chatTabButton
+                    onLoaded: {
+                        item.label = "Входящие запросы"
+                        item.isFriendsButton = true
+                        item.isActive = Qt.binding(function() { return mainStack.currentIndex === 1 })
+                        item.onClicked.connect(function() { mainStack.currentIndex = 1; ; clientController.updateIncomingFriendsRequests() })
+                    }
                 }
-            }
-            Loader {
-                sourceComponent: style.chatTabButton
-                onLoaded: {
-                    item.label = "Исходящие запросы"
-                    item.isFriendsButton = true
-                    item.isActive = Qt.binding(function() { return mainStack.currentIndex === 2 })
-                    item.onClicked.connect(function() { mainStack.currentIndex = 2; ; clientController.updateOutcomingFriendsRequests() })
+                Loader {
+                    sourceComponent: style.chatTabButton
+                    onLoaded: {
+                        item.label = "Исходящие запросы"
+                        item.isFriendsButton = true
+                        item.isActive = Qt.binding(function() { return mainStack.currentIndex === 2 })
+                        item.onClicked.connect(function() { mainStack.currentIndex = 2; ; clientController.updateOutcomingFriendsRequests() })
+                    }
                 }
-            }
-            Loader {
-                sourceComponent: style.chatTabButton
-                onLoaded: {
-                    item.label = "Добавить по ID"
-                    item.isFriendsButton = true
-                    item.isActive = Qt.binding(function() { return mainStack.currentIndex === 3 })
-                    item.onClicked.connect(function() { mainStack.currentIndex = 3 })
+                Loader {
+                    sourceComponent: style.chatTabButton
+                    onLoaded: {
+                        item.label = "Добавить по ID"
+                        item.isFriendsButton = true
+                        item.isActive = Qt.binding(function() { return mainStack.currentIndex === 3 })
+                        item.onClicked.connect(function() { mainStack.currentIndex = 3 })
+                    }
                 }
-            }
-            Loader {
-                sourceComponent: style.chatTabButton
-                onLoaded: {
-                    item.label = "Все кто онлайн"
-                    item.isFriendsButton = true
-                    item.isActive = Qt.binding(function() { return mainStack.currentIndex === 4 })
-                    item.onClicked.connect(function() { mainStack.currentIndex = 4; clientController.updateOnlineUsers(); })
+                Loader {
+                    sourceComponent: style.chatTabButton
+                    onLoaded: {
+                        item.label = "Все кто онлайн"
+                        item.isFriendsButton = true
+                        item.isActive = Qt.binding(function() { return mainStack.currentIndex === 4 })
+                        item.onClicked.connect(function() { mainStack.currentIndex = 4; clientController.updateOnlineUsers(); })
+                    }
                 }
             }
         }
+        
 
         // ================= ОСНОВНОЙ КОНТЕНТ (ЭКРАНЫ) =================
         StackLayout {
@@ -85,8 +92,8 @@ Rectangle {
                 clip: true
 
                 ListView {
-                    width: parent.width
-                    height: parent.height
+                    id: friendsListView
+                    anchors.fill: parent
                     spacing: 8
                     model: clientController.authHandler.friends
 
@@ -97,11 +104,11 @@ Rectangle {
                         color: "#888888"
                     }
                     delegate: Rectangle {
-                        width: parent.width
+                        width: friendsListView.width
                         height: 60
                         color: "white"
                         radius: 8
-                        border.color: friendsRoot.colors.border_default
+                        border.color: colors.border_default
 
                         RowLayout {
                             anchors.fill: parent
@@ -117,13 +124,17 @@ Rectangle {
                                 sourceSize.height: 32
                                 clip: true
                                 fillMode: Image.PreserveAspectCrop 
-                                source: modelData.avatar ? "data:image/png;base64," + modelData.avatar : "qrc:/Main/assets/person.png"
+
+                                cache: false
+
+                                source: (modelData && modelData.userId) ? "image://avatars/" + modelData.userId 
+                                    : "qrc:/Main/assets/person.png"
                             }
 
                             Text {
                                 text: modelData.login 
                                 Layout.fillWidth: true
-                                font: friendsRoot.textStyles.userName
+                                font: textStyles.userName
                             }
                             
                             Button {
@@ -159,8 +170,8 @@ Rectangle {
                 clip: true
 
                 ListView {
-                    width: parent.width
-                    height: parent.height
+                    id: incomingListView
+                    anchors.fill: parent
                     spacing: 8
                     model: clientController.authHandler.incomingRequests
 
@@ -172,7 +183,7 @@ Rectangle {
                     }
 
                     delegate: Rectangle {
-                            width: parent.width
+                            width: incomingListView.width
                             height: 60
                             color: "white"
                             radius: 8
@@ -190,8 +201,13 @@ Rectangle {
                                     sourceSize.width: 32
                                     sourceSize.height: 32
                                     clip: true
+
+                                    cache: false
+
                                     fillMode: Image.PreserveAspectCrop 
-                                    source: modelData.avatar ? "data:image/png;base64," + modelData.avatar : "qrc:/Main/assets/person.png"
+                                    source: (modelData && modelData.userId) 
+                                        ? "image://avatars/" + modelData.userId 
+                                        : "qrc:/Main/assets/person.png"
                                 }
 
                                 Text {
@@ -240,8 +256,8 @@ Rectangle {
                 clip: true
 
                 ListView {
-                    width: parent.width
-                    height: parent.height
+                    id: outgoingListView
+                    anchors.fill: parent
                     spacing: 8
                     model: clientController.authHandler.outgoingRequests
 
@@ -254,7 +270,7 @@ Rectangle {
 
                     delegate: Rectangle {
                         // Внутри ListView мы управляем шириной через width, а не Layout!
-                        width: parent.width 
+                        width: outgoingListView.width
                         height: 60
                         color: "white"
                         radius: 8
@@ -272,8 +288,13 @@ Rectangle {
                                 sourceSize.width: 32
                                 sourceSize.height: 32
                                 clip: true
+
+                                cache: false
+
                                 fillMode: Image.PreserveAspectCrop 
-                                source: modelData.avatar ? "data:image/png;base64," + modelData.avatar : "qrc:/Main/assets/person.png"
+                                source: (modelData && modelData.userId) 
+                                    ? "image://avatars/" + modelData.userId 
+                                    : "qrc:/Main/assets/person.png"
                             }
 
                             Text {
@@ -372,8 +393,13 @@ Rectangle {
                                 sourceSize.height: 32
                                 clip: true
                                 fillMode: Image.PreserveAspectCrop 
+                                
+                                cache: false
+
                                 // modelData работает корректно, когда в QVariantList лежат QVariantMap
-                                source: modelData.avatar && modelData.avatar !== "" ? "data:image/png;base64," + modelData.avatar : "qrc:/Main/assets/person.png"
+                                source: (modelData && modelData.userId) 
+                                    ? "image://avatars/" + modelData.userId 
+                                    : "qrc:/Main/assets/person.png"
                             }
 
                             Text {

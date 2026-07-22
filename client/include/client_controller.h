@@ -8,6 +8,7 @@
 #include "auth_handler.h"
 #include "call_manager.h"
 #include "chat_handler.h"
+#include "avatar_image_provider.h"
 
 class ClientController : public QObject
 {
@@ -26,6 +27,7 @@ public:
     AuthHandler* authHandler() { return &auth_handler_; }
     ChatHandler* chatHandler() { return &chat_handler_; }
     CallManager* callManager() { return &call_manager_; }
+    void setAvatarProvider(AvatarImageProvider* avatarProvider);
 
     Q_INVOKABLE QVariantList loadServersFromCsv(const QString &csvPath = QString());
     Q_INVOKABLE void addServer(const QString &name, const QString &url);
@@ -44,18 +46,21 @@ public:
     Q_INVOKABLE void updateOutcomingFriendsRequests();
     Q_INVOKABLE void deleteFriend(unsigned int userId);
     Q_INVOKABLE void updateOnlineUsers();
-    Q_INVOKABLE 
+    Q_INVOKABLE void setAvatarRequest(const QString& avatarFilePath);
 
 signals:
     void serversStatusChanged(); // Сигнал для уведомления об изменении статуса серверов
     void serversListChanged(); // Сигнал для уведомления об изменении списка серверов
     void serverSelected(const QString &url);
     void serverDisconected();
+    void loadFromCSVEnded();
 
 private slots:
     void updateCSV();
     void pingAllServers();
     void handleTransportResponse(const Response& response);
+    void onLoadFromCSVEnded();
+    
     
 public slots:
     void updateServerStatus(const QString &url, bool isOnline, int usersCount, int onlineCount);
@@ -75,6 +80,7 @@ private:
 
     QTimer *pingTimer = nullptr; // Таймер для периодического пинга серверов
     Transport* m_transport = nullptr;
+    AvatarImageProvider* m_avatarProvider = nullptr;
 
     AuthHandler auth_handler_;
     ChatHandler chat_handler_;

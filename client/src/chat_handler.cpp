@@ -47,14 +47,14 @@ void ChatHandler::initDatabaseForUser(unsigned int currentUserId, const QString 
     // Создание таблицы сообщений, если её ещё нет
     QSqlQuery query(m_db);
     query.exec("CREATE TABLE IF NOT EXISTS messages ("
-               "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-               "sender_id INTEGER NOT NULL, "
-               "receiver_id INTEGER NOT NULL, "
-               "peer_id INTEGER NOT NULL, "
-               "content TEXT NOT NULL, "
-               "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, "
-               "is_outgoing BOOLEAN NOT NULL"
-               ");");
+           "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+           "sender_id INTEGER NOT NULL, "
+           "receiver_id INTEGER NOT NULL, "
+           "peer_id INTEGER NOT NULL, "
+           "content TEXT NOT NULL, "
+           "timestamp DATETIME DEFAULT (datetime('now', 'localtime')), "
+           "is_outgoing BOOLEAN NOT NULL"
+           ");");
 
     query.exec("CREATE INDEX IF NOT EXISTS idx_peer_id ON messages(peer_id);");
     qDebug() << "Путь к БД:" << dbPath;
