@@ -188,11 +188,10 @@ WebRtcWrapper::handleCallAccepted(const wire::CallAcceptedResponse& response)
   }
 
   mState = CallState::Connecting;
-
   qInfo(appService) << "Remote accepted call. Creating offer";
 
   try {
-    mPeerConnection->setLocalDescription();
+    mPeerConnection->setLocalDescription(rtc::Description::Type::Offer);
   } catch (const std::exception& e) {
     qCritical(appService) << "Failed to create local description:" << e.what();
     emit callFailed(QString("Failed to create offer: %1").arg(e.what()));
@@ -242,13 +241,20 @@ WebRtcWrapper::handleRemoteSdp(const wire::SdpResponse& response)
   try {
     rtc::Description description(response.sdp.toStdString());
     bool isOffer = description.type() == rtc::Description::Type::Offer;
-    qInfo(appService) << "Received remote SDP:" << (isOffer ? "Offer" : "Answer");
+    qInfo() << "Received remote SDP:" << (isOffer ? "Offer" : "Answer");
 
     mPeerConnection->setRemoteDescription(description);
 
     if (!mPeerConnection->localDescription()) {
       qInfo(appService) << "No local description yet, creating it now";
-      mPeerConnection->setLocalDescription();
+      if (isOffer) {
+        // Мы получили Offer, значит мы должны ответить Answer
+        mPeerConnection->setLocalDescription(rtc::Description::Type::Answer);
+      } else {
+        qWarning() << "Received Answer but no local description; this is abnormal";
+        emit callFailed("Received Answer but no local description");
+        cleanupCall();
+      }
     }
   } catch (const std::exception& e) {
     qCritical(appService) << "Failed to process SDP:" << e.what();
