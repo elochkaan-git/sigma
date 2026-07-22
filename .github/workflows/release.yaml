@@ -127,14 +127,14 @@ jobs:
         shell: pwsh
         run: |
           windeployqt "$env:github_workspace\install_client\bin\SigmaMessenger.exe" --no-quick-import --no-system-d3d-compiler
-          windeployqt "$env:github_workspace\install_server\server.exe" --no-quick-import --no-system-d3d-compiler
+          windeployqt "$env:github_workspace\install_server\bin\server.exe" --no-quick-import --no-system-d3d-compiler
 
       - name: Copy vcpkg DLLs (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           Copy-Item "$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\bin\*.dll" -Destination "$env:github_workspace\install_client\bin\" -Force
-          Copy-Item "$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\bin\*.dll" -Destination "$env:github_workspace\install_server\" -Force -ErrorAction SilentlyContinue
+          Copy-Item "$env:VCPKG_ROOT\installed\$env:VCPKG_TRIPLET\bin\*.dll" -Destination "$env:github_workspace\install_server\bin\" -Force -ErrorAction SilentlyContinue
 
       - name: Bundle dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -142,7 +142,7 @@ jobs:
           mkdir -p dist/bin dist/plugins
 
           cp install_client/bin/SigmaMessenger dist/bin/
-          [ -f install_server/server ] && cp install_server/server dist/bin/
+          [ -f install_server/bin/server ] && cp install_server/bin/server dist/bin/
 
           ldd dist/bin/SigmaMessenger | grep "=> /" | awk '{print $3}' | while read lib; do
             case "$lib" in
@@ -154,7 +154,7 @@ jobs:
           QT_PLUGIN_DIR=$(qmake -query QT_INSTALL_PLUGINS)
           cp -r $QT_PLUGIN_DIR/platforms dist/plugins/
           cp -r $QT_PLUGIN_DIR/imageformats dist/plugins/
-          cp -r $QT_PLUGIN_DIR/mediaservice dist/plugins/  # если используется мультимедиа
+          cp -r $QT_PLUGIN_DIR/mediaservice dist/plugins/ 
 
       # ------------------------------------------------------------------
       # Подготовка финального архива
@@ -165,7 +165,7 @@ jobs:
         run: |
           mkdir dist
           Copy-Item -Recurse install_client\bin dist\bin
-          Copy-Item install_server\server.exe dist\bin\ -ErrorAction SilentlyContinue
+          Copy-Item install_server\bin\* dist\bin\ -ErrorAction SilentlyContinue
           Copy-Item install_client\* dist\ -Recurse -ErrorAction SilentlyContinue
 
       # ------------------------------------------------------------------
