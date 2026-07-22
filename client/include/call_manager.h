@@ -73,6 +73,7 @@ public:
   void handleCallEnded(const wire::CallEndedResponse& r);
   void handleSdp(const wire::SdpResponse& r);
   void handleIceCandidate(const wire::IceCandidateResponse& r);
+  void handleGetTurnCredentials(const QString& ip, const wire::GetTurnCredentialsResponse& r);
 
 signals:
   void callStateChanged(CallState newState);

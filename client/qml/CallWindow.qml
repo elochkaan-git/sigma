@@ -5,101 +5,81 @@ import QtQuick.Layouts
 Window {
     id: callWindowRoot
 
-    // Окно можно свободно перемещать, оно не блокирует главный интерфейс
-    width: 380
-    height: 540
+    width: 400
+    height: 560
     minimumWidth: 320
     minimumHeight: 480
-    title: "Звонок — " + callerName
+    title: "Звонок — " + (callerName || "Пользователь")
 
-    // Делаем окно поверх всех окон, если нужно (по желанию можно убрать)
-    // flags: Qt.Window | Qt.WindowStaysOnTopHint
-
-    property var style: Style {}
-    property var colors: style.colors ? style.colors : {
-        "bg_canvas": "#18222D",
-        "fg_default": "#FFFFFF",
-        "danger": "#E53935",
-        "success": "#4CAF50"
-    }
-
-    property string callerName: "Пользователь"
+    property string callerName: ""
     property int callerId: -1
 
-    // Доступ к CallManager через clientController
-    readonly property var callManager: clientController.callManager
+    readonly property var callManager: clientController ? clientController.callManager : null
     readonly property int currentState: callManager ? callManager.callState : 0
     readonly property bool isVideo: callManager ? callManager.isVideoEnabled : false
 
-    color: colors.bg_canvas
-
-    // Окно автоматически открывается, если звонок в процессе, и закрывается, если Idle (0)
     visible: currentState !== 0
-
     onClosing: (close) => {
-        // Если пользователь жмет на 'X' самого окна ОС во время разговора — сбрасываем звонок
         if (currentState !== 0) {
             clientController.endCallRequest()
         }
     }
-    
-    Item{
-        // --- Переключение UI в зависимости от CallState из C++ ---
-        states: [
-            State {
-                name: "INCOMING"
-                when: callWindowRoot.currentState === 1 // CallState::Incoming
-                PropertyChanges { target: incomingView; visible: true }
-                PropertyChanges { target: outgoingView; visible: false }
-                PropertyChanges { target: activeCallView; visible: false }
-            },
-            State {
-                name: "OUTGOING"
-                when: callWindowRoot.currentState === 2 // CallState::Outgoing
-                PropertyChanges { target: incomingView; visible: false }
-                PropertyChanges { target: outgoingView; visible: true }
-                PropertyChanges { target: activeCallView; visible: false }
-            },
-            State {
-                name: "CONNECTED"
-                when: callWindowRoot.currentState === 3 // CallState::Connected
-                PropertyChanges { target: incomingView; visible: false }
-                PropertyChanges { target: outgoingView; visible: false }
-                PropertyChanges { target: activeCallView; visible: true }
-            }
-        ]
 
-        // ========================================================
-        // 1. РЕЖИМ: Входящий звонок (Принять / Отклонить)
-        // ========================================================
+    color: "#1A2332"
+
+    // Компонент круглой аватарки
+    Component {
+        id: avatarComponent
+        Rectangle {
+            width: 100
+            height: 100
+            radius: 50
+            clip: true
+            color: "#2A3A4A" // цвет фона, если изображение не загрузится
+            Image {
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectCrop
+                source: (callerId > 0) ? "image://avatars/" + callerId : "qrc:/Main/assets/person.png"
+            }
+        }
+    }
+
+    StackLayout {
+        id: stack
+        anchors.fill: parent
+        anchors.margins: 24
+        currentIndex: {
+            if (currentState === 1) return 0      // Incoming
+            if (currentState === 2) return 1      // Outgoing
+            if (currentState === 3) return 2      // Connected
+            return -1
+        }
+
+        // ------------------------------------------------------------
+        // 1. Входящий звонок
+        // ------------------------------------------------------------
         ColumnLayout {
             id: incomingView
-            anchors.fill: parent
-            anchors.margins: 24
             spacing: 16
-            visible: false
 
-            Item { Layout.fillHeight: true }
-
-            Image {
+            Loader {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: 96
-                Layout.preferredHeight: 96
-                source: (callerId > 0) ? "image://avatars/" + callerId : "qrc:/Main/assets/person.png"
-                fillMode: Image.PreserveAspectCrop
+                Layout.preferredWidth: 100
+                Layout.preferredHeight: 100
+                sourceComponent: avatarComponent
             }
 
             Text {
-                text: callWindowRoot.callerName !== "" ? callWindowRoot.callerName : "Входящий вызов"
-                color: colors.fg_default
-                font.pixelSize: 20
+                text: callerName || "Входящий вызов"
+                color: "#FFFFFF"
+                font.pixelSize: 22
                 font.bold: true
                 Layout.alignment: Qt.AlignHCenter
             }
 
             Text {
                 text: isVideo ? "Входящий видеозвонок..." : "Входящий аудиозвонок..."
-                color: "#A0A0A0"
+                color: "#AAB8C9"
                 font.pixelSize: 14
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -112,53 +92,67 @@ Window {
 
                 Button {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 48
-                    background: Rectangle { color: colors.danger; radius: 24 }
-                    contentItem: Text { text: "Отклонить"; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: true }
+                    Layout.preferredHeight: 50
+                    background: Rectangle {
+                        color: "#E53935"
+                        radius: 25
+                    }
+                    contentItem: Text {
+                        text: "Отклонить"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: 16
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
                     onClicked: clientController.rejectCallRequest()
                 }
 
                 Button {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 48
-                    background: Rectangle { color: colors.success; radius: 24 }
-                    contentItem: Text { text: "Принять"; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: true }
+                    Layout.preferredHeight: 50
+                    background: Rectangle {
+                        color: "#43A047"
+                        radius: 25
+                    }
+                    contentItem: Text {
+                        text: "Принять"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: 16
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
                     onClicked: clientController.acceptCallRequest()
                 }
             }
         }
 
-        // ========================================================
-        // 2. РЕЖИМ: Ожидание принятия (Исходящий вызов)
-        // ========================================================
+        // ------------------------------------------------------------
+        // 2. Исходящий звонок
+        // ------------------------------------------------------------
         ColumnLayout {
             id: outgoingView
-            anchors.fill: parent
-            anchors.margins: 24
             spacing: 16
-            visible: false
 
-            Item { Layout.fillHeight: true }
-
-            Image {
+            Loader {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: 96
-                Layout.preferredHeight: 96
-                source: (callerId > 0) ? "image://avatars/" + callerId : "qrc:/Main/assets/person.png"
-                fillMode: Image.PreserveAspectCrop
+                Layout.preferredWidth: 100
+                Layout.preferredHeight: 100
+                sourceComponent: avatarComponent
             }
 
             Text {
-                text: callWindowRoot.callerName
-                color: colors.fg_default
-                font.pixelSize: 20
+                text: callerName || "Вызов..."
+                color: "#FFFFFF"
+                font.pixelSize: 22
                 font.bold: true
                 Layout.alignment: Qt.AlignHCenter
             }
 
             Text {
-                text: "Вызов..."
-                color: "#A0A0A0"
+                text: "Ожидание ответа..."
+                color: "#AAB8C9"
                 font.pixelSize: 14
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -167,46 +161,53 @@ Window {
 
             Button {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 48
-                background: Rectangle { color: colors.danger; radius: 24 }
-                contentItem: Text { text: "Отмена"; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: true }
+                Layout.preferredHeight: 50
+                background: Rectangle {
+                    color: "#E53935"
+                    radius: 25
+                }
+                contentItem: Text {
+                    text: "Отменить"
+                    color: "white"
+                    font.bold: true
+                    font.pixelSize: 16
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
                 onClicked: clientController.endCallRequest()
             }
         }
 
-        // ========================================================
-        // 3. РЕЖИМ: Разговор (Аудио / Видео поток + Кнопка завершения)
-        // ========================================================
+        // ------------------------------------------------------------
+        // 3. Активный звонок
+        // ------------------------------------------------------------
         Item {
             id: activeCallView
-            anchors.fill: parent
-            visible: false
 
-            // Вариант А: Видео звонок
+            // Видео-режим
             Rectangle {
                 anchors.fill: parent
-                color: "#11111B"
+                color: "#0B1119"
                 visible: isVideo
 
-                // Экран удаленного участника
                 Image {
                     id: remoteVideo
                     anchors.fill: parent
                     fillMode: Image.PreserveAspectCrop
-                    source: "image://remoteVideo/"  // провайдер всегда вернёт последний кадр
+                    source: "image://remoteVideo/"
                 }
 
-                // Маленький превью со своей камеры в углу
+                // Локальное превью
                 Rectangle {
                     width: 100
-                    height: 130
+                    height: 140
                     radius: 8
                     color: "#222"
                     anchors.right: parent.right
                     anchors.top: parent.top
                     anchors.margins: 12
-                    border.width: 1
-                    border.color: "#444"
+                    border.width: 2
+                    border.color: "#555"
                     clip: true
 
                     Image {
@@ -218,44 +219,44 @@ Window {
                 }
             }
 
-            // Вариант Б: Аудио звонок
+            // Аудио-режим
             ColumnLayout {
                 anchors.centerIn: parent
                 spacing: 12
                 visible: !isVideo
 
-                Image {
+                Loader {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.preferredWidth: 80
                     Layout.preferredHeight: 80
-                    source: (callerId > 0) ? "image://avatars/" + callerId : "qrc:/Main/assets/person.png"
+                    sourceComponent: avatarComponent
                 }
 
                 Text {
-                    text: callWindowRoot.callerName
-                    color: colors.fg_default
-                    font.pixelSize: 18
+                    text: callerName || "Собеседник"
+                    color: "#FFFFFF"
+                    font.pixelSize: 20
                     font.bold: true
                     Layout.alignment: Qt.AlignHCenter
                 }
 
                 Text {
-                    text: "Разговор идет..."
-                    color: colors.success
+                    text: "Разговор идёт..."
+                    color: "#66BB6A"
                     font.pixelSize: 14
                     Layout.alignment: Qt.AlignHCenter
                 }
             }
 
-            // Кнопка завершения вызова внизу окна
+            // Кнопка завершения
             Rectangle {
                 anchors.bottom: parent.bottom
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottomMargin: 20
-                width: 56
-                height: 56
-                radius: 28
-                color: colors.danger
+                width: 60
+                height: 60
+                radius: 30
+                color: "#E53935"
 
                 Button {
                     anchors.fill: parent
@@ -263,7 +264,7 @@ Window {
                     contentItem: Text {
                         text: "✕"
                         color: "white"
-                        font.pixelSize: 22
+                        font.pixelSize: 28
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -271,5 +272,11 @@ Window {
                 }
             }
         }
+    }
+
+    Connections {
+        target: callManager
+        enabled: callManager !== null
+        // можно добавить обработчики по необходимости
     }
 }

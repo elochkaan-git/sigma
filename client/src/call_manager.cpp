@@ -164,6 +164,23 @@ void CallManager::handleIceCandidate(const wire::IceCandidateResponse& r)   {
   mWebRtc->handleRemoteIceCandidate(r);
 }
 
+void CallManager::handleGetTurnCredentials(const QString& ip, const wire::GetTurnCredentialsResponse& r)
+{
+  QString host = ip;
+  // FIXME: убрать хардкод
+  uint16_t port = 3478;
+
+  std::vector<rtc::IceServer> servers;
+  // STUN (без аутентификации) – тот же хост, но с префиксом stun:
+  servers.emplace_back(("stun:" + host + ":" + QString::number(port)).toStdString());
+  // TURN с аутентификацией – используем конструктор с host, port, username, password, relayType
+  servers.emplace_back(host.toStdString(), port,
+                      r.username.toStdString(), r.password.toStdString(),
+                      rtc::IceServer::RelayType::TurnUdp);
+  mWebRtc->setIceServers(servers);
+  qInfo() << "TURN credentials set for server";
+}
+
 // --- Слоты для состояния звонка ---
 void CallManager::onCallEstablished()
 {

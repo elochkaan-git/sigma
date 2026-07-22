@@ -1,4 +1,5 @@
 #include "client_controller.h"
+#include "commands.h"
 #include "transport.h"
 #include <QCoreApplication>
 #include <QDir>
@@ -248,6 +249,7 @@ Q_INVOKABLE void ClientController::setSelectedServer(const QVariant &server)
     qDebug() << "Selected server URL:" << serverUrl;
     m_transport->connectToHost(serverUrl);
     pingTimer->stop();
+    connectedToURL = serverUrl;
 }
 
 Q_INVOKABLE void ClientController::disconnectFromServer(){
@@ -397,6 +399,17 @@ void ClientController::handleTransportResponse(const Response &response)
         [this](const wire::CallEndedResponse& r)   { call_manager_.handleCallEnded(r); },
         [this](const wire::SdpResponse& r)         { call_manager_.handleSdp(r); },
         [this](const wire::IceCandidateResponse& r) { call_manager_.handleIceCandidate(r); },
+        [this](const wire::GetTurnCredentialsResponse& r) {
+            // Извлекаем IP из connectedToURL (убираем протокол и порт)
+            QString ip = connectedToURL;
+            ip.remove("ws://", Qt::CaseInsensitive);
+            ip.remove("wss://", Qt::CaseInsensitive);
+            // Обрезаем порт, если есть
+            if (ip.contains(':')) {
+                ip = ip.section(':', 0, 0);
+            }
+            call_manager_.handleGetTurnCredentials(ip, r);
+        },
 
         // Временная заглушка для ВСЕХ остальных типов
         [](const auto&) {
@@ -405,7 +418,6 @@ void ClientController::handleTransportResponse(const Response &response)
 
         // // 5. Системная статистика / Утилиты
         // [this](const wire::GetServerStatsResponse& r)     { handleGetServerStats(r); },
-        // [this](const wire::GetTurnCredentialsResponse& r) { handleGetTurnCredentials(r); },
     }, response);
 }
 
@@ -419,6 +431,7 @@ void ClientController::onLoginSuccess(unsigned int userId)
     qDebug() << "Login succeeded!";
     chat_handler_.initDatabaseForUser(userId, connectedToURL);
     this->getAllFriendsInfo();
+    m_transport->sendCommand(wire::GetTurnCredentials{});
 }
 
 void ClientController::updateFriendsInfo()
