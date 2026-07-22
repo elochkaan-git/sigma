@@ -160,17 +160,17 @@ Page {
         
         function onLoginSuccess() {
             var comp = Qt.createComponent("qrc:/Main/qml/General_window.qml");
+    
             if (comp.status === Component.Ready) {
-                
                 var newWindow = comp.createObject(null);
                 if (newWindow) {
-                    // New window is created and shown
-                    mainWindow.close(); // Close the main window (Main.qml)
+                    mainWindow.close();
                 } else {
-                    console.error("Could not create General_window.qml");
+                    console.error("Не удалось создать объект окна!");
                 }
-            } else {
-                console.error("Failed to load General_window.qml:", comp.errorString());
+            } else if (comp.status === Component.Error) {
+                // ВОТ ЗДЕСЬ QML напечатает точную строку и номер файла, из-за которого окно не создается!
+                console.error("Ошибка загрузки General_window.qml:", comp.errorString());
             }
         }
     }

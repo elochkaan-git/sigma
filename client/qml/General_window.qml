@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
+import Qt.labs.platform as Platform
 
 ApplicationWindow {
     id: root
@@ -11,36 +13,52 @@ ApplicationWindow {
     minimumHeight: 480
     title: qsTr("Sigma Messenger")
 
-    property var style: Style {}
-    property var colors: style.colors
-    property var textStyles: style.textStyles
+    Style {
+        id: globalStyle
+    }
+
+    // Псевдонимы или ссылки для удобства:
+    readonly property alias style: globalStyle
+    readonly property alias colors: globalStyle.colors
+    readonly property alias textStyles: globalStyle.textStyles
 
 
     // Свойство для хранения индекса текущего активного таба
     property int currentTabIndex: 0
 
-    function removeChat(index) {
-        if (index < 0 || index >= tabsModel.count)
-            return;
 
-        var wasActive = index === root.currentTabIndex;
-        tabsModel.remove(index);
+    function getUserName(userId, friendsList) {
+        if (!userId || Number(userId) <= 0) return "";
 
-        if (root.currentTabIndex > index) {
-            root.currentTabIndex -= 1;
-        } else if (wasActive && root.currentTabIndex >= tabsModel.count) {
-            root.currentTabIndex = Math.max(0, tabsModel.count - 1);
-        }
-    }
+        // Берем список или напрямую из свойства
+        var friends = (friendsList !== undefined && friendsList !== null) 
+                        ? friendsList 
+                        : clientController.authHandler.friends;
 
-    function getUserName(userId) {
-        var friends = clientController.authHandler.friends;
-        for (var i = 0; i < friends.length; i++) {
-            if (Number(friends[i].userId) === Number(userId)) {
-                return friends[i].login
+        // Проверяем наличие длины (работает и для JS Array, и для C++ QVariantList)
+        if (friends && typeof friends.length !== "undefined" && friends.length > 0) {
+            for (var i = 0; i < friends.length; i++) {
+                var f = friends[i];
+                
+                // Сравниваем ID
+                if (f && Number(f.userId) === Number(userId)) {
+                    return f.login ? String(f.login) : ("Пользователь #" + userId);
+                }
             }
         }
-        return "Пользователь #" + userId; // Запасной вариант, если собеседник не в друзьях
+
+        // То же самое для списка чатов
+        var chats = clientController.chatHandler.chatsList;
+        if (chats && typeof chats.length !== "undefined" && chats.length > 0) {
+            for (var j = 0; j < chats.length; j++) {
+                var c = chats[j];
+                if (c && Number(c.userId) === Number(userId)) {
+                    if (c.login) return String(c.login);
+                }
+            }
+        }
+
+        return "Пользователь #" + userId;
     }
 
     SplitView {
@@ -61,7 +79,7 @@ ApplicationWindow {
                 width: parent.width
                 clip: true
                 anchors.top: parent.top
-                anchors.bottom: userIdText.top
+                anchors.bottom: bottomSection.top
                 anchors.bottomMargin: 8 // Отступ между скроллом и текстом
                 anchors.horizontalCenter: parent.horizontalCenter
 
@@ -103,66 +121,110 @@ ApplicationWindow {
                         model: clientController.chatHandler.chatsList
 
                         delegate: Loader {
-                            // Указываем Loader'у использовать ваш компонент стиля
-                            sourceComponent: style.chatTabButton
+                            id: chatItemLoader
                             
                             Layout.fillWidth: true
                             Layout.margins: 12
                             Layout.bottomMargin: 0
 
-                            
-                            
-                            // Важно: через свойство 'item' мы настраиваем уже загруженную кнопку,
-                            // а доступ к данным модели (modelData) получаем напрямую.
-                            onLoaded: {
-                                item.label = Qt.binding(function() {
-                                    return root.getUserName(modelData.userId)
-                                })
-                                
-                                // Если в вашей кнопке есть флаг checked, можно управлять им через индекс
-                                item.isActive = Qt.binding(function() {
-                                    return mainStack.currentIndex === 1 && chatScreen.currentUserId === modelData.userId
-                                })
+                            readonly property int targetUserId: modelData ? modelData.userId : 0
 
-                                // Навешиваем обработчик клика на загруженную кнопку
-                                item.onClicked.connect(function() {
-                                    // 1. Задаем данные для экрана чата
-                                    chatScreen.currentUserName = root.getUserName(modelData.userId)
-                                    chatScreen.currentUserId = modelData.userId
-                                    
-                                    // 2. Даем команду контроллеру загрузить сообщения
-                                    clientController.chatHandler.loadChatWithUser(modelData.userId)
-                                    
-                                    // 3. Переключаем StackLayout на индекс 1 (Экран чата)
-                                    mainStack.currentIndex = 1
-                                })
-                                item.removeRequested.connect(function() {
-                                    console.log("Удаление истории для пользователя ", modelData.userId)
-                                    clientController.chatHandler.deleteChatHistory(modelData.userId)
+                            sourceComponent: style.chatTabButton
 
-                                    // Если удаленный чат был открыт прямо сейчас — переключаем на заглушку
-                                    if (chatScreen.currentUserId === modelData.userId) {
-                                        mainStack.currentIndex = 2 // Возврат к заглушке "Выберите окно"
+                            Binding {
+                                target: chatItemLoader.item
+                                property: "label"
+                                value: root.getUserName(chatItemLoader.targetUserId, clientController.authHandler.friends)
+                            }
+
+                            Binding {
+                                target: chatItemLoader.item
+                                property: "isActive"
+                                value: mainStack.currentIndex === 1 && chatScreen.currentUserId === chatItemLoader.targetUserId
+                            }
+
+                            // Чистая ссылка на провайдер без query-параметров!
+                            Binding {
+                                target: chatItemLoader.item
+                                property: "avatarSource"
+                                value: {
+                                    if (chatItemLoader.targetUserId > 0) {
+                                        return "image://avatars/" + chatItemLoader.targetUserId;
                                     }
-                                })
+                                    return "qrc:/Main/assets/person.png";
+                                }
+                            }
+
+                            Connections {
+                                target: chatItemLoader.item
+
+                                function onClicked() {
+                                    chatScreen.currentUserId = chatItemLoader.targetUserId
+                                    chatScreen.currentUserName = root.getUserName(chatItemLoader.targetUserId, clientController.authHandler.friends)
+                                    
+                                    clientController.chatHandler.loadChatWithUser(chatItemLoader.targetUserId)
+                                    mainStack.currentIndex = 1
+                                }
+
+                                function onRemoveRequested() {
+                                    confirmHistoryDeleteDiolog.userId = chatItemLoader.targetUserId
+                                    confirmHistoryDeleteDiolog.open()
+                                }
+                            }
+                            
+                            Connections {
+                                target: clientController.authHandler
+                                function onFriendsChanged() {
+                                    console.log("[QML Signal] authHandler.friendsChanged сработал! Перезапрашиваем аватарки...")
+                                    
+                                    // Пробегаем по всем элементам Repeater и заставляем Image перечитать провайдер
+                                    for (var i = 0; i < sideMenuColumn.children.length; i++) {
+                                        var child = sideMenuColumn.children[i];
+                                        // Находим наши Loader'ы
+                                        if (child && child.item && child.item.avatarSource !== undefined) {
+                                            var currentSource = child.item.avatarSource;
+                                            if (currentSource && currentSource.indexOf("image://") === 0) {
+                                                // Сбрасываем в пустую строку и возвращаем обратно на следующем кадре
+                                                child.item.avatarSource = "";
+                                                child.item.avatarSource = currentSource;
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-
-            Text {
-                id: userIdText // Добавили id, чтобы ScrollView мог на него ссылаться
-                text: "Ваш id: " + clientController.authHandler.getUserId()
-                font: root.textStyles.system
-                color: root.colors.fg_muted
-                
+            
+            Column{
+                id: bottomSection
                 anchors.bottom: parent.bottom 
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.margins: 12
-                
-                horizontalAlignment: Text.AlignHLeft
+                spacing: 8
+                Text {
+                    id: userIdText // Добавили id, чтобы ScrollView мог на него ссылаться
+                    text: "Ваш id: " + clientController.authHandler.getUserId()
+                    font: root.textStyles.system
+                    color: root.colors.fg_muted
+                    horizontalAlignment: Text.AlignHLeft
+                }
+                Loader {
+                    id: changeAvatarButton
+                    anchors.right: parent.right
+                    anchors.left: parent.left
+                    sourceComponent: style.customButton
+                    onLoaded: {
+                        item.text = qsTr("Выбрать аватарку")
+                        item.buttonStyle = "transparent"
+                        item.clicked.connect(function(){
+                            avatarFileDialog.open()
+                        })
+                    }
+                }
+
             }
         }
         /// ...
@@ -215,6 +277,129 @@ ApplicationWindow {
                     horizontalAlignment: Text.AlignHCenter
                 }
             }
+        }
+    }
+
+    FileDialog {
+        id: avatarFileDialog
+        title: qsTr("Выберите аватарку")
+        nameFilters: ["Изображения (*.png *.jpg *.jpeg *.webp)"]
+        currentFolder: Platform.StandardPaths.writableLocation(Platform.StandardPaths.PicturesLocation)
+        
+        onAccepted: {
+            // fileUrl содержит путь вида "file:///path/to/image.png"
+            clientController.setAvatarRequest(selectedFile)
+        }
+    }
+
+    Dialog {
+        id: confirmHistoryDeleteDiolog
+        property int userId: -1
+        title: "Удаление истории чата"
+
+        anchors.centerIn: parent
+        modal: true
+        Overlay.modal: Rectangle {
+            color: Qt.rgba(0, 0, 0, 0.28)
+        }
+        footer: Item {
+            width: parent ? parent.width : implicitWidth
+            implicitHeight: 48
+
+            Row {
+                spacing: 12
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.rightMargin: 12
+
+                Loader {
+                    id: cancelButtonLoader
+                    sourceComponent: style.customButton
+                    onLoaded: {
+                        item.text = qsTr("Отмена")
+                        item.buttonStyle = "transparent"
+                        item.clicked.connect(confirmHistoryDeleteDiolog.reject)
+                    }
+                }
+
+                Loader {
+                    id: acceptButtonLoader
+                    sourceComponent: style.customButton
+                    onLoaded: {
+                        item.text = qsTr("Удалить")
+                        item.buttonStyle = "accent"
+                        item.clicked.connect(confirmHistoryDeleteDiolog.accept)
+                    }
+                }
+            }
+        }
+
+        // Настройка внешнего вида окна под темную тему
+        background: Rectangle {
+            color: colors.bg_canvas_overlay
+            border.width: 1
+            border.color: colors.border_default
+            radius: 8
+        }
+
+        header: Label {
+            text: confirmHistoryDeleteDiolog.title
+            font: textStyles.header
+            color: colors.fg_default
+            horizontalAlignment: Text.AlignHCenter
+            padding: 15
+        }
+
+        Text{
+            text: "Вы уверены что хотите удалить историю общения с этим пользователем?"
+            color: colors.fg_default
+            font: textStyles.messageText
+            padding: 15
+        }
+
+        onAccepted: {
+            console.log("Удаление истории для пользователя ", confirmHistoryDeleteDiolog.userId)
+            clientController.chatHandler.deleteChatHistory(confirmHistoryDeleteDiolog.userId)
+
+            // Если удаленный чат был открыт прямо сейчас — переключаем на заглушку
+            if (chatScreen.currentUserId === confirmHistoryDeleteDiolog.userId) {
+                mainStack.currentIndex = 2 // Возврат к заглушке "Выберите окно"
+            }
+        }
+        // onRejected: clearServerDialogFields()
+
+    }
+
+    Toast {
+        id: errorToast
+    }
+    Toast {
+        id: successToast
+        backgroundColor: style.colors.status_success_bg
+    }
+    Connections {
+        target: clientController.authHandler // Указываем на конкретный подконтроллер
+
+        // Имя функции формируется автоматически: on + ИмяСигнала с большой буквы
+        function onShowErrorToast(message) {
+            errorToast.show(message); // Вызываем функцию Toast в UI!
+        }
+        
+        function onSetAvatarSuccess() {
+            successToast.show("Автарка установлена!");
+        }
+    }
+    Connections {
+        target: clientController.authHandler
+        function onFriendsChanged() {
+            console.log("[QML Signal] authHandler.friendsChanged сработал! Новая длина:", clientController.authHandler.friends.length)
+        }
+    }
+
+    Connections {
+        target: clientController.chatHandler
+        function onChatsListChanged() {
+            console.log("[QML Signal] chatHandler.chatsListChanged сработал! Чатов в списке:", clientController.chatHandler.chatsList.length)
         }
     }
 }

@@ -76,6 +76,17 @@ void AuthHandler::handleRemoveFriend(const wire::RemoveFriendResponse &r)
     }
 }
 
+void AuthHandler::handleSetAvatar(const wire::SetAvatarResponse &r)
+{
+    if(r.status == OperationStatus::OK){
+        emit setAvatarSuccess();
+    } else if(r.status == OperationStatus::InvalidAvatar){
+        emit showErrorToast("Не валидное изображени либо размер больше 1MB");
+    } else {
+        emit showErrorToast("Внутренняя ошибка при отправке аватарки");
+    }
+}
+
 QVariantList AuthHandler::convertUserList(const std::optional<std::vector<User>>& userVector)
 {
     QVariantList result;
@@ -86,10 +97,14 @@ QVariantList AuthHandler::convertUserList(const std::optional<std::vector<User>>
     }
 
     for (const auto& user : userVector.value()) {
+
+        if (m_avatarProvider && !user.avatar.isEmpty()) {
+            m_avatarProvider->updateAvatar(QString::number(user.user_id), user.avatar);
+        }
+
         QVariantMap userMap;
         userMap["userId"] = user.user_id; 
         userMap["login"] = user.login; 
-        userMap["avatar"] = user.avatar; 
         userMap["lastSeen"] = user.last_seen; 
         result.append(userMap);
     }

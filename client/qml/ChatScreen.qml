@@ -19,10 +19,33 @@ Rectangle {
     onCurrentUserIdChanged: {
         if (currentUserId !== -1) {
             console.log("Загружаем историю чата для пользователя ID:", currentUserId)
-            // Здесь будет вызов вашего контроллера:
-            // clientController.loadMessagesFor(currentUserId)
+            Qt.callLater(function() {
+                chatListView.scrollToBottom()
+            })
         }
     }
+
+    function formatTimestamp(rawTimestamp) {
+        if (!rawTimestamp) return ""
+        
+        // Если приходит число (ms) или строка ISO/Timestamp
+        var date = new Date(rawTimestamp)
+        if (isNaN(date.getTime())) {
+            // Если пришла строка Unix Timestamp в секундах
+            date = new Date(Number(rawTimestamp) * 1000)
+        }
+
+        if (isNaN(date.getTime())) return rawTimestamp // Если не удалось распарсить
+
+        var day = String(date.getDate()).padStart(2, '0')
+        var month = String(date.getMonth() + 1).padStart(2, '0')
+        var hours = String(date.getHours()).padStart(2, '0')
+        var minutes = String(date.getMinutes()).padStart(2, '0')
+
+        return `${day}.${month} ${hours}:${minutes}`
+    }
+
+    
 
     ColumnLayout {
         anchors.fill: parent
@@ -32,13 +55,13 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             height: 60
-            color: chatRoot.colors.bg_canvas_default
+            color: root.colors.bg_canvas_default
             
             Rectangle { // Разделительная линия снизу
                 anchors.bottom: parent.bottom
                 width: parent.width
                 height: 1
-                color: chatRoot.colors.border_muted
+                color: root.colors.border_muted
             }
 
             RowLayout {
@@ -48,132 +71,168 @@ Rectangle {
                 
                 // Аватарка (опционально, так как сервер присылает base64)
                 Image {
-                    Layout.leftMargin: 8
+                    Layout.leftMargin: 10
                     Layout.preferredWidth: 32
                     Layout.preferredHeight: 32
                     sourceSize.width: 32
                     sourceSize.height: 32
                     clip: true
+
+                    cache: false
+
                     fillMode: Image.PreserveAspectCrop 
-                    // source: modelData.avatar ? "data:image/png;base64," + modelData.avatar : "qrc:/Main/assets/person.png"
-                    source: "qrc:/Main/assets/person.png"
+                    source: (chatRoot.currentUserId && chatRoot.currentUserId > 0) 
+                        ? "image://avatars/" + chatRoot.currentUserId 
+                        : "qrc:/Main/assets/person.png"
                 }
 
+
                 Text {
-                    text: chatRoot.currentUserName
+                    text: (chatRoot.currentUserName) ? chatRoot.currentUserName : ""
+                        ? chatRoot.currentUserName 
+                        : root.getUserName(chatRoot.currentUserId)
                     Layout.fillWidth: true
-                    font: chatRoot.textStyles.userName
-                    color: chatRoot.colors.fg_default
+                    font: root.textStyles.userName
+                    color: root.colors.fg_default
                 }
                 
                 // Calls icons here
             }
         }
-
-        // 2. Область сообщений
-        ScrollView {
+        ListView {
+            id: chatListView
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
 
-            ListView {
-                id: chatListView
-                anchors.fill: parent
-                anchors.margins: 15
-                spacing: 12
-                clip: true // Чтобы сообщения не вылезали за пределы списка при прокрутке
+            Layout.leftMargin: 12
+            Layout.rightMargin: 12
+            Layout.topMargin: 8
+            Layout.bottomMargin: 8
+            
+            // Включаем встроенный скроллбар QtQuick Controls, если нужен
+            ScrollBar.vertical: ScrollBar {
+                active: true
+            }
 
-                // Автоматический скролл вниз при добавлении новых сообщений
-                verticalLayoutDirection: ListView.TopToBottom
+            // anchors.margins: 15
+            spacing: 12
+            clip: true // Чтобы сообщения не вылезали за пределы списка при прокрутке
+
+            // Автоматический скролл вниз при добавлении новых сообщений
+            verticalLayoutDirection: ListView.TopToBottom
+            
+            model: clientController.chatHandler.currentChatMessages
+
+            function scrollToBottom() {
+                if (count > 0) {
+                    positionViewAtIndex(count - 1, ListView.End)
+                }
+            }
+            onCountChanged: {
+                Qt.callLater(scrollToBottom)
+            }
+            onModelChanged: {
+                Qt.callLater(scrollToBottom)
+            }
+
+            delegate: Item {
+                id: delegateRoot
                 
-                model: clientController.chatHandler.currentChatMessages
+                // Чередуем: четные — от текущего пользователя (справа), нечетные — от собеседника (слева)
+                readonly property bool isOutgoing: modelData.isOutgoing
+                
+                // Ограничиваем максимальную ширину облачка (70% от ширины списка)
+                width: chatListView.width
+                height: bubbleRectangle.height + 6 // Небольшой отступ для тени
 
-                delegate: Item {
-                    id: delegateRoot
+                Rectangle {
+                    id: bubbleRectangle
                     
-                    // Чередуем: четные — от текущего пользователя (справа), нечетные — от собеседника (слева)
-                    readonly property bool isOutgoing: modelData.isOutgoing
+                    // Ширина подстраивается под текст, но не превышает 70% контейнера
+                    width: Math.min(
+                    Math.max(messageText.implicitWidth, timeText.implicitWidth) + 24, 
+                    chatListView.width * 0.7
+                )
+                    height: messageLayout.height + 16
                     
-                    // Ограничиваем максимальную ширину облачка (70% от ширины списка)
-                    width: chatListView.width
-                    height: bubbleRectangle.height + 4 // Небольшой отступ для тени
+                    // Выравнивание: свои — справа, чужие — слева
+                    anchors.right: delegateRoot.isOutgoing ? parent.right : undefined
+                    anchors.left: delegateRoot.isOutgoing ? undefined : parent.left
 
+                    // Цветовая схема (используются ваши переменные или запасные фолбэки)
+                    color: delegateRoot.isOutgoing 
+                        ? (root.colors.accent_bg ?? "#2B5278") 
+                        : (root.colors.fg_muted ?? "#18222D")
+                        
+                    // Скругление углов: угол со стороны отправки делается более острым
+                    radius: 14
                     Rectangle {
-                        id: bubbleRectangle
-                        
-                        // Ширина подстраивается под текст, но не превышает 70% контейнера
-                        width: Math.min(messageText.implicitWidth + 32, chatListView.width * 0.7)
-                        height: messageLayout.height + 16
-                        
-                        // Выравнивание: свои — справа, чужие — слева
+                        // Маленький хак для создания «хвостика» баббла
+                        width: 14
+                        height: 14
+                        color: parent.color
+                        anchors.bottom: parent.bottom
                         anchors.right: delegateRoot.isOutgoing ? parent.right : undefined
                         anchors.left: delegateRoot.isOutgoing ? undefined : parent.left
+                        visible: true
+                    }
 
-                        // Цветовая схема (используются ваши переменные или запасные фолбэки)
-                        color: delegateRoot.isOutgoing 
-                            ? (chatRoot.colors.accent_bg ?? "#2B5278") 
-                            : (chatRoot.colors.fg_muted ?? "#18222D")
-                            
-                        // Скругление углов: угол со стороны отправки делается более острым
-                        radius: 14
-                        Rectangle {
-                            // Маленький хак для создания «хвостика» баббла
-                            width: 14
-                            height: 14
-                            color: parent.color
-                            anchors.bottom: parent.bottom
-                            anchors.right: delegateRoot.isOutgoing ? parent.right : undefined
-                            anchors.left: delegateRoot.isOutgoing ? undefined : parent.left
-                            visible: true
+                    // Основной контент внутри сообщения
+                    Column {
+                        id: messageLayout
+                        anchors {
+                            top: parent.top
+                            left: parent.left
+                            right: parent.right
+                            margins: 8
+                            leftMargin: 12
+                            rightMargin: 12
+                        }
+                        spacing: 4
+
+                        Text {
+                            id: messageText
+                            text: modelData.content
+                            width: parent.width
+                            wrapMode: Text.Wrap
+                            color:  "#FFFFFF" 
+                            font.pixelSize: 14
+                            font.family: "Segoe UI, Roboto, sans-serif"
                         }
 
-                        // Основной контент внутри сообщения
-                        Column {
-                            id: messageLayout
-                            anchors {
-                                top: parent.top
-                                left: parent.left
-                                right: parent.right
-                                margins: 8
-                                leftMargin: 12
-                                rightMargin: 12
-                            }
-                            spacing: 4
-
-                            Text {
-                                id: messageText
-                                text: modelData.content
-                                width: parent.width
-                                wrapMode: Text.Wrap
-                                color: delegateRoot.isOutgoing ? "#FFFFFF" : "#F5F5F5"
-                                font.pixelSize: 14
-                                font.family: "Segoe UI, Roboto, sans-serif"
-                            }
-
-                            // Время отправки
-                            Text {
-                                text: "12:45"
-                                anchors.right: parent.right
-                                color: delegateRoot.isOutgoing ? "#A1C8EC" : "#7F8C99"
-                                font.pixelSize: 11
-                            }
+                        // Время отправки
+                        Text {
+                            id: timeText
+                            // Вызываем нашу функцию форматирования
+                            text: chatRoot.formatTimestamp(modelData.timestamp) 
+                            anchors.right: parent.right
+                            color: root.colors.fg_on_accent 
+                            font.pixelSize: 11
                         }
+                    }
+                }
+                Component.onCompleted: {
+                    if (index === chatListView.count) {
+                        Qt.callLater(function() {
+                            chatListView.positionViewAtIndex(chatListView.count - 1, ListView.End)
+                        })
                     }
                 }
             }
         }
 
+
         // 3. Панель ввода сообщения
         Rectangle {
             Layout.fillWidth: true
             height: 60
-            color: chatRoot.colors.bg_canvas_default
+            color: root.colors.bg_canvas_default
 
             Rectangle { // Разделительная линия сверху
                 anchors.top: parent.top
                 width: parent.width
                 height: 1
-                color: chatRoot.colors.border_muted
+                color: root.colors.border_muted
             }
 
             RowLayout {
