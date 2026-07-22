@@ -74,7 +74,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
-          sudo apt-get install nasm linux-libc-dev
+          sudo apt-get install nasm linux-libc-dev -y
           $VCPKG_ROOT/vcpkg install "ffmpeg[core,avcodec,avformat,swscale,swresample]:$VCPKG_TRIPLET" "openssl:$VCPKG_TRIPLET" "pkgconf:$VCPKG_TRIPLET"
         env:
           VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
@@ -153,19 +153,21 @@ jobs:
       - name: Bundle dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
+          set +e
           mkdir -p dist/bin dist/plugins
           cp install_client/bin/SigmaMessenger dist/bin/
           [ -f install_server/bin/server ] && cp install_server/bin/server dist/bin/
           ldd dist/bin/SigmaMessenger | grep "=> /" | awk '{print $3}' | while read lib; do
             case "$lib" in
               /lib/*|/usr/lib/*|/lib64/*|/usr/lib64/*) ;;
-              *) cp -d "$lib" dist/bin/ ;;
+              *) cp -df "$lib" dist/bin/ 2>/dev/null || true ;;
             esac
           done
           QT_PLUGIN_DIR=$(qmake -query QT_INSTALL_PLUGINS)
-          [ -d "$QT_PLUGIN_DIR/platforms" ] && cp -r $QT_PLUGIN_DIR/platforms dist/plugins/
-          [ -d "$QT_PLUGIN_DIR/imageformats" ] && cp -r $QT_PLUGIN_DIR/imageformats dist/plugins/
-          [ -d "$QT_PLUGIN_DIR/mediaservice" ] && cp -r $QT_PLUGIN_DIR/mediaservice dist/plugins/
+          [ -d "$QT_PLUGIN_DIR/platforms" ] && cp -r $QT_PLUGIN_DIR/platforms dist/plugins/ || true
+          [ -d "$QT_PLUGIN_DIR/imageformats" ] && cp -r $QT_PLUGIN_DIR/imageformats dist/plugins/ || true
+          [ -d "$QT_PLUGIN_DIR/mediaservice" ] && cp -r $QT_PLUGIN_DIR/mediaservice dist/plugins/ || true
+          set -e 
 
       # ------------------------------------------------------------------
       # Подготовка финального архива
