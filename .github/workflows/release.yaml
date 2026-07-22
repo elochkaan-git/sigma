@@ -157,6 +157,19 @@ jobs:
       - name: Install Server
         run: cmake --install build_server --prefix install_server --config Release
 
+      # Развёртывание Qt-библиотек для сервера (Windows)
+      - name: Deploy Server (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: cmd
+        run: |
+          windeployqt --release install_server\server.exe
+
+      # Развёртывание для сервера (Linux)
+      - name: Deploy Server (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          linuxdeployqt install_server/server -bundle-non-qt-libs
+
       # ------------------------------------------------------------------
       # Сборка в единый дистрибутив
       # ------------------------------------------------------------------
