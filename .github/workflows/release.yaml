@@ -57,6 +57,9 @@ jobs:
             ${{ env.VCPKG_ROOT }}/buildtrees
             ${{ matrix.os == 'windows-latest' && '~/AppData/Local/vcpkg/archives' || '~/.cache/vcpkg/archives' }}
           key: vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v2
+          restore-keys: |
+            vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v2
+            vcpkg-${{ runner.os }}-
 
       # ------------------------------------------------------------------
       # Установка зависимостей через vcpkg (раздельно для Windows и Linux)
