@@ -183,7 +183,6 @@ jobs:
           mkdir dist
           Copy-Item -Recurse install_client\bin dist\bin
           Copy-Item install_server\bin\* dist\bin\ -Recurse -ErrorAction SilentlyContinue
-          Copy-Item install_client\* dist\ -Recurse -ErrorAction SilentlyContinue
 
       # ------------------------------------------------------------------
       # Архивация и загрузка релиза
