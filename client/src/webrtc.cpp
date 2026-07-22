@@ -168,6 +168,7 @@ WebRtcWrapper::handleIncomingCall(const wire::IncomingCallResponse& response)
 
   mCurrentCallId = response.call_id;
   mState = CallState::Incoming;
+  mVideoEnabled = response.with_video;
 
   qInfo(appService) << "Incoming call from" << response.caller_id
                      << "call id:" << response.call_id;
@@ -355,9 +356,12 @@ WebRtcWrapper::sendVideoFrame(const QByteArray& encodedFrame,
                               uint32_t durationSamples)
 {
   if (!mVideoTrack || !mVideoTrack->isOpen() || !mVideoRtpConfig) {
-    qWarning(appService) << "Video track is not ready to send";
+    qWarning() << "Video track is not ready to send, track:" << (mVideoTrack ? "exists" : "null")
+                << "isOpen:" << (mVideoTrack ? mVideoTrack->isOpen() : false)
+                << "config:" << (mVideoRtpConfig ? "exists" : "null");
     return;
   }
+  qDebug() << "Sending video frame, size:" << encodedFrame.size();
 
   rtc::binary sample(reinterpret_cast<const std::byte*>(encodedFrame.constData()),
                      reinterpret_cast<const std::byte*>(encodedFrame.constData() +
@@ -490,6 +494,7 @@ WebRtcWrapper::attachAudioTrack()
   mAudioTrack->setMediaHandler(packetizer);
 
   mAudioTrack->onFrame([this](rtc::binary data, rtc::FrameInfo) {
+    qDebug() << "Audio frame received from remote, size:" << data.size();
     QByteArray bytes(reinterpret_cast<const char*>(data.data()),
                      static_cast<int>(data.size()));
     QMetaObject::invokeMethod(
@@ -526,6 +531,7 @@ WebRtcWrapper::attachVideoTrack()
   mVideoTrack->setMediaHandler(packetizer);
 
   mVideoTrack->onFrame([this](rtc::binary data, rtc::FrameInfo) {
+    qDebug() << "Video frame received from remote, size:" << data.size();
     QByteArray bytes(reinterpret_cast<const char*>(data.data()),
                      static_cast<int>(data.size()));
     QMetaObject::invokeMethod(

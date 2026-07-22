@@ -111,7 +111,9 @@ void AudioCaptureEncoder::initEncoder()
 
 void AudioCaptureEncoder::onReadyRead()
 {
-  mPcmBuffer.append(mIODevice->readAll());
+  auto data = mIODevice->readAll();
+  qDebug() << "Audio captured, size:" << data.size();
+  mPcmBuffer.append(data);
 
   const int bytesPerFrame = mFrameSamples * mChannels * static_cast<int>(sizeof(int16_t));
   while (mPcmBuffer.size() >= bytesPerFrame) {

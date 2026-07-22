@@ -98,10 +98,12 @@ ClientController::ClientController(QObject *parent)
 
     connect(&call_manager_, &CallManager::remoteVideoFrameReady,
             this, [this](const QImage& img) {
+                qDebug() << "remoteVideoFrameReady, image size:" << img.size();
                 m_remoteVideoProvider->updateFrame(img);
             });
     connect(&call_manager_, &CallManager::localVideoFrameReady,
             this, [this](const QImage& img) {
+                qDebug() << "localVideoFrameReady, image size:" << img.size();
                 m_localVideoProvider->updateFrame(img);
             });
 
@@ -118,9 +120,13 @@ ClientController::ClientController(QObject *parent)
 
     connect(&call_manager_, &CallManager::decodedAudioReady,
             this, [this](const QByteArray& pcmData, int, int) {
-        if (!m_audioSink || m_audioSink->state() == QAudio::StoppedState) {
-            return;
+        qDebug() << "decodedAudioReady, PCM size:" << pcmData.size();
+        if (!m_audioSink) { qWarning() << "audio sink null"; return; }
+        if (m_audioSink->state() == QAudio::StoppedState) {
+            qDebug() << "Starting audio sink";
+            m_audioSink->start(m_audioBuffer);
         }
+        qDebug() << "Audio sink state:" << m_audioSink->state();
         
         // Пишем данные в буфер — QAudioSink сам прочитает их и воспроизведёт
         m_audioBuffer->write(pcmData);

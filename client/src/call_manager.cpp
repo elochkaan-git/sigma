@@ -244,11 +244,15 @@ void CallManager::startCapturing()
 {
   if (!mAudioCapture->start(mDevices.audio, 48000, 1)) {
     qWarning() << "Не удалось запустить аудиозахват";
+  } else {
+    qDebug() << "Аудиозахват запущен";
   }
 
   if (mVideoEnabled) {
     if (!mVideoCapture->start(mDevices.video, 640, 480, 30)) {
       qWarning() << "Не удалось запустить видеозахват";
+    } else {
+      qDebug() << "Видеозахват запущен";
     }
   }
 }

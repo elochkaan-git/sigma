@@ -153,6 +153,7 @@ void VideoCaptureEncoder::onVideoFrameChanged(const QVideoFrame& frame)
   if (image.isNull()) {
     return;
   }
+  qDebug() << "Video frame captured, size:" << image.size();
 
   if (image.size() != QSize(mWidth, mHeight)) {
     image = image.scaled(mWidth, mHeight, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
