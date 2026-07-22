@@ -163,7 +163,6 @@ jobs:
         run: |
           TAG=$(git describe --abbrev=0 --tags)
           ARTIFACT="SigmaMessenger-${TAG}-${{ matrix.os }}${ext}"
-          mv "SigmaMessenger-${TAG}-${{ matrix.os }}${ext}" "${ARTIFACT}"
           if gh release view "${TAG}" > /dev/null 2>&1; then
             gh release upload "${TAG}" "${ARTIFACT}" --clobber
           else
