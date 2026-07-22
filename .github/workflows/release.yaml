@@ -34,7 +34,7 @@ jobs:
           cache: true
 
       # ------------------------------------------------------------------
-      # Настройка vcpkg и установка зависимостей для обеих платформ
+      # Настройка vcpkg
       # ------------------------------------------------------------------
       - name: Setup vcpkg (Windows)
         if: matrix.os == 'windows-latest'
@@ -58,14 +58,23 @@ jobs:
             ${{ matrix.os == 'windows-latest' && '~/AppData/Local/vcpkg/archives' || '~/.cache/vcpkg/archives' }}
           key: vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v2
 
-      - name: Install FFmpeg / OpenSSL / pkgconf via vcpkg
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+      # ------------------------------------------------------------------
+      # Установка зависимостей через vcpkg (раздельно для Windows и Linux)
+      # ------------------------------------------------------------------
+      - name: Install FFmpeg / OpenSSL / pkgconf via vcpkg (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            & "$env:VCPKG_ROOT\vcpkg.exe" install "ffmpeg[core,avcodec,avformat,swscale,swresample]:$env:VCPKG_TRIPLET" "openssl:$env:VCPKG_TRIPLET" "pkgconf:$env:VCPKG_TRIPLET"
-          else
-            $VCPKG_ROOT/vcpkg install "ffmpeg[core,avcodec,avformat,swscale,swresample]:$VCPKG_TRIPLET" "openssl:$VCPKG_TRIPLET" "pkgconf:$VCPKG_TRIPLET"
-          fi
+          & "$env:VCPKG_ROOT\vcpkg.exe" install "ffmpeg[core,avcodec,avformat,swscale,swresample]:$env:VCPKG_TRIPLET" "openssl:$env:VCPKG_TRIPLET" "pkgconf:$env:VCPKG_TRIPLET"
+        env:
+          VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
+          VCPKG_TRIPLET: ${{ env.VCPKG_TRIPLET }}
+
+      - name: Install FFmpeg / OpenSSL / pkgconf via vcpkg (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          $VCPKG_ROOT/vcpkg install "ffmpeg[core,avcodec,avformat,swscale,swresample]:$VCPKG_TRIPLET" "openssl:$VCPKG_TRIPLET" "pkgconf:$VCPKG_TRIPLET"
         env:
           VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
           VCPKG_TRIPLET: ${{ env.VCPKG_TRIPLET }}
