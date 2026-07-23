@@ -91,6 +91,9 @@ void CallManager::startCall(unsigned int calleeId, bool withVideo)
     qWarning() << "CallManager не инициализирован";
     return;
   }
+
+  setCallerId(calleeId);
+
   mVideoEnabled = withVideo;
   emit videoEnabledChanged(mVideoEnabled);
 
@@ -134,8 +137,13 @@ void CallManager::handleStartCallResponse(const wire::StartCallResponse& r) {
 
 void CallManager::handleIncomingCall(const wire::IncomingCallResponse& r)   {
   mWebRtc->handleIncomingCall(r);
-  setCallState(CallState::Incoming);
+
+  setCallerId(r.caller_id);
+
   mVideoEnabled = r.with_video;
+  setCallState(CallState::Incoming);
+  
+  
   emit videoEnabledChanged(mVideoEnabled);
 }
 
@@ -201,6 +209,7 @@ void CallManager::onCallClosed()
   stopCapturing();
 
   setCallState(CallState::Idle);
+  setCallerId(0);
   emit callClosed();
 }
 
@@ -232,6 +241,14 @@ void CallManager::initDecoders(int audioSampleRate, int videoWidth, int videoHei
   }
   if (!mVideoDecoder->init(videoWidth, videoHeight)) {
     qWarning() << "Не удалось инициализировать видеодекодер";
+  }
+}
+
+void CallManager::setCallerId(unsigned int id)
+{
+  if (mCallerId != id) {
+    mCallerId = id;
+    emit callerIdChanged(mCallerId);
   }
 }
 

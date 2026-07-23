@@ -26,6 +26,8 @@ class CallManager : public QObject
   // QML_UNCREATABLE("CallManager is read-only")
   Q_PROPERTY(CallState callState READ callState NOTIFY callStateChanged)
   Q_PROPERTY(bool isVideoEnabled READ isVideoEnabled NOTIFY videoEnabledChanged)
+  Q_PROPERTY(unsigned int callerId READ callerId NOTIFY callerIdChanged)
+
 public:
   enum class CallState {
     Idle,         // Нет активного вызова
@@ -40,6 +42,7 @@ public:
 
   CallState callState() const { return mCallState; }
   bool isVideoEnabled() const { return mVideoEnabled; }
+  unsigned int callerId() const { return mCallerId; }
 
   /**
    * @brief Установка устройств пользователя. Если пусто,
@@ -78,6 +81,7 @@ public:
 signals:
   void callStateChanged(CallState newState);
   void videoEnabledChanged(bool enabled);
+  void callerIdChanged(unsigned int callerId);
   /**
    * @brief Сигнал при установке соединения между клиентами
    */
@@ -125,10 +129,12 @@ private:
   void startCapturing();
   void stopCapturing();
   void initDecoders(int audioSampleRate = 48000, int videoWidth = 640, int videoHeight = 480);
+  void setCallerId(unsigned int id);
 
   Transport* mTransport = nullptr;
   MediaDevices mDevices;
   bool mInitialized = false;
+  unsigned int mCallerId = 0;
 
   CallState mCallState = CallState::Idle;
 

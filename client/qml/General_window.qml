@@ -402,8 +402,13 @@ ApplicationWindow {
 
     CallWindow {
         id: callWindow
-        // Автоматически подтягивает данные активного собеседника из чата
-        callerName: chatScreen.currentUserName 
-        callerId: chatScreen.currentUserId
+        // Автоматически подтягивает данные активного собеседника из чата хотя должен из callManager!
+        callerId: clientController.callManager.callerId
+    
+        // Автоматически высчитываем имя, используя готовую функцию root.getUserName
+        callerName: root.getUserName(
+            clientController.callManager.callerId, 
+            clientController.authHandler.friends
+        )
     }
 }
