@@ -77,7 +77,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get install nasm linux-libc-dev -y
-          $VCPKG_ROOT/vcpkg install "ffmpeg[core,avcodec,avformat,swscale,swresample]:$VCPKG_TRIPLET" "openssl:$VCPKG_TRIPLET" "pkgconf:$VCPKG_TRIPLET"
+          $VCPKG_ROOT/vcpkg install "ffmpeg[core,avcodec,avformat,swscale,swresample,opus,x264,gpl]:$VCPKG_TRIPLET" "openssl:$VCPKG_TRIPLET" "pkgconf:$VCPKG_TRIPLET"
         env:
           VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
           VCPKG_TRIPLET: ${{ env.VCPKG_TRIPLET }}
