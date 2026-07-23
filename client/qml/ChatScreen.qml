@@ -264,45 +264,48 @@ Rectangle {
                 // Выравниваем кнопку по нижнему краю, когда TextArea растет вверх
                 Layout.alignment: Qt.AlignBottom 
 
-                ScrollView {
+                Loader {
+                    id: messageField
+                    sourceComponent: style.customTextField
                     Layout.fillWidth: true
-                    // Ограничиваем минимальную и максимальную высоту поля
-                    implicitHeight: Math.min(messageField.implicitHeight, 120) 
-                    Layout.preferredHeight: implicitHeight
-                    
-                    // Отключаем горизонтальный скроллбар, чтобы текст обязательно переносился
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
-                    TextArea {
-                        id: messageField
-                        placeholderText: "Напишите сообщение..."
-                        enabled: chatRoot.currentUserId !== -1
-                        
-                        // Включаем автоперенос по словам
-                        wrapMode: TextEdit.Wrap
+                    onLoaded: {
+                        item.placeholderText = "Введите сообщение"
 
-                        // Перехватываем Enter для отправки, а Shift+Enter — для переноса строки
-                        Keys.onPressed: (event) => {
-                            if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !(event.modifiers & Qt.ShiftModifier)) {
-                                if (sendButton.enabled) {
-                                    sendButton.clicked()
-                                }
-                                event.accepted = true
+                        item.accepted.connect(function() {
+                            // Проверяем, активна ли кнопка отправки (прошел ли текст валидацию)
+                            if (sendButtonLoader.enabled) {
+                                clientController.chatHandler.saveAndSendMessage(
+                                    chatRoot.currentUserId, 
+                                    messageField.item.text
+                                );
+                                messageField.item.clear();
                             }
-                        }
+                        })
                     }
                 }
 
-                Button {
-                    id: sendButton
-                    text: "Отправить"
-                    // Выравниваем кнопку по нижнему краю текстового поля
+                Loader {
+                    id: sendButtonLoader
+                    sourceComponent: style.customButton
                     Layout.alignment: Qt.AlignHCenter
-                    enabled: messageField.text.trim().length > 0 && chatRoot.currentUserId !== -1
-                    onClicked: {
-                        console.log("Отправка сообщения пользователю", chatRoot.currentUserId, ":", messageField.text)
-                        clientController.chatHandler.saveAndSendMessage(chatRoot.currentUserId, messageField.text)
-                        messageField.clear()
+                    
+                    enabled: messageField.item && messageField.item.text.trim().length > 0 && chatRoot.currentUserId !== -1
+                    
+                    onLoaded: {
+                        item.text = "Отправить"
+                        item.buttonStyle = "accent"
+                        item.enabled = Qt.binding(function() { return sendButtonLoader.enabled })
+                        item.clicked.connect(function() {
+                            clientController.chatHandler.saveAndSendMessage(
+                                chatRoot.currentUserId, 
+                                messageField.item.text
+                            );
+                            // Очищаем текст через загруженный элемент
+                            if (messageField.item) {
+                                messageField.item.clear(); // или messageField.item.text = ""
+                            }
+                        })
                     }
                 }
             }

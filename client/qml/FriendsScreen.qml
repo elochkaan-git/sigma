@@ -106,9 +106,9 @@ Rectangle {
                     delegate: Rectangle {
                         width: friendsListView.width
                         height: 60
-                        color: "white"
-                        radius: 8
+                        color: colors.bg_canvas_overlay
                         border.color: colors.border_default
+                        radius: 8
 
                         RowLayout {
                             anchors.fill: parent
@@ -135,28 +135,34 @@ Rectangle {
                                 text: modelData.login 
                                 Layout.fillWidth: true
                                 font: textStyles.userName
+                                color: colors.fg_default
                             }
-                            
-                            Button {
-                                text: "Написать"
-                                onClicked: {
-                                    friendsRoot.openChatRequested(modelData.userId, modelData.login)
+
+                            Loader {
+                                sourceComponent: style.customButton
+
+                                onLoaded: {
+                                    item.text = "Написать"
+                                    item.buttonStyle = "accent"
+                                    item.implicitHeight = 32.5
+                                    item.clicked.connect(function() {
+                                        friendsRoot.openChatRequested(modelData.userId, modelData.login)
+                                    })
                                 }
                             }
-                            
-                            Button {
-                                text: "Удалить"
+
+                            Loader {
+                                sourceComponent: style.customButton
                                 Layout.rightMargin: 8
-                                contentItem: Text {
-                                    text: parent.text
-                                    color: "red"
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                
-                                onClicked: {
-                                    clientController.deleteFriend(modelData.userId);
-                                    clientController.updateFriendsInfo();
+
+                                onLoaded: {
+                                    item.text = "Удалить"
+                                    item.buttonStyle = "dark"
+                                    item.implicitHeight = 32.5
+                                    item.clicked.connect(function() {
+                                        clientController.deleteFriend(modelData.userId);
+                                        clientController.updateFriendsInfo();
+                                    })
                                 }
                             }
                         }
@@ -185,9 +191,9 @@ Rectangle {
                     delegate: Rectangle {
                             width: incomingListView.width
                             height: 60
-                            color: "white"
+                            color: colors.bg_canvas_overlay
                             radius: 8
-                            border.color: "#e0e0e0"
+                            border.color: colors.border_default
 
                             RowLayout {
                                 anchors.fill: parent
@@ -213,40 +219,40 @@ Rectangle {
                                 Text {
                                     text: modelData.login + " хочет в друзья" // Подставляем логин[cite: 4]
                                     Layout.fillWidth: true
-                                    font.pixelSize: 14
+                                    font: textStyles.userName
+                                    color: colors.fg_default
+                                }
+                                Loader {
+                                    sourceComponent: style.customButton
+
+                                    onLoaded: {
+                                        item.text = "Принять"
+                                        item.buttonStyle = "accent"
+                                        item.implicitHeight = 32.5
+                                        item.clicked.connect(function() {
+                                            clientController.acceptFriendRequest(modelData.userId);
+                                            clientController.updateIncomingFriendsRequests();
+                                            clientController.updateFriendsInfo();
+                                        })
+                                    }
                                 }
 
-                                Button {
-                                    text: "Принять"
-                                    contentItem: Text {
-                                        text: parent.text
-                                        color: "green"
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                    }
-                                    onClicked: {
-                                        clientController.acceptFriendRequest(modelData.userId);
-                                        clientController.updateIncomingFriendsRequests();
-                                        clientController.updateFriendsInfo();
-                                    }
-                                }
+                                Loader {
+                                    sourceComponent: style.customButton
+                                    Layout.rightMargin: 8
 
-                                Button {
-                                    text: "Отклонить"
-                                    contentItem: Text {
-                                        text: parent.text
-                                        color: "red"
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                    }
-                                    onClicked: {
-                                        clientController.rejectFriendRequest(modelData.userId);
-                                        clientController.updateIncomingFriendsRequests();
+                                    onLoaded: {
+                                        item.text = "Отклонить"
+                                        item.buttonStyle = "dark"
+                                        item.implicitHeight = 32.5
+                                        item.clicked.connect(function() {
+                                            clientController.rejectFriendRequest(modelData.userId);
+                                            clientController.updateIncomingFriendsRequests();
+                                        })
                                     }
                                 }
                             }
                         }
-            
                 }
             }
             // ---- ЭКРАН 3: Входящие только отобразить. Отозвать заявку нельзя
@@ -272,9 +278,9 @@ Rectangle {
                         // Внутри ListView мы управляем шириной через width, а не Layout!
                         width: outgoingListView.width
                         height: 60
-                        color: "white"
+                        color: colors.bg_canvas_overlay
+                        border.color: colors.border_default
                         radius: 8
-                        border.color: "#e0e0e0"
 
                         RowLayout {
                             anchors.fill: parent
@@ -300,13 +306,14 @@ Rectangle {
                             Text {
                                 text: "Запрос отправлен пользователю " + modelData.login
                                 Layout.fillWidth: true 
-                                font.pixelSize: 14
+                                font: textStyles.userName
+                                color: colors.fg_default
                                 elide: Text.ElideRight 
                             }
 
                             Text {
                                 text: "Ожидает подтверждения"
-                                color: "#888888"
+                                color: colors.fg_subtle
                                 font.italic: true
                                 font.pixelSize: 12
                                 Layout.alignment: Qt.AlignVCenter | Qt.AlignRight 
@@ -376,9 +383,9 @@ Rectangle {
                         // Чтобы элемент не вылезал за границы списка с учетом скроллбара
                         width: onlineUsersView.width 
                         height: 60
-                        color: "white"
+                        color: colors.bg_canvas_overlay
+                        border.color: colors.border_default
                         radius: 8
-                        border.color: "#e0e0e0"
 
                         RowLayout {
                             anchors.fill: parent
@@ -405,13 +412,14 @@ Rectangle {
                             Text {
                                 text: "Пользователь: " + (modelData.login ?? "")
                                 Layout.fillWidth: true 
-                                font.pixelSize: 14
+                                font: textStyles.userName
+                                color: colors.fg_default
                                 elide: Text.ElideRight 
                             }
 
                             Text {
                                 text: "ID: " + (modelData.userId ?? "")
-                                color: "#888888"
+                                color: colors.fg_subtle
                                 font.pixelSize: 12
                                 Layout.alignment: Qt.AlignVCenter | Qt.AlignRight 
                             }
