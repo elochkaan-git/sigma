@@ -73,6 +73,10 @@ ClientController::ClientController(QObject *parent)
     connect(pingTimer, &QTimer::timeout, this, &ClientController::pingAllServers);
     pingTimer->start(5000); // Опрос раз в 5 секунд
 
+    aliveTimer = new QTimer(this);
+    connect(aliveTimer, &QTimer::timeout, this, &ClientController::pingConnectedServer);
+    aliveTimer->setInterval(5000);
+
     // Transport layer creation
     // m_transport = new Transport(this);
     connect(m_transport, &Transport::responseReady, 
@@ -232,6 +236,7 @@ Q_INVOKABLE void ClientController::setSelectedServer(const QVariant &server)
     qDebug() << "Selected server URL:" << serverUrl;
     m_transport->connectToHost(serverUrl);
     pingTimer->stop();
+    aliveTimer->start();
     connectedToURL = serverUrl;
 }
 
@@ -240,6 +245,7 @@ Q_INVOKABLE void ClientController::disconnectFromServer(){
     qDebug() << "Disconected from:" << selectedServer.toMap().value("serverUrl").toString();
     selectedServer = {};
     pingTimer->start();
+    aliveTimer->stop();
     emit serverDisconected();
 }
 
@@ -407,6 +413,11 @@ void ClientController::handleTransportResponse(const Response &response)
 void ClientController::onLoadFromCSVEnded()
 {
     pingAllServers();
+}
+
+void ClientController::pingConnectedServer()
+{
+    m_transport->sendCommand(wire::GetServerStats{});
 }
 
 void ClientController::onLoginSuccess(unsigned int userId)

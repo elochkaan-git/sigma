@@ -79,6 +79,7 @@ private slots:
     void pingAllServers();
     void handleTransportResponse(const Response& response);
     void onLoadFromCSVEnded();
+    void pingConnectedServer();
     
     
 public slots:
@@ -98,6 +99,7 @@ private:
     QString connectedToURL;
 
     QTimer *pingTimer = nullptr; // Таймер для периодического пинга серверов
+    QTimer *aliveTimer = nullptr;
     Transport* m_transport = nullptr;
     AvatarImageProvider* m_avatarProvider = nullptr;
 
