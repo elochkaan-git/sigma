@@ -193,15 +193,17 @@ Window {
                 Image {
                     id: remoteVideo
                     anchors.fill: parent
-                    fillMode: Image.PreserveAspectCrop
+                    fillMode: Image.PreserveAspectFit
                     cache: false  // отключаем кеширование на всякий случай
                     source: "image://remoteVideo/?" + clientController.remoteVideoVersion
                 }
 
                 // Локальное превью
                 Rectangle {
-                    width: 100
-                    height: 140
+                    width: Math.max(160, parent.width * 0.2)
+                    height: localVideo.sourceSize.width > 0 
+                            ? width * (localVideo.sourceSize.height / localVideo.sourceSize.width) 
+                            : width * (9 / 16)
                     radius: 8
                     color: "#222"
                     anchors.right: parent.right
@@ -213,8 +215,9 @@ Window {
 
                     Image {
                         id: localVideo
-                        width: 100
-                        height: 140
+                        width:parent.width
+                        height: parent.height
+                        fillMode: Image.PreserveAspectCrop
                         // ...
                         cache: false
                         source: "image://localVideo/?" + clientController.localVideoVersion
