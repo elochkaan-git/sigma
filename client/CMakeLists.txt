@@ -93,6 +93,12 @@ target_link_libraries(SigmaMessenger PRIVATE
     # libdatachannel
     PkgConfig::FFMPEG
 )
+if(UNIX AND NOT APPLE)
+  install(IMPORTED_RUNTIME_ARTIFACTS Qt6::WebSockets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION lib
+  )
+endif()
 target_compile_options(SigmaMessenger PRIVATE
   $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra>
   $<$<CXX_COMPILER_ID:MSVC>:/W4>
