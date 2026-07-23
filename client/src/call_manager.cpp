@@ -104,6 +104,7 @@ void CallManager::acceptCall()
 
 void CallManager::rejectCall()
 {
+  setCallState(CallState::Idle);
   mWebRtc->rejectCall();
 }
 
