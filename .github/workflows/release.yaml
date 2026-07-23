@@ -56,7 +56,7 @@ jobs:
           path: |
             ${{ env.VCPKG_ROOT }}/installed
             ${{ matrix.os == 'windows-latest' && '~/AppData/Local/vcpkg/archives' || '~/.cache/vcpkg/archives' }}
-          key: vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v3
+          key: vcpkg-${{ runner.os }}-ffmpeg-openssl-pkgconf-v4
           restore-keys: |
             vcpkg-${{ runner.os }}-
 
