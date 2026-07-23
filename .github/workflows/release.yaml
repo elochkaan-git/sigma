@@ -121,6 +121,7 @@ jobs:
         run: |
           cmake --install build_client --prefix "${{ github.workspace }}/install_client" --config Release
           ls -R "${{ github.workspace }}/install_client/bin"
+          ls -R "${{ github.workspace }}/install_client"
 
       # ------------------------------------------------------------------
       # Сборка сервера
@@ -142,17 +143,6 @@ jobs:
       # ------------------------------------------------------------------
       # Развёртывание зависимостей для самодостаточного пакета
       # ------------------------------------------------------------------
-      - name: Deploy Qt (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          windeployqt "$env:github_workspace\install_client\bin\SigmaMessenger.exe" `
-            --qmldir "$env:github_workspace\client\qml" `
-            --dir "$env:github_workspace\install_client" `
-            --no-system-d3d-compiler
-          windeployqt "$env:github_workspace\install_server\bin\server.exe" `
-            --no-quick-import --no-system-d3d-compiler
-
       - name: Copy vcpkg DLLs (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
@@ -180,6 +170,7 @@ jobs:
         run: |
           mkdir dist
           Copy-Item -Recurse install_client\* dist\
+          Copy-Item -Recurse install_server\* dist\ -Force
 
       # ------------------------------------------------------------------
       # Архивация и загрузка релиза
