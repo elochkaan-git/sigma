@@ -110,9 +110,10 @@ install(TARGETS SigmaMessenger
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-qt_generate_deploy_app_script(
+qt_generate_deploy_qml_app_script(
     TARGET SigmaMessenger
     OUTPUT_SCRIPT deploy_script
     NO_UNSUPPORTED_PLATFORM_ERROR
+    DEPLOY_USER_QML_MODULES_ON_UNSUPPORTED_PLATFORM
 )
 install(SCRIPT ${deploy_script})
