@@ -169,9 +169,9 @@ void VideoCaptureEncoder::encodeAndSend(const QImage& image)
 {
   if (!mSwsCtx) {
     mSwsCtx = sws_getContext(
-        mWidth, mHeight, AV_PIX_FMT_RGB32,
-        mWidth, mHeight, AV_PIX_FMT_YUV420P,
-        SWS_BILINEAR, nullptr, nullptr, nullptr);
+      mWidth, mHeight, AV_PIX_FMT_RGB32,
+      mWidth, mHeight, AV_PIX_FMT_YUV420P,
+      SWS_BILINEAR, nullptr, nullptr, nullptr);
     if (!mSwsCtx) {
       qWarning() << "Не удалось создать SwsContext";
       return;
@@ -183,17 +183,23 @@ void VideoCaptureEncoder::encodeAndSend(const QImage& image)
 
   av_frame_make_writable(mFrame);
   sws_scale(mSwsCtx, srcSlices, srcStride, 0, mHeight,
-            mFrame->data, mFrame->linesize);
+          mFrame->data, mFrame->linesize);
   mFrame->pts = mFrameIndex;
 
   if (avcodec_send_frame(mCodecCtx, mFrame) < 0) {
     return;
   }
 
+  // Собираем все пакеты этого кадра в один буфер
+  QByteArray combined;
   while (avcodec_receive_packet(mCodecCtx, mPacket) == 0) {
-    QByteArray encoded(reinterpret_cast<const char*>(mPacket->data), mPacket->size);
-    uint32_t durationSamples = static_cast<uint32_t>(90000 / mFps);
-    encodedVideoFrameDone(encoded, durationSamples);
+    combined.append(reinterpret_cast<const char*>(mPacket->data), mPacket->size);
     av_packet_unref(mPacket);
+  }
+
+  // Если есть данные — отправляем как один кадр
+  if (!combined.isEmpty()) {
+    uint32_t durationSamples = static_cast<uint32_t>(90000 / mFps);
+    encodedVideoFrameDone(combined, durationSamples);
   }
 }
