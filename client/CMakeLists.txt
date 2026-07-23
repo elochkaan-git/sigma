@@ -87,10 +87,10 @@ target_link_libraries(SigmaMessenger PRIVATE
     Qt6::Network
     Qt6::WebSockets
     Qt6::Multimedia
-    # LibDataChannel::LibDataChannel
+    LibDataChannel::LibDataChannel
     Qt6::Sql
 
-    libdatachannel
+    # libdatachannel
     PkgConfig::FFMPEG
 )
 target_compile_options(SigmaMessenger PRIVATE
