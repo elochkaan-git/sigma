@@ -7,28 +7,28 @@ file(GLOB CLIENT_HEADERS CONFIGURE_DEPENDS
   ${CMAKE_SOURCE_DIR}/common/inc/*.h
 )
 
-add_library(libdatachannel SHARED IMPORTED)
-set_target_properties(libdatachannel PROPERTIES
-    IMPORTED_LOCATION "/home/savely/Downloads/libdatachannel/libdatachannel.so"
-)
-target_include_directories(libdatachannel INTERFACE
-    "/home/savely/Downloads/libdatachannel/include"
-)
+# add_library(libdatachannel SHARED IMPORTED)
+# set_target_properties(libdatachannel PROPERTIES
+#     IMPORTED_LOCATION "/home/savely/Downloads/libdatachannel/libdatachannel.so"
+# )
+# target_include_directories(libdatachannel INTERFACE
+#     "/home/savely/Downloads/libdatachannel/include"
+# )
 
 find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick Core Network WebSockets Multimedia Sql)
 qt_standard_project_setup(REQUIRES 6.8)
 
-# include(FetchContent)
-# FetchContent_Declare(
-#   libdatachannel
-#   GIT_REPOSITORY https://github.com/paullouisageneau/libdatachannel.git
-#   GIT_TAG        v0.24.5
-# )
+include(FetchContent)
+FetchContent_Declare(
+  libdatachannel
+  GIT_REPOSITORY https://github.com/paullouisageneau/libdatachannel.git
+  GIT_TAG        v0.24.5
+)
 set(NO_WEBSOCKET ON CACHE BOOL "" FORCE)
 set(NO_TESTS ON CACHE BOOL "" FORCE)
 set(NO_EXAMPLES ON CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-# FetchContent_MakeAvailable(libdatachannel)
+FetchContent_MakeAvailable(libdatachannel)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
