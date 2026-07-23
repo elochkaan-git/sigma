@@ -51,7 +51,7 @@ install(TARGETS ${SERVER_NAME}
 
 if (UNIX AND NOT APPLE)
   set_target_properties(${SERVER_NAME} PROPERTIES
-    INSTALL_RPATH "$ORIGIN"
+    INSTALL_RPATH "$ORIGIN/../lib"
     BUILD_WITH_INSTALL_RPATH TRUE
   )
 endif()
