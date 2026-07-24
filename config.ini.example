@@ -1,0 +1,13 @@
+[network]
+host=0
+port=5555
+flood_limit=5
+ban_limit=60
+max_msg_size=536870912
+max_login_attempts=4
+max_oversized_msgs=4
+max_msgs_allowed=1000
+trust_proxy_server=false
+
+[turn]
+secret=supersecret
